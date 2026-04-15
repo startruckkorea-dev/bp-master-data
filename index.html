@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BP Master Data Management</title>
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100vh; }
+
+  #login-screen {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 100vh; gap: 16px;
+  }
+  #login-screen .logo {
+    font-size: 22px; font-weight: 600; color: #323130; letter-spacing: 1px;
+  }
+  #login-screen .subtitle { font-size: 14px; color: #605e5c; }
+  #btn-login {
+    background: #0078d4; color: #fff; border: none; border-radius: 4px;
+    padding: 10px 28px; font-size: 15px; cursor: pointer; margin-top: 8px;
+  }
+  #btn-login:hover { background: #006cbe; }
+
+  #app { display: none; max-width: 860px; margin: 0 auto; padding: 24px 16px; }
+
+  .header {
+    background: #fff; border-radius: 6px; padding: 16px 24px;
+    margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;
+    border: 1px solid #edebe9;
+  }
+  .header .title { font-size: 18px; font-weight: 600; color: #323130; }
+  .header .user-info { font-size: 13px; color: #605e5c; display: flex; align-items: center; gap: 12px; }
+  #btn-logout {
+    background: none; border: 1px solid #d2d0ce; border-radius: 4px;
+    padding: 4px 12px; font-size: 12px; cursor: pointer; color: #323130;
+  }
+
+  .tabs { display: flex; gap: 2px; margin-bottom: 16px; }
+  .tab {
+    padding: 8px 20px; border: none; background: #fff; border-radius: 4px 4px 0 0;
+    font-size: 14px; cursor: pointer; color: #605e5c; border-bottom: 3px solid transparent;
+  }
+  .tab.active { color: #0078d4; border-bottom: 3px solid #0078d4; font-weight: 500; }
+
+  .card {
+    background: #fff; border-radius: 6px; border: 1px solid #edebe9;
+    padding: 24px; margin-bottom: 16px;
+  }
+  .card-title { font-size: 14px; font-weight: 600; color: #323130; margin-bottom: 16px; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .form-row.full { grid-template-columns: 1fr; }
+  .form-row.three { grid-template-columns: 1fr 1fr 1fr; }
+
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 13px; font-weight: 500; color: #323130; }
+  .form-group label .required { color: #a4262c; margin-left: 3px; }
+  .form-group select, .form-group input, .form-group textarea {
+    border: 1px solid #d2d0ce; border-radius: 4px; padding: 7px 10px;
+    font-size: 14px; color: #323130; background: #fff; font-family: inherit;
+  }
+  .form-group select:focus, .form-group input:focus, .form-group textarea:focus {
+    outline: none; border-color: #0078d4;
+  }
+  .form-group select:disabled, .form-group input:disabled {
+    background: #f3f2f1; color: #a19f9d; cursor: not-allowed;
+  }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+
+  .docs-box {
+    background: #f3f2f1; border-radius: 4px; padding: 10px 12px;
+    font-size: 13px; color: #323130; line-height: 1.7; white-space: pre-line;
+  }
+
+  .file-area {
+    border: 1.5px dashed #d2d0ce; border-radius: 4px; padding: 16px;
+    text-align: center; cursor: pointer; transition: border-color .2s;
+  }
+  .file-area:hover { border-color: #0078d4; }
+  .file-area input { display: none; }
+  .file-area .hint { font-size: 13px; color: #605e5c; }
+  .file-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .file-item {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #f3f2f1; border-radius: 4px; padding: 6px 10px; font-size: 13px;
+  }
+  .file-item button {
+    background: none; border: none; color: #a4262c; cursor: pointer; font-size: 16px; line-height: 1;
+  }
+
+  .approval-section { margin-bottom: 16px; }
+  .approval-row {
+    display: grid; grid-template-columns: 120px 1fr 1fr;
+    gap: 8px; align-items: center; margin-bottom: 8px;
+  }
+  .approval-row label { font-size: 13px; font-weight: 500; color: #323130; }
+
+  .btn-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+  .btn-primary {
+    background: #0078d4; color: #fff; border: none; border-radius: 4px;
+    padding: 9px 24px; font-size: 14px; cursor: pointer; font-weight: 500;
+  }
+  .btn-primary:hover { background: #006cbe; }
+  .btn-primary:disabled { background: #c8c6c4; cursor: not-allowed; }
+  .btn-secondary {
+    background: #fff; color: #323130; border: 1px solid #d2d0ce; border-radius: 4px;
+    padding: 9px 24px; font-size: 14px; cursor: pointer;
+  }
+  .btn-secondary:hover { background: #f3f2f1; }
+
+  .notice {
+    font-size: 12px; padding: 8px 12px; border-radius: 4px; margin-top: 6px;
+  }
+  .notice.warn { background: #fff4ce; color: #7d5700; }
+  .notice.error { background: #fde7e9; color: #a4262c; }
+  .notice.info { background: #dff6dd; color: #107c10; }
+
+  .list-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .list-table th {
+    background: #f3f2f1; padding: 10px 12px; text-align: left;
+    font-weight: 600; color: #323130; border-bottom: 1px solid #edebe9;
+  }
+  .list-table td {
+    padding: 10px 12px; border-bottom: 1px solid #edebe9; color: #323130;
+  }
+  .list-table tr:hover td { background: #f3f2f1; cursor: pointer; }
+
+  .status-badge {
+    display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 500;
+  }
+  .status-대기 { background: #fff4ce; color: #7d5700; }
+  .status-승인완료 { background: #dff6dd; color: #107c10; }
+  .status-반려 { background: #fde7e9; color: #a4262c; }
+
+  .loading {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3);
+    align-items: center; justify-content: center; z-index: 999;
+  }
+  .loading.show { display: flex; }
+  .loading-box { background: #fff; border-radius: 6px; padding: 24px 32px; font-size: 15px; color: #323130; }
+
+  @media (max-width: 600px) {
+    .form-row { grid-template-columns: 1fr; }
+    .form-row.three { grid-template-columns: 1fr; }
+    .approval-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="logo">STAR TRUCK KOREA</div>
+  <div class="subtitle">BP Master Data Management</div>
+  <button id="btn-login" onclick="signIn()">Microsoft 계정으로 로그인</button>
+  <div id="login-error" class="notice error" style="display:none;max-width:320px;text-align:center;"></div>
+</div>
+
+<div id="app">
+  <div class="header">
+    <div class="title">BP Master Data Management</div>
+    <div class="user-info">
+      <span id="user-name"></span>
+      <button id="btn-logout" onclick="signOut()">로그아웃</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('form')">신청서 작성</button>
+    <button class="tab" onclick="switchTab('list')">내 신청 목록</button>
+    <button class="tab" id="tab-approval-btn" onclick="switchTab('approval')" style="display:none">결재함</button>
+  </div>
+
+  <!-- 신청서 작성 탭 -->
+  <div id="tab-form">
+    <div class="card">
+      <div class="card-title">기본 정보</div>
+      <div class="form-row three">
+        <div class="form-group">
+          <label>Type <span class="required">*</span></label>
+          <select id="sel-type" onchange="onTypeChange()">
+            <option value="">-- Type 선택 --</option>
+            <option value="Vendor">Vendor</option>
+            <option value="Customer">Customer</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Sub Category <span class="required">*</span></label>
+          <select id="sel-subcat" onchange="onSubCatChange()" disabled>
+            <option value="">-- Sub Category 선택 --</option>
+            <option value="BP creation">BP creation</option>
+            <option value="BP information change">BP information change</option>
+            <option value="BP inactivation">BP inactivation</option>
+            <option value="BP activation">BP activation</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label id="bpcode-label">BP Code</label>
+          <input type="text" id="inp-bpcode" placeholder="BP Code 입력" disabled>
+          <div id="bpcode-notice" class="notice warn" style="display:none">BP Code는 필수 입력 항목입니다.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">필수 제출 서류</div>
+      <div id="docs-box" class="docs-box">Type을 먼저 선택해주세요.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">요청사항 <span class="required" style="color:#a4262c">*</span></div>
+      <div class="form-group">
+        <textarea id="inp-desc" placeholder="요청사항을 자세히 기입해주시기 바랍니다.&#10;Ex. 통장 계좌 추가 등록, 신규 Vendor Code 생성 등" style="min-height:100px"></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">첨부파일 <span class="required" style="color:#a4262c">*</span></div>
+      <div class="file-area" onclick="document.getElementById('file-input').click()">
+        <input type="file" id="file-input" multiple onchange="onFileSelect(event)">
+        <div class="hint">클릭하여 파일 첨부 (여러 파일 선택 가능)</div>
+      </div>
+      <div class="file-list" id="file-list"></div>
+      <div id="file-notice" class="notice error" style="display:none">첨부파일은 필수입니다.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">결재라인 설정</div>
+      <div class="approval-section">
+        <div class="approval-row">
+          <label>1차 결재자</label>
+          <input type="text" id="appr1-name" placeholder="이름">
+          <input type="email" id="appr1-email" placeholder="이메일 (예: name@startruck.kr)">
+        </div>
+        <div class="approval-row">
+          <label>2차 결재자</label>
+          <input type="text" id="appr2-name" placeholder="이름">
+          <input type="email" id="appr2-email" placeholder="이메일 (예: name@startruck.kr)">
+        </div>
+        <div class="approval-row">
+          <label>회계 담당자</label>
+          <input type="text" id="appr3-name" placeholder="이름">
+          <input type="email" id="appr3-email" placeholder="이메일 (예: name@startruck.kr)">
+        </div>
+      </div>
+      <div class="notice info">최종 승인 후 회계 담당자가 BP Code를 직접 입력합니다.</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="resetForm()">초기화</button>
+      <button class="btn-primary" id="btn-submit" onclick="submitRequest()">상신</button>
+    </div>
+  </div>
+
+  <!-- 내 신청 목록 탭 -->
+  <div id="tab-list" style="display:none">
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="list-table">
+        <thead>
+          <tr>
+            <th>번호</th><th>Type</th><th>Sub Category</th><th>BP Code</th>
+            <th>상태</th><th>신청일</th>
+          </tr>
+        </thead>
+        <tbody id="list-body">
+          <tr><td colspan="6" style="text-align:center;padding:32px;color:#605e5c">불러오는 중...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 결재함 탭 -->
+  <div id="tab-approval" style="display:none">
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="list-table">
+        <thead>
+          <tr>
+            <th>번호</th><th>신청자</th><th>Type</th><th>Sub Category</th>
+            <th>상태</th><th>신청일</th><th>처리</th>
+          </tr>
+        </thead>
+        <tbody id="approval-body">
+          <tr><td colspan="7" style="text-align:center;padding:32px;color:#605e5c">불러오는 중...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="loading" id="loading">
+  <div class="loading-box">처리 중입니다...</div>
+</div>
+
+<script>
+const CLIENT_ID = '432976c2-b43a-492e-8213-ece505fa1f51';
+const TENANT_ID = '19cab1f5-21f4-44df-8ac6-96d6ca595203';
+const SITE_URL  = 'startruckkorea.sharepoint.com:/sites/STK-NAS:';
+const GRAPH_API = 'https://graph.microsoft.com/v1.0';
+
+const msalConfig = {
+  auth: {
+    clientId: CLIENT_ID,
+    authority: `https://login.microsoftonline.com/${TENANT_ID}`,
+    redirectUri: window.location.origin + window.location.pathname
+  },
+  cache: { cacheLocation: 'sessionStorage' }
+};
+const msalInstance = new msal.PublicClientApplication(msalConfig);
+const scopes = ['User.Read', 'Sites.ReadWrite.All'];
+
+let currentUser = null;
+let selectedFiles = [];
+let siteId = null;
+let msalReady = false;
+
+async function ensureInit() {
+  if (!msalReady) {
+    await msalInstance.initialize();
+    msalReady = true;
+  }
+}
+
+async function signIn() {
+  try {
+    await ensureInit();
+    const resp = await msalInstance.loginPopup({ scopes });
+    msalInstance.setActiveAccount(resp.account);
+    await initApp(resp.account);
+  } catch(e) {
+    document.getElementById('login-error').style.display = 'block';
+    document.getElementById('login-error').textContent = '로그인 실패: ' + e.message;
+  }
+}
+
+function signOut() {
+  msalInstance.logoutPopup();
+}
+
+async function getToken() {
+  const account = msalInstance.getActiveAccount();
+  const resp = await msalInstance.acquireTokenSilent({ scopes, account });
+  return resp.accessToken;
+}
+
+async function callGraph(endpoint, method = 'GET', body = null) {
+  const token = await getToken();
+  const opts = {
+    method,
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(GRAPH_API + endpoint, opts);
+  if (!res.ok) throw new Error(await res.text());
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+async function initApp(account) {
+  currentUser = account;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('user-name').textContent = account.name || account.username;
+  try {
+    const site = await callGraph(`/sites/${SITE_URL}`);
+    siteId = site.id;
+    await loadMyRequests();
+    await checkApproverRole();
+  } catch(e) {
+    alert('SharePoint 연결 오류: ' + e.message);
+  }
+}
+
+async function checkApproverRole() {
+  if (!siteId) return;
+  try {
+    const data = await callGraph(
+      `/sites/${siteId}/lists/BP_Approvals/items?$filter=fields/ApproverEmail eq '${currentUser.username}' and fields/Status eq '대기'&$expand=fields`
+    );
+    if (data.value && data.value.length > 0) {
+      document.getElementById('tab-approval-btn').style.display = 'block';
+      await loadApprovalQueue();
+    }
+  } catch(e) {}
+}
+
+function switchTab(name) {
+  ['form','list','approval'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach((btn, i) => {
+    btn.classList.toggle('active', ['form','list','approval'][i] === name);
+  });
+  if (name === 'list') loadMyRequests();
+  if (name === 'approval') loadApprovalQueue();
+}
+
+function onTypeChange() {
+  const type = document.getElementById('sel-type').value;
+  const subcat = document.getElementById('sel-subcat');
+  subcat.disabled = !type;
+  subcat.value = '';
+  document.getElementById('inp-bpcode').disabled = true;
+  document.getElementById('inp-bpcode').value = '';
+  document.getElementById('bpcode-notice').style.display = 'none';
+
+  const docs = {
+    Vendor: '1. Vendor Registration Form\n2. 통장사본\n3. 사업자등록증\n4. Sanction Check\n5. 개인정보동의서',
+    Customer: '1. Customer Registration Form\n2. 통장사본(환불)\n3. 사업자등록증\n4. Sanction Check(해외업체의 경우)'
+  };
+  document.getElementById('docs-box').textContent = docs[type] || 'Type을 먼저 선택해주세요.';
+}
+
+function onSubCatChange() {
+  const sub = document.getElementById('sel-subcat').value;
+  const bpInput = document.getElementById('inp-bpcode');
+  const bpLabel = document.getElementById('bpcode-label');
+  const notice  = document.getElementById('bpcode-notice');
+  if (sub === 'BP creation') {
+    bpInput.disabled = true;
+    bpInput.value = '';
+    bpInput.placeholder = '최종 승인 후 회계담당자가 입력';
+    bpLabel.innerHTML = 'BP Code <span style="font-size:11px;color:#605e5c">(creation 시 공란)</span>';
+    notice.style.display = 'none';
+  } else if (sub) {
+    bpInput.disabled = false;
+    bpInput.placeholder = 'BP Code 입력';
+    bpLabel.innerHTML = 'BP Code <span class="required">*</span>';
+    notice.style.display = 'block';
+  } else {
+    bpInput.disabled = true;
+    bpInput.value = '';
+    notice.style.display = 'none';
+  }
+}
+
+function onFileSelect(e) {
+  const newFiles = Array.from(e.target.files);
+  newFiles.forEach(f => { if (!selectedFiles.find(x => x.name === f.name)) selectedFiles.push(f); });
+  renderFileList();
+  document.getElementById('file-notice').style.display = 'none';
+}
+
+function renderFileList() {
+  const list = document.getElementById('file-list');
+  list.innerHTML = selectedFiles.map((f, i) =>
+    `<div class="file-item">
+      <span>${f.name} <span style="color:#605e5c">(${(f.size/1024).toFixed(1)} KB)</span></span>
+      <button onclick="removeFile(${i})">×</button>
+    </div>`
+  ).join('');
+}
+
+function removeFile(i) {
+  selectedFiles.splice(i, 1);
+  renderFileList();
+}
+
+function resetForm() {
+  ['sel-type','sel-subcat','inp-bpcode','inp-desc','appr1-name','appr1-email',
+   'appr2-name','appr2-email','appr3-name','appr3-email'].forEach(id => {
+    const el = document.getElementById(id);
+    el.value = '';
+    if (id === 'sel-subcat' || id === 'inp-bpcode') el.disabled = true;
+  });
+  selectedFiles = [];
+  renderFileList();
+  document.getElementById('docs-box').textContent = 'Type을 먼저 선택해주세요.';
+  document.getElementById('bpcode-notice').style.display = 'none';
+  document.getElementById('file-notice').style.display = 'none';
+}
+
+function showLoading(v) {
+  document.getElementById('loading').classList.toggle('show', v);
+}
+
+async function submitRequest() {
+  const type   = document.getElementById('sel-type').value;
+  const subcat = document.getElementById('sel-subcat').value;
+  const bpcode = document.getElementById('inp-bpcode').value.trim();
+  const desc   = document.getElementById('inp-desc').value.trim();
+
+  if (!type)   return alert('Type을 선택해주세요.');
+  if (!subcat) return alert('Sub Category를 선택해주세요.');
+  if (subcat !== 'BP creation' && !bpcode) return alert('BP Code를 입력해주세요.');
+  if (!desc)   return alert('요청사항을 입력해주세요.');
+  if (selectedFiles.length === 0) {
+    document.getElementById('file-notice').style.display = 'block';
+    return;
+  }
+
+  showLoading(true);
+  try {
+    const item = await callGraph(`/sites/${siteId}/lists/BP_Requests/items`, 'POST', {
+      fields: {
+        Title: `${type} - ${subcat}`,
+        BPType: type,
+        SubCategory: subcat,
+        BPCode: subcat === 'BP creation' ? '' : bpcode,
+        Description: desc,
+        Status: '대기',
+        RequesterEmail: currentUser.username,
+        RequestDate: new Date().toISOString()
+      }
+    });
+    const reqId = item.id;
+
+    for (const file of selectedFiles) {
+      const token = await getToken();
+      const buf = await file.arrayBuffer();
+      await fetch(
+        `${GRAPH_API}/sites/${siteId}/drive/root:/BP_Attachments/${reqId}/${file.name}:/content`,
+        { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` }, body: buf }
+      );
+    }
+
+    const approvers = [
+      { name: document.getElementById('appr1-name').value, email: document.getElementById('appr1-email').value, role: '1차결재자', order: 1 },
+      { name: document.getElementById('appr2-name').value, email: document.getElementById('appr2-email').value, role: '2차결재자', order: 2 },
+      { name: document.getElementById('appr3-name').value, email: document.getElementById('appr3-email').value, role: '회계담당자', order: 3 },
+    ].filter(a => a.email);
+
+    for (const appr of approvers) {
+      await callGraph(`/sites/${siteId}/lists/BP_Approvals/items`, 'POST', {
+        fields: {
+          Title: `${reqId}-${appr.order}`,
+          RequestID: parseInt(reqId),
+          ApproverEmail: appr.email,
+          ApproverName: appr.name,
+          ApproverRole: appr.role,
+          ApprovalOrder: appr.order,
+          Status: appr.order === 1 ? '대기' : '대기(잠김)'
+        }
+      });
+    }
+
+    alert('상신이 완료되었습니다.');
+    resetForm();
+    switchTab('list');
+  } catch(e) {
+    alert('오류가 발생했습니다: ' + e.message);
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function loadMyRequests() {
+  if (!siteId) return;
+  try {
+    const data = await callGraph(
+      `/sites/${siteId}/lists/BP_Requests/items?$filter=fields/RequesterEmail eq '${currentUser.username}'&$expand=fields&$orderby=fields/RequestDate desc`
+    );
+    const tbody = document.getElementById('list-body');
+    if (!data.value.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:#605e5c">신청 내역이 없습니다.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.value.map(item => {
+      const f = item.fields;
+      return `<tr>
+        <td>${item.id}</td>
+        <td>${f.BPType || ''}</td>
+        <td>${f.SubCategory || ''}</td>
+        <td>${f.BPCode || '-'}</td>
+        <td><span class="status-badge status-${f.Status}">${f.Status}</span></td>
+        <td>${f.RequestDate ? f.RequestDate.slice(0,10) : ''}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) {}
+}
+
+async function loadApprovalQueue() {
+  if (!siteId) return;
+  try {
+    const data = await callGraph(
+      `/sites/${siteId}/lists/BP_Approvals/items?$filter=fields/ApproverEmail eq '${currentUser.username}' and fields/Status eq '대기'&$expand=fields`
+    );
+    const tbody = document.getElementById('approval-body');
+    if (!data.value.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:#605e5c">결재 대기 항목이 없습니다.</td></tr>';
+      return;
+    }
+    const rows = await Promise.all(data.value.map(async item => {
+      const f = item.fields;
+      let reqFields = {};
+      try {
+        const req = await callGraph(`/sites/${siteId}/lists/BP_Requests/items/${f.RequestID}?$expand=fields`);
+        reqFields = req.fields;
+      } catch(e) {}
+      return `<tr>
+        <td>${f.RequestID}</td>
+        <td>${reqFields.RequesterEmail || ''}</td>
+        <td>${reqFields.BPType || ''}</td>
+        <td>${reqFields.SubCategory || ''}</td>
+        <td><span class="status-badge status-${reqFields.Status}">${reqFields.Status || ''}</span></td>
+        <td>${reqFields.RequestDate ? reqFields.RequestDate.slice(0,10) : ''}</td>
+        <td>
+          <button class="btn-primary" style="padding:4px 12px;font-size:12px" onclick="processApproval(${item.id},'승인',${f.RequestID},'${f.ApproverRole}')">승인</button>
+          <button class="btn-secondary" style="padding:4px 12px;font-size:12px;margin-left:4px" onclick="processApproval(${item.id},'반려',${f.RequestID},'${f.ApproverRole}')">반려</button>
+        </td>
+      </tr>`;
+    }));
+    tbody.innerHTML = rows.join('');
+  } catch(e) {}
+}
+
+async function processApproval(approvalItemId, action, requestId, role) {
+  const comment = prompt(`${action} 의견을 입력해주세요 (선택사항):`);
+  if (comment === null) return;
+  showLoading(true);
+  try {
+    await callGraph(`/sites/${siteId}/lists/BP_Approvals/items/${approvalItemId}`, 'PATCH', {
+      fields: { Status: action, ApprovalDate: new Date().toISOString(), Comment: comment || '' }
+    });
+
+    if (action === '승인' && role === '회계담당자') {
+      if (confirm('최종 승인되었습니다. BP Code를 지금 입력하시겠습니까?')) {
+        const bpCode = prompt('BP Code를 입력해주세요:');
+        if (bpCode) {
+          await callGraph(`/sites/${siteId}/lists/BP_Requests/items/${requestId}`, 'PATCH', {
+            fields: { Status: '승인완료', BPCode: bpCode }
+          });
+        }
+      }
+    } else if (action === '반려') {
+      await callGraph(`/sites/${siteId}/lists/BP_Requests/items/${requestId}`, 'PATCH', {
+        fields: { Status: '반려' }
+      });
+    } else if (action === '승인') {
+      const nextApprovals = await callGraph(
+        `/sites/${siteId}/lists/BP_Approvals/items?$filter=fields/RequestID eq ${requestId} and fields/Status eq '대기(잠김)'&$expand=fields&$orderby=fields/ApprovalOrder asc`
+      );
+      if (nextApprovals.value.length > 0) {
+        await callGraph(`/sites/${siteId}/lists/BP_Approvals/items/${nextApprovals.value[0].id}`, 'PATCH', {
+          fields: { Status: '대기' }
+        });
+      }
+    }
+    alert(`${action} 처리되었습니다.`);
+    await loadApprovalQueue();
+  } catch(e) {
+    alert('오류: ' + e.message);
+  } finally {
+    showLoading(false);
+  }
+}
+
+(async () => {
+  await ensureInit();
+  const resp = await msalInstance.handleRedirectPromise();
+  if (resp) {
+    msalInstance.setActiveAccount(resp.account);
+    await initApp(resp.account);
+  } else {
+    const accounts = msalInstance.getAllAccounts();
+    if (accounts.length > 0) {
+      msalInstance.setActiveAccount(accounts[0]);
+      await initApp(accounts[0]);
+    }
+  }
+})();
+</script>
+</body>
+</html>
