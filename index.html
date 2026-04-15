@@ -389,20 +389,20 @@ async function submitRequest() {
     const fileLinks = [];
     try {
       const drivesData = await api(`/sites/${siteId}/drives`);
-      const drive = drivesData.value.find(d => d.name === '문서') || drivesData.value[0];
+      const drive = drivesData.value.find(d => d.name === 'AttachedFiles') || drivesData.value[0];
       const driveId = drive.id;
       for (const file of files) {
         try {
           const t = await token();
           const buf = await file.arrayBuffer();
           const res = await fetch(
-            `${GRAPH}/drives/${driveId}/root:/BP_Requests/${reqId}/${encodeURIComponent(file.name)}:/content`,
+            `${GRAPH}/drives/${driveId}/root:/BP_Requests_AttachedFiles/${reqId}/${encodeURIComponent(file.name)}:/content`,
             { method: 'PUT', headers: { Authorization: `Bearer ${t}`, 'Content-Type': file.type||'application/octet-stream' }, body: buf }
           );
           if (res.ok) {
             const uploaded = await res.json();
             fileLinks.push(`${file.name}|${uploaded.webUrl}`);
-            console.log('업로드 성공:', file.name);
+            console.log('업로드 성공:', file.name, uploaded.webUrl);
           } else {
             const err = await res.text();
             console.warn('업로드 실패:', res.status, err);
