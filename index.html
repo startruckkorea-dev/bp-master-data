@@ -407,7 +407,8 @@ async function submitRequest() {
           );
           if (res.ok) {
             const uploaded = await res.json();
-            fileLinks.push(`${file.name}|${uploaded.webUrl}`);
+            const fileUrl = uploaded.webUrl.startsWith('http') ? uploaded.webUrl : 'https:' + uploaded.webUrl;
+            fileLinks.push(`${file.name}|${fileUrl}`);
             console.log('업로드 성공:', file.name, uploaded.webUrl);
           } else {
             const err = await res.text();
@@ -480,13 +481,13 @@ async function loadApprovalQueue() {
       let rf = {};
       try { const r = await api(`/sites/${siteId}/lists/BP_Requests/items/${f.RequestID}?$expand=fields`); rf = r.fields; } catch(e) {}
       return `<tr>
-        <td style="cursor:pointer;color:#0078d4" onclick="showDetail(${f.RequestID})">${f.RequestID}</td>
+        <td style="cursor:pointer;color:#0078d4" onclick="event.stopPropagation();showDetail(${f.RequestID})">${f.RequestID}</td>
         <td>${rf.RequesterEmail||''}</td><td>${rf.BPType||''}</td><td>${rf.SubCategory||''}</td>
         <td><span class="badge badge-${rf.Status}">${rf.Status||''}</span></td>
         <td>${rf.RequestDate?fmtDate(rf.RequestDate):''}</td>
         <td>
-          <button class="btn-primary" style="padding:4px 12px;font-size:12px" onclick="processApproval(${item.id},'승인',${f.RequestID},'${f.ApproverRole}')">승인</button>
-          <button class="btn-secondary" style="padding:4px 12px;font-size:12px;margin-left:4px" onclick="processApproval(${item.id},'반려',${f.RequestID},'${f.ApproverRole}')">반려</button>
+          <button class="btn-primary" style="padding:4px 12px;font-size:12px" onclick="event.stopPropagation();processApproval(${item.id},'승인',${f.RequestID},'${f.ApproverRole}')">승인</button>
+          <button class="btn-secondary" style="padding:4px 12px;font-size:12px;margin-left:4px" onclick="event.stopPropagation();processApproval(${item.id},'반려',${f.RequestID},'${f.ApproverRole}')">반려</button>
         </td>
       </tr>`;
     }));
@@ -527,7 +528,10 @@ async function showDetail(requestId) {
       <div style="margin-top:14px;font-size:13px;font-weight:600;margin-bottom:8px">첨부파일</div>
       ${filesHtml}
     `;
-    document.getElementById('detail-modal').style.display = 'flex';
+    const modal = document.getElementById('detail-modal');
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
   } catch(e) { alert('상세 조회 오류: ' + e.message); }
   finally { loading(false); }
 }
