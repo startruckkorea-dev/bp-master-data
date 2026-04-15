@@ -409,7 +409,12 @@ async function submitRequest() {
           );
           if (res.ok) {
             const uploaded = await res.json();
-            const fileUrl = uploaded.webUrl.startsWith('http') ? uploaded.webUrl : 'https:' + uploaded.webUrl;
+            let fileUrl = uploaded.webUrl || '';
+            if (!fileUrl.startsWith('http')) fileUrl = 'https:' + fileUrl;
+            // webUrl이 github pages URL이면 sharepoint URL 직접 조합
+            if (fileUrl.includes('github.io')) {
+              fileUrl = `https://startruckkorea.sharepoint.com/sites/STK-DB/AttachedFiles/BP_Requests_AttachedFiles/${reqId}/${encodeURIComponent(file.name)}`;
+            }
             fileLinks.push(`${file.name}|${fileUrl}`);
             console.log('업로드 성공:', file.name, uploaded.webUrl);
           } else {
@@ -482,14 +487,14 @@ async function loadApprovalQueue() {
       const f = item.fields;
       let rf = {};
       try { const r = await api(`/sites/${siteId}/lists/BP_Requests/items/${f.RequestID}?$expand=fields`); rf = r.fields; } catch(e) {}
-      return `<tr>
-        <td style="cursor:pointer;color:#0078d4" onclick="event.stopPropagation();showDetail(${f.RequestID})">${f.RequestID}</td>
+      return `<tr style="cursor:pointer" onclick="showDetail(${f.RequestID})">
+        <td style="color:#0078d4">${f.RequestID}</td>
         <td>${rf.RequesterEmail||''}</td><td>${rf.BPType||''}</td><td>${rf.SubCategory||''}</td>
         <td><span class="badge badge-${rf.Status}">${rf.Status||''}</span></td>
         <td>${rf.RequestDate?fmtDate(rf.RequestDate):''}</td>
-        <td>
-          <button class="btn-primary" style="padding:4px 12px;font-size:12px" onclick="event.stopPropagation();processApproval(${item.id},'승인',${f.RequestID},'${f.ApproverRole}')">승인</button>
-          <button class="btn-secondary" style="padding:4px 12px;font-size:12px;margin-left:4px" onclick="event.stopPropagation();processApproval(${item.id},'반려',${f.RequestID},'${f.ApproverRole}')">반려</button>
+        <td onclick="event.stopPropagation()">
+          <button class="btn-primary" style="padding:4px 12px;font-size:12px" onclick="processApproval(${item.id},'승인',${f.RequestID},'${f.ApproverRole}')">승인</button>
+          <button class="btn-secondary" style="padding:4px 12px;font-size:12px;margin-left:4px" onclick="processApproval(${item.id},'반려',${f.RequestID},'${f.ApproverRole}')">반려</button>
         </td>
       </tr>`;
     }));
