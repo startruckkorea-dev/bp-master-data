@@ -502,26 +502,30 @@ async function submitRequest() {
     });
     const reqId = item.id;
 
+    const drives = await callGraph(`/sites/${siteId}/drives`);
+    const docDrive = drives.value.find(d => d.name === '문서') || drives.value[0];
+    const driveId = docDrive.id;
+    const uploadedLinks = [];
     for (const file of selectedFiles) {
       const token = await getToken();
       const buf = await file.arrayBuffer();
       const encodedName = encodeURIComponent(file.name);
       const uploadRes = await fetch(
-        `${GRAPH_API}/sites/${siteId}/lists/BP_Requests/items/${reqId}/attachments`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': file.type || 'application/octet-stream',
-            'x-ms-file-name': encodedName
-          },
-          body: buf
-        }
+        `${GRAPH_API}/drives/${driveId}/root:/BP_Attachments/${reqId}/${encodedName}:/content`,
+        { method: 'PUT', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': file.type || 'application/octet-stream' }, body: buf }
       );
       if (!uploadRes.ok) {
         const errText = await uploadRes.text();
         throw new Error('파일 업로드 실패: ' + errText);
       }
+      const uploaded = await uploadRes.json();
+      uploadedLinks.push({ name: file.name, url: uploaded.webUrl });
+    }
+    if (uploadedLinks.length > 0) {
+      const linkText = uploadedLinks.map(f => f.name + '|' + f.url).join(';');
+      await callGraph(`/sites/${siteId}/lists/BP_Requests/items/${reqId}`, 'PATCH', {
+        fields: { AttachedFiles: linkText }
+      });
     }
 
     const approvers = [
@@ -631,19 +635,16 @@ async function showDetail(requestId) {
 
     let filesHtml = '';
     try {
-      const token = await getToken();
-      const attachRes = await fetch(
-        `${GRAPH_API}/sites/${siteId}/lists/BP_Requests/items/${requestId}/attachments`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
-      const attachData = await attachRes.json();
-      if (attachData.value && attachData.value.length > 0) {
-        filesHtml = attachData.value.map(file =>
-          `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid #edebe9;font-size:13px;">
+      const req = await callGraph(`/sites/${siteId}/lists/BP_Requests/items/${requestId}?$expand=fields`);
+      const attachedFiles = req.fields.AttachedFiles || '';
+      if (attachedFiles) {
+        filesHtml = attachedFiles.split(';').map(entry => {
+          const [name, url] = entry.split('|');
+          return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid #edebe9;font-size:13px;">
             <span style="font-size:14px">📎</span>
-            <a href="${file.serverRelativeUrl ? 'https://startruckkorea.sharepoint.com' + file.serverRelativeUrl : '#'}" target="_blank" style="color:#0078d4;text-decoration:none;">${file.fileName || file.name}</a>
-          </div>`
-        ).join('');
+            <a href="${url}" target="_blank" style="color:#0078d4;text-decoration:none;">${name}</a>
+          </div>`;
+        }).join('');
       } else {
         filesHtml = '<div style="font-size:13px;color:#605e5c">첨부파일 없음</div>';
       }
