@@ -529,16 +529,19 @@ async function submitRequest() {
 
 async function loadMyRequests() {
   if (!siteId) return;
+  const tbody = document.getElementById('list-body');
   try {
     const data = await callGraph(
-      `/sites/${siteId}/lists/BP_Requests/items?$filter=fields/RequesterEmail eq '${currentUser.username}'&$expand=fields&$orderby=fields/RequestDate desc`
+      `/sites/${siteId}/lists/BP_Requests/items?$expand=fields&$top=500`
     );
-    const tbody = document.getElementById('list-body');
-    if (!data.value.length) {
+    const myItems = data.value.filter(item =>
+      (item.fields.RequesterEmail || '').toLowerCase() === currentUser.username.toLowerCase()
+    ).sort((a, b) => new Date(b.fields.RequestDate) - new Date(a.fields.RequestDate));
+    if (!myItems.length) {
       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:#605e5c">신청 내역이 없습니다.</td></tr>';
       return;
     }
-    tbody.innerHTML = data.value.map(item => {
+    tbody.innerHTML = myItems.map(item => {
       const f = item.fields;
       return `<tr>
         <td>${item.id}</td>
@@ -549,14 +552,20 @@ async function loadMyRequests() {
         <td>${f.RequestDate ? f.RequestDate.slice(0,10) : ''}</td>
       </tr>`;
     }).join('');
-  } catch(e) {}
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:#a4262c">오류: ' + e.message + '</td></tr>';
+  }
 }
 
 async function loadApprovalQueue() {
   if (!siteId) return;
   try {
     const data = await callGraph(
-      `/sites/${siteId}/lists/BP_Approvals/items?$filter=fields/ApproverEmail eq '${currentUser.username}' and fields/Status eq '대기'&$expand=fields`
+      `/sites/${siteId}/lists/BP_Approvals/items?$expand=fields&$top=500`
+    );
+    data.value = data.value.filter(item =>
+      (item.fields.ApproverEmail || '').toLowerCase() === currentUser.username.toLowerCase() &&
+      item.fields.Status === '대기'
     );
     const tbody = document.getElementById('approval-body');
     if (!data.value.length) {
