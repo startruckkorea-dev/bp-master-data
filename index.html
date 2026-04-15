@@ -153,7 +153,7 @@
 <div id="login-screen">
   <div class="logo">STAR TRUCK KOREA</div>
   <div class="subtitle">BP Master Data Management</div>
-  <button id="btn-login" onclick="signIn()">Microsoft 계정으로 로그인</button>
+  <button id="btn-login" onclick="signIn()" disabled style="background:#c8c6c4;cursor:not-allowed">초기화 중...</button>
   <div id="login-error" class="notice error" style="display:none;max-width:320px;text-align:center;"></div>
 </div>
 
@@ -639,6 +639,12 @@ async function processApproval(approvalItemId, action, requestId, role) {
   };
   msalInstance = new msal.PublicClientApplication(msalConfig);
   await msalInstance.initialize();
+
+  const btn = document.getElementById('btn-login');
+  btn.disabled = false;
+  btn.style.background = '';
+  btn.style.cursor = '';
+  btn.textContent = 'Microsoft 계정으로 로그인';
 
   const resp = await msalInstance.handleRedirectPromise();
   if (resp) {
