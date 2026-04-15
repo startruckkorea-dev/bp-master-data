@@ -502,16 +502,21 @@ async function submitRequest() {
     });
     const reqId = item.id;
 
-    const driveInfo = await callGraph(`/sites/${siteId}/drive`);
-    const driveId = driveInfo.id;
+    const drives = await callGraph(`/sites/${siteId}/drives`);
+    const docDrive = drives.value.find(d => d.name === '문서') || drives.value[0];
+    const driveId = docDrive.id;
     for (const file of selectedFiles) {
       const token = await getToken();
       const buf = await file.arrayBuffer();
       const encodedName = encodeURIComponent(file.name);
-      await fetch(
+      const uploadRes = await fetch(
         `${GRAPH_API}/drives/${driveId}/root:/BP_Attachments/${reqId}/${encodedName}:/content`,
         { method: 'PUT', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': file.type || 'application/octet-stream' }, body: buf }
       );
+      if (!uploadRes.ok) {
+        const errText = await uploadRes.text();
+        throw new Error('파일 업로드 실패 (' + docDrive.name + '): ' + errText);
+      }
     }
 
     const approvers = [
@@ -621,8 +626,9 @@ async function showDetail(requestId) {
 
     let filesHtml = '';
     try {
-      const driveInfo = await callGraph(`/sites/${siteId}/drive`);
-      const driveId = driveInfo.id;
+      const drives = await callGraph(`/sites/${siteId}/drives`);
+      const docDrive = drives.value.find(d => d.name === '문서') || drives.value[0];
+      const driveId = docDrive.id;
       const files = await callGraph(`/drives/${driveId}/root:/BP_Attachments/${requestId}:/children`);
       if (files.value && files.value.length > 0) {
         filesHtml = files.value.map(file =>
