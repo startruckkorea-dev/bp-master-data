@@ -502,20 +502,25 @@ async function submitRequest() {
     });
     const reqId = item.id;
 
-    const drives = await callGraph(`/sites/${siteId}/drives`);
-    const docDrive = drives.value.find(d => d.name === '문서') || drives.value[0];
-    const driveId = docDrive.id;
     for (const file of selectedFiles) {
       const token = await getToken();
       const buf = await file.arrayBuffer();
       const encodedName = encodeURIComponent(file.name);
       const uploadRes = await fetch(
-        `${GRAPH_API}/drives/${driveId}/root:/BP_Attachments/${reqId}/${encodedName}:/content`,
-        { method: 'PUT', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': file.type || 'application/octet-stream' }, body: buf }
+        `${GRAPH_API}/sites/${siteId}/lists/BP_Requests/items/${reqId}/attachments`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': file.type || 'application/octet-stream',
+            'x-ms-file-name': file.name
+          },
+          body: buf
+        }
       );
       if (!uploadRes.ok) {
         const errText = await uploadRes.text();
-        throw new Error('파일 업로드 실패 (' + docDrive.name + '): ' + errText);
+        throw new Error('파일 업로드 실패: ' + errText);
       }
     }
 
@@ -626,16 +631,17 @@ async function showDetail(requestId) {
 
     let filesHtml = '';
     try {
-      const drives = await callGraph(`/sites/${siteId}/drives`);
-      const docDrive = drives.value.find(d => d.name === '문서') || drives.value[0];
-      const driveId = docDrive.id;
-      const files = await callGraph(`/drives/${driveId}/root:/BP_Attachments/${requestId}:/children`);
-      if (files.value && files.value.length > 0) {
-        filesHtml = files.value.map(file =>
+      const token = await getToken();
+      const attachRes = await fetch(
+        `${GRAPH_API}/sites/${siteId}/lists/BP_Requests/items/${requestId}/attachments`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      const attachData = await attachRes.json();
+      if (attachData.value && attachData.value.length > 0) {
+        filesHtml = attachData.value.map(file =>
           `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid #edebe9;font-size:13px;">
             <span style="font-size:14px">📎</span>
-            <a href="${file.webUrl}" target="_blank" style="color:#0078d4;text-decoration:none;">${file.name}</a>
-            <span style="color:#605e5c;font-size:11px">(${(file.size/1024).toFixed(1)} KB)</span>
+            <a href="${file.serverRelativeUrl ? 'https://startruckkorea.sharepoint.com' + file.serverRelativeUrl : '#'}" target="_blank" style="color:#0078d4;text-decoration:none;">${file.fileName || file.name}</a>
           </div>`
         ).join('');
       } else {
