@@ -312,9 +312,18 @@ const scopes = ['User.Read', 'Sites.ReadWrite.All'];
 let currentUser = null;
 let selectedFiles = [];
 let siteId = null;
+let msalReady = false;
+
+async function ensureInit() {
+  if (!msalReady) {
+    await msalInstance.initialize();
+    msalReady = true;
+  }
+}
 
 async function signIn() {
   try {
+    await ensureInit();
     const resp = await msalInstance.loginPopup({ scopes });
     msalInstance.setActiveAccount(resp.account);
     await initApp(resp.account);
@@ -637,7 +646,7 @@ async function processApproval(approvalItemId, action, requestId, role) {
 }
 
 (async () => {
-  await msalInstance.initialize();
+  await ensureInit();
   const resp = await msalInstance.handleRedirectPromise();
   if (resp) {
     msalInstance.setActiveAccount(resp.account);
