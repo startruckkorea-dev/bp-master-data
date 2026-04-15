@@ -530,6 +530,30 @@ async function showDetail(requestId) {
       }).filter(Boolean).join('');
       if (!filesHtml) filesHtml = '<div style="font-size:13px;color:#605e5c">첨부파일 없음</div>';
     }
+    let apprHtml = '';
+    try {
+      const apprData = await api(`/sites/${siteId}/lists/BP_Approvals/items?$expand=fields&$top=500`);
+      const apprList = apprData.value
+        .filter(i => i.fields.RequestID == requestId)
+        .sort((a,b) => a.fields.ApprovalOrder - b.fields.ApprovalOrder);
+      if (apprList.length) {
+        const statusColor = { '대기':'#7d5700', '승인':'#107c10', '반려':'#a4262c', '대기(잠김)':'#605e5c' };
+        apprHtml = `<div style="margin-top:14px;font-size:13px;font-weight:600;margin-bottom:8px">결재 이력</div>` +
+          apprList.map(a => {
+            const af = a.fields;
+            const color = statusColor[af.Status] || '#323130';
+            return `<div style="padding:8px 0;border-bottom:0.5px solid #edebe9;font-size:13px">
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                <span style="font-weight:500">${af.ApproverRole||''} — ${af.ApproverName||af.ApproverEmail||''}</span>
+                <span style="color:${color};font-weight:500">${af.Status||''}</span>
+              </div>
+              ${af.ApprovalDate ? `<div style="color:#605e5c;font-size:12px">${fmtDate(af.ApprovalDate)}</div>` : ''}
+              ${af.Comment ? `<div style="margin-top:4px;color:#323130;background:#f3f2f1;border-radius:4px;padding:6px 8px;font-size:12px">${af.Comment}</div>` : ''}
+            </div>`;
+          }).join('');
+      }
+    } catch(e) {}
+
     document.getElementById('modal-content').innerHTML = `
       <div class="modal-row"><div class="modal-label">신청번호</div><div class="modal-value">${requestId}</div></div>
       <div class="modal-row"><div class="modal-label">신청자</div><div class="modal-value">${f.RequesterEmail||''}</div></div>
@@ -540,6 +564,7 @@ async function showDetail(requestId) {
       <div class="modal-row"><div class="modal-label">요청사항</div><div class="modal-value" style="white-space:pre-wrap">${f.Description||''}</div></div>
       <div style="margin-top:14px;font-size:13px;font-weight:600;margin-bottom:8px">첨부파일</div>
       ${filesHtml}
+      ${apprHtml}
     `;
     const modal = document.getElementById('detail-modal');
     modal.style.display = 'flex';
