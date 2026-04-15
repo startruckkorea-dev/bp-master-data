@@ -622,11 +622,17 @@ async function processApproval(approvalItemId, action, requestId, role) {
         fields: { Status: '반려' }
       });
     } else if (action === '승인') {
-      const nextApprovals = await callGraph(
-        `/sites/${siteId}/lists/BP_Approvals/items?$filter=fields/RequestID eq ${requestId} and fields/Status eq '대기(잠김)'&$expand=fields&$orderby=fields/ApprovalOrder asc`
+      const allApprovals = await callGraph(
+        `/sites/${siteId}/lists/BP_Approvals/items?$expand=fields&$top=500`
       );
-      if (nextApprovals.value.length > 0) {
-        await callGraph(`/sites/${siteId}/lists/BP_Approvals/items/${nextApprovals.value[0].id}`, 'PATCH', {
+      const nextApprovals = allApprovals.value
+        .filter(item =>
+          item.fields.RequestID == requestId &&
+          item.fields.Status === '대기(잠김)'
+        )
+        .sort((a, b) => a.fields.ApprovalOrder - b.fields.ApprovalOrder);
+      if (nextApprovals.length > 0) {
+        await callGraph(`/sites/${siteId}/lists/BP_Approvals/items/${nextApprovals[0].id}`, 'PATCH', {
           fields: { Status: '대기' }
         });
       }
