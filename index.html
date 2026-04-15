@@ -502,12 +502,15 @@ async function submitRequest() {
     });
     const reqId = item.id;
 
+    const driveInfo = await callGraph(`/sites/${siteId}/drive`);
+    const driveId = driveInfo.id;
     for (const file of selectedFiles) {
       const token = await getToken();
       const buf = await file.arrayBuffer();
+      const encodedName = encodeURIComponent(file.name);
       await fetch(
-        `${GRAPH_API}/sites/${siteId}/drive/root:/BP_Attachments/${reqId}/${file.name}:/content`,
-        { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` }, body: buf }
+        `${GRAPH_API}/drives/${driveId}/root:/BP_Attachments/${reqId}/${encodedName}:/content`,
+        { method: 'PUT', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': file.type || 'application/octet-stream' }, body: buf }
       );
     }
 
@@ -618,11 +621,13 @@ async function showDetail(requestId) {
 
     let filesHtml = '';
     try {
-      const files = await callGraph(`/sites/${siteId}/drive/root:/BP_Attachments/${requestId}:/children`);
+      const driveInfo = await callGraph(`/sites/${siteId}/drive`);
+      const driveId = driveInfo.id;
+      const files = await callGraph(`/drives/${driveId}/root:/BP_Attachments/${requestId}:/children`);
       if (files.value && files.value.length > 0) {
         filesHtml = files.value.map(file =>
           `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid #edebe9;font-size:13px;">
-            <span>📎</span>
+            <span style="font-size:14px">📎</span>
             <a href="${file.webUrl}" target="_blank" style="color:#0078d4;text-decoration:none;">${file.name}</a>
             <span style="color:#605e5c;font-size:11px">(${(file.size/1024).toFixed(1)} KB)</span>
           </div>`
@@ -631,7 +636,7 @@ async function showDetail(requestId) {
         filesHtml = '<div style="font-size:13px;color:#605e5c">첨부파일 없음</div>';
       }
     } catch(e) {
-      filesHtml = '<div style="font-size:13px;color:#605e5c">첨부파일 조회 불가</div>';
+      filesHtml = '<div style="font-size:13px;color:#a4262c">첨부파일 조회 오류: ' + e.message + '</div>';
     }
 
     document.getElementById('modal-content').innerHTML = `
