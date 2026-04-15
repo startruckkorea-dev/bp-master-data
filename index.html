@@ -288,6 +288,15 @@
   </div>
 </div>
 
+
+<div id="detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:998;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:8px;padding:28px 32px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;position:relative;">
+    <button onclick="closeModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#605e5c;">×</button>
+    <div style="font-size:16px;font-weight:600;margin-bottom:16px;color:#323130;">신청 상세 내용</div>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
 <div class="loading" id="loading">
   <div class="loading-box">처리 중입니다...</div>
 </div>
@@ -584,14 +593,14 @@ async function loadApprovalQueue() {
         const req = await callGraph(`/sites/${siteId}/lists/BP_Requests/items/${f.RequestID}?$expand=fields`);
         reqFields = req.fields;
       } catch(e) {}
-      return `<tr>
+      return `<tr style="cursor:pointer" onclick="showDetail(${f.RequestID}, event)">
         <td>${f.RequestID}</td>
         <td>${reqFields.RequesterEmail || ''}</td>
         <td>${reqFields.BPType || ''}</td>
         <td>${reqFields.SubCategory || ''}</td>
         <td><span class="status-badge status-${reqFields.Status}">${reqFields.Status || ''}</span></td>
         <td>${reqFields.RequestDate ? reqFields.RequestDate.slice(0,10) : ''}</td>
-        <td>
+        <td onclick="event.stopPropagation()">
           <button class="btn-primary" style="padding:4px 12px;font-size:12px" onclick="processApproval(${item.id},'승인',${f.RequestID},'${f.ApproverRole}')">승인</button>
           <button class="btn-secondary" style="padding:4px 12px;font-size:12px;margin-left:4px" onclick="processApproval(${item.id},'반려',${f.RequestID},'${f.ApproverRole}')">반려</button>
         </td>
@@ -599,6 +608,57 @@ async function loadApprovalQueue() {
     }));
     tbody.innerHTML = rows.join('');
   } catch(e) {}
+}
+
+async function showDetail(requestId) {
+  showLoading(true);
+  try {
+    const req = await callGraph(`/sites/${siteId}/lists/BP_Requests/items/${requestId}?$expand=fields`);
+    const f = req.fields;
+
+    let filesHtml = '';
+    try {
+      const files = await callGraph(`/sites/${siteId}/drive/root:/BP_Attachments/${requestId}:/children`);
+      if (files.value && files.value.length > 0) {
+        filesHtml = files.value.map(file =>
+          `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid #edebe9;font-size:13px;">
+            <span>📎</span>
+            <a href="${file.webUrl}" target="_blank" style="color:#0078d4;text-decoration:none;">${file.name}</a>
+            <span style="color:#605e5c;font-size:11px">(${(file.size/1024).toFixed(1)} KB)</span>
+          </div>`
+        ).join('');
+      } else {
+        filesHtml = '<div style="font-size:13px;color:#605e5c">첨부파일 없음</div>';
+      }
+    } catch(e) {
+      filesHtml = '<div style="font-size:13px;color:#605e5c">첨부파일 조회 불가</div>';
+    }
+
+    document.getElementById('modal-content').innerHTML = `
+      <table style="width:100%;font-size:13px;border-collapse:collapse">
+        <tr><td style="padding:7px 0;color:#605e5c;width:120px">신청번호</td><td style="padding:7px 0;font-weight:500">${requestId}</td></tr>
+        <tr><td style="padding:7px 0;color:#605e5c">신청자</td><td style="padding:7px 0">${f.RequesterEmail || ''}</td></tr>
+        <tr><td style="padding:7px 0;color:#605e5c">Type</td><td style="padding:7px 0">${f.BPType || ''}</td></tr>
+        <tr><td style="padding:7px 0;color:#605e5c">Sub Category</td><td style="padding:7px 0">${f.SubCategory || ''}</td></tr>
+        <tr><td style="padding:7px 0;color:#605e5c">BP Code</td><td style="padding:7px 0">${f.BPCode || '-'}</td></tr>
+        <tr><td style="padding:7px 0;color:#605e5c">신청일</td><td style="padding:7px 0">${f.RequestDate ? f.RequestDate.slice(0,10) : ''}</td></tr>
+        <tr><td style="padding:7px 0;color:#605e5c;vertical-align:top">요청사항</td><td style="padding:7px 0;white-space:pre-wrap;line-height:1.6">${f.Description || ''}</td></tr>
+      </table>
+      <div style="margin-top:14px;font-size:13px;font-weight:500;color:#323130;margin-bottom:8px">첨부파일</div>
+      ${filesHtml}
+    `;
+
+    const modal = document.getElementById('detail-modal');
+    modal.style.display = 'flex';
+  } catch(e) {
+    alert('상세 조회 오류: ' + e.message);
+  } finally {
+    showLoading(false);
+  }
+}
+
+function closeModal() {
+  document.getElementById('detail-modal').style.display = 'none';
 }
 
 async function processApproval(approvalItemId, action, requestId, role) {
