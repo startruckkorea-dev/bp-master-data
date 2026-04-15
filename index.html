@@ -317,7 +317,7 @@ async function signIn() {
 }
 
 function signOut() {
-  msalInstance.logoutPopup();
+  msalInstance.logoutRedirect();
 }
 
 async function getToken() {
@@ -364,10 +364,12 @@ async function checkApproverRole() {
       (item.fields.ApproverEmail || '').toLowerCase() === currentUser.username.toLowerCase() &&
       item.fields.Status === '대기'
     );
-    if (mine.length > 0) {
-      document.getElementById('tab-approval-btn').style.display = 'block';
-    }
-  } catch(e) {}
+    const btn = document.getElementById('tab-approval-btn');
+    btn.style.display = mine.length > 0 ? 'block' : 'none';
+    if (mine.length > 0) await loadApprovalQueue();
+  } catch(e) {
+    console.error('checkApproverRole error:', e);
+  }
 }
 
 function switchTab(name) {
@@ -653,27 +655,33 @@ async function processApproval(approvalItemId, action, requestId, role) {
       authority: `https://login.microsoftonline.com/${TENANT_ID}`,
       redirectUri: window.location.origin + window.location.pathname
     },
-    cache: { cacheLocation: 'sessionStorage' }
+    cache: { cacheLocation: 'localStorage' }
   };
 
   msalInstance = await msal.PublicClientApplication.createPublicClientApplication(msalConfig);
 
   const btn = document.getElementById('btn-login');
-  btn.disabled = false;
-  btn.style.background = '';
-  btn.style.cursor = '';
-  btn.textContent = 'Microsoft 계정으로 로그인';
 
   const resp = await msalInstance.handleRedirectPromise();
   if (resp) {
     msalInstance.setActiveAccount(resp.account);
     await initApp(resp.account);
+    return;
+  }
+
+  const accounts = msalInstance.getAllAccounts();
+  if (accounts.length > 0) {
+    msalInstance.setActiveAccount(accounts[0]);
+    btn.disabled = false;
+    btn.style.background = '';
+    btn.style.cursor = '';
+    btn.textContent = 'Microsoft 계정으로 로그인';
+    await initApp(accounts[0]);
   } else {
-    const accounts = msalInstance.getAllAccounts();
-    if (accounts.length > 0) {
-      msalInstance.setActiveAccount(accounts[0]);
-      await initApp(accounts[0]);
-    }
+    btn.disabled = false;
+    btn.style.background = '';
+    btn.style.cursor = '';
+    btn.textContent = 'Microsoft 계정으로 로그인';
   }
 })();
 </script>
