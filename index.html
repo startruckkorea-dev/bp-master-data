@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BP Master Data Management</title>
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.28.0/lib/msal-browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100vh; }
@@ -171,9 +172,53 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 
     <div class="card">
       <div class="card-title">결재라인 설정</div>
-      <div class="appr-row"><label>1차 결재자</label><input type="text" id="a1-name" placeholder="이름"><input type="email" id="a1-email" placeholder="이메일"></div>
-      <div class="appr-row"><label>2차 결재자</label><input type="text" id="a2-name" placeholder="이름"><input type="email" id="a2-email" placeholder="이메일"></div>
-      <div class="appr-row"><label>회계 담당자</label><input type="text" id="a3-name" placeholder="이름"><input type="email" id="a3-email" placeholder="이메일"></div>
+
+      <div style="margin-bottom:16px">
+        <div style="font-size:13px;font-weight:500;color:#323130;margin-bottom:8px">1차 결재자 <span style="color:#a4262c">*</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:6px">
+          <select id="a1-dept" onchange="onDeptChange(1)" style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px">
+            <option value="">-- 부서 선택 --</option>
+          </select>
+          <select id="a1-team" onchange="onTeamChange(1)" disabled style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px">
+            <option value="">-- 팀 선택 --</option>
+          </select>
+          <select id="a1-person" onchange="onPersonChange(1)" disabled style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px">
+            <option value="">-- 직원 선택 --</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <input type="text" id="a1-name" placeholder="이름" readonly style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px;background:#f3f2f1">
+          <input type="email" id="a1-email" placeholder="이메일" readonly style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px;background:#f3f2f1">
+        </div>
+      </div>
+
+      <div style="margin-bottom:16px">
+        <div style="font-size:13px;font-weight:500;color:#323130;margin-bottom:8px">2차 결재자</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:6px">
+          <select id="a2-dept" onchange="onDeptChange(2)" style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px">
+            <option value="">-- 부서 선택 --</option>
+          </select>
+          <select id="a2-team" onchange="onTeamChange(2)" disabled style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px">
+            <option value="">-- 팀 선택 --</option>
+          </select>
+          <select id="a2-person" onchange="onPersonChange(2)" disabled style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px">
+            <option value="">-- 직원 선택 --</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <input type="text" id="a2-name" placeholder="이름" readonly style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px;background:#f3f2f1">
+          <input type="email" id="a2-email" placeholder="이메일" readonly style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px;background:#f3f2f1">
+        </div>
+      </div>
+
+      <div style="margin-bottom:8px">
+        <div style="font-size:13px;font-weight:500;color:#323130;margin-bottom:8px">회계 담당자 <span style="font-size:11px;color:#605e5c;font-weight:400">(고정)</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <input type="text" id="a3-name" value="Hyunju Gong" readonly style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px;background:#f3f2f1;color:#605e5c">
+          <input type="email" id="a3-email" value="Hyunju.gong@hyosung.com" readonly style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px;background:#f3f2f1;color:#605e5c">
+        </div>
+      </div>
+
       <div class="notice info" style="margin-top:8px">최종 승인 후 회계 담당자가 BP Code를 직접 입력합니다.</div>
     </div>
 
@@ -258,6 +303,7 @@ async function boot(account) {
     siteId = site.id;
     await loadMyList();
     await checkApprover();
+    await loadEmployees();
   } catch(e) { alert('SharePoint 연결 오류: ' + e.message); }
 }
 
@@ -272,6 +318,80 @@ async function checkApprover() {
     document.getElementById('tab-appr-btn').style.display = mine.length ? 'block' : 'none';
     if (mine.length) await loadApprovalQueue();
   } catch(e) {}
+}
+
+let employeeData = [];
+
+async function loadEmployees() {
+  try {
+    const drivesData = await api(`/sites/${siteId}/drives`);
+    const docDrive = drivesData.value.find(d => d.name === '문서') || drivesData.value[0];
+    const driveId = docDrive.id;
+    const t = await token();
+    const res = await fetch(
+      `${GRAPH}/drives/${driveId}/root:/employee_search.xlsx:/content`,
+      { headers: { Authorization: `Bearer ${t}` } }
+    );
+    if (!res.ok) throw new Error('파일 로드 실패');
+    const buf = await res.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws);
+    employeeData = rows.map(r => ({
+      company: r['Company'] || '',
+      dept: r['Department'] || '',
+      team: r['Team'] || '',
+      name: r['EngName'] || '',
+      email: r['EMail'] || ''
+    })).filter(r => r.email);
+    populateDepts(1);
+    populateDepts(2);
+  } catch(e) {
+    console.warn('직원 데이터 로드 실패:', e);
+  }
+}
+
+function populateDepts(idx) {
+  const depts = [...new Set(employeeData.map(e => e.dept))].sort();
+  const sel = document.getElementById(`a${idx}-dept`);
+  sel.innerHTML = '<option value="">-- 부서 선택 --</option>' +
+    depts.map(d => `<option value="${d}">${d}</option>`).join('');
+}
+
+function onDeptChange(idx) {
+  const dept = document.getElementById(`a${idx}-dept`).value;
+  const teamSel = document.getElementById(`a${idx}-team`);
+  const personSel = document.getElementById(`a${idx}-person`);
+  teamSel.innerHTML = '<option value="">-- 팀 선택 --</option>';
+  personSel.innerHTML = '<option value="">-- 직원 선택 --</option>';
+  document.getElementById(`a${idx}-name`).value = '';
+  document.getElementById(`a${idx}-email`).value = '';
+  if (!dept) { teamSel.disabled = true; personSel.disabled = true; return; }
+  const teams = [...new Set(employeeData.filter(e => e.dept === dept).map(e => e.team))].sort();
+  teamSel.innerHTML = '<option value="">-- 팀 선택 --</option>' +
+    teams.map(t => `<option value="${t}">${t}</option>`).join('');
+  teamSel.disabled = false;
+  personSel.disabled = true;
+}
+
+function onTeamChange(idx) {
+  const dept = document.getElementById(`a${idx}-dept`).value;
+  const team = document.getElementById(`a${idx}-team`).value;
+  const personSel = document.getElementById(`a${idx}-person`);
+  document.getElementById(`a${idx}-name`).value = '';
+  document.getElementById(`a${idx}-email`).value = '';
+  if (!team) { personSel.disabled = true; personSel.innerHTML = '<option value="">-- 직원 선택 --</option>'; return; }
+  const persons = employeeData.filter(e => e.dept === dept && e.team === team);
+  personSel.innerHTML = '<option value="">-- 직원 선택 --</option>' +
+    persons.map(p => `<option value="${p.email}">${p.name}</option>`).join('');
+  personSel.disabled = false;
+}
+
+function onPersonChange(idx) {
+  const email = document.getElementById(`a${idx}-person`).value;
+  const person = employeeData.find(e => e.email === email);
+  document.getElementById(`a${idx}-name`).value = person ? person.name : '';
+  document.getElementById(`a${idx}-email`).value = person ? person.email : '';
 }
 
 function fmtDate(iso) {
@@ -351,10 +471,19 @@ function renderFiles() {
 }
 
 function resetForm() {
-  ['sel-type','sel-subcat','inp-bpcode','inp-desc','a1-name','a1-email','a2-name','a2-email','a3-name','a3-email'].forEach(id => {
+  ['sel-type','sel-subcat','inp-bpcode','inp-desc'].forEach(id => {
     const el = document.getElementById(id);
     el.value = '';
     if (id==='sel-subcat'||id==='inp-bpcode') el.disabled = true;
+  });
+  [1,2].forEach(idx => {
+    document.getElementById(`a${idx}-dept`).value = '';
+    document.getElementById(`a${idx}-team`).innerHTML = '<option value="">-- 팀 선택 --</option>';
+    document.getElementById(`a${idx}-team`).disabled = true;
+    document.getElementById(`a${idx}-person`).innerHTML = '<option value="">-- 직원 선택 --</option>';
+    document.getElementById(`a${idx}-person`).disabled = true;
+    document.getElementById(`a${idx}-name`).value = '';
+    document.getElementById(`a${idx}-email`).value = '';
   });
   files = []; renderFiles();
   document.getElementById('docs-box').textContent = 'Type을 먼저 선택해주세요.';
