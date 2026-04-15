@@ -318,15 +318,28 @@ function onSubCatChange() {
 }
 
 function onFileSelect(e) {
-  Array.from(e.target.files).forEach(f => { if (!files.find(x=>x.name===f.name)) files.push(f); });
+  const newFiles = Array.from(e.target.files);
+  for (const f of newFiles) {
+    if (files.find(x => x.name === f.name)) continue;
+    files.push(f);
+  }
+  const totalMB = files.reduce((sum, f) => sum + f.size, 0) / 1024 / 1024;
+  if (totalMB > 10) {
+    alert(`첨부파일 총 용량이 ${totalMB.toFixed(1)}MB입니다. 10MB 이하로 첨부해주세요.`);
+    files = files.filter(f => !newFiles.includes(f));
+  }
   renderFiles();
   document.getElementById('file-notice').style.display = 'none';
+  document.getElementById('file-input').value = '';
 }
 function removeFile(i) { files.splice(i,1); renderFiles(); }
 function renderFiles() {
+  const totalMB = files.reduce((sum, f) => sum + f.size, 0) / 1024 / 1024;
+  const totalColor = totalMB > 10 ? '#a4262c' : '#605e5c';
+  const totalHtml = files.length ? `<div style="font-size:12px;color:${totalColor};margin-top:6px;text-align:right">총 ${totalMB.toFixed(1)} MB / 10 MB</div>` : '';
   document.getElementById('file-list').innerHTML = files.map((f,i) =>
     `<div class="file-item"><span>${f.name} <span style="color:#605e5c">(${(f.size/1024).toFixed(1)} KB)</span></span><button onclick="removeFile(${i})">×</button></div>`
-  ).join('');
+  ).join('') + totalHtml;
 }
 
 function resetForm() {
@@ -378,6 +391,7 @@ async function submitRequest() {
       try {
         const t = await token();
         const buf = await file.arrayBuffer();
+        // 방법1: Graph driveItem 업로드
         const res = await fetch(
           `${GRAPH}/sites/${siteId}/lists/BP_Requests/items/${reqId}/driveItem:/${encodeURIComponent(file.name)}:/content`,
           { method: 'PUT', headers: { Authorization: `Bearer ${t}`, 'Content-Type': file.type||'application/octet-stream' }, body: buf }
@@ -385,8 +399,17 @@ async function submitRequest() {
         if (res.ok) {
           const uploaded = await res.json();
           fileLinks.push(`${file.name}|${uploaded.webUrl}`);
+          console.log('파일 업로드 성공(driveItem):', file.name, uploaded.webUrl);
+        } else {
+          const errText = await res.text();
+          console.warn('driveItem 업로드 실패:', res.status, errText);
+          // 방법2: 파일명만 기록
+          fileLinks.push(`${file.name}|#업로드실패`);
         }
-      } catch(e) { console.warn('파일 업로드 실패:', file.name, e); }
+      } catch(e) {
+        console.warn('파일 업로드 오류:', file.name, e);
+        fileLinks.push(`${file.name}|#업로드실패`);
+      }
     }
     if (fileLinks.length) {
       await api(`/sites/${siteId}/lists/BP_Requests/items/${reqId}`, 'PATCH', {
