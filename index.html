@@ -387,30 +387,29 @@ async function submitRequest() {
     const reqId = item.id;
 
     const fileLinks = [];
-    for (const file of files) {
-      try {
-        const t = await token();
-        const buf = await file.arrayBuffer();
-        // 방법1: Graph driveItem 업로드
-        const res = await fetch(
-          `${GRAPH}/sites/${siteId}/lists/BP_Requests/items/${reqId}/driveItem:/${encodeURIComponent(file.name)}:/content`,
-          { method: 'PUT', headers: { Authorization: `Bearer ${t}`, 'Content-Type': file.type||'application/octet-stream' }, body: buf }
-        );
-        if (res.ok) {
-          const uploaded = await res.json();
-          fileLinks.push(`${file.name}|${uploaded.webUrl}`);
-          console.log('파일 업로드 성공(driveItem):', file.name, uploaded.webUrl);
-        } else {
-          const errText = await res.text();
-          console.warn('driveItem 업로드 실패:', res.status, errText);
-          // 방법2: 파일명만 기록
-          fileLinks.push(`${file.name}|#업로드실패`);
-        }
-      } catch(e) {
-        console.warn('파일 업로드 오류:', file.name, e);
-        fileLinks.push(`${file.name}|#업로드실패`);
+    try {
+      const drivesData = await api(`/sites/${siteId}/drives`);
+      const drive = drivesData.value.find(d => d.name === '문서') || drivesData.value[0];
+      const driveId = drive.id;
+      for (const file of files) {
+        try {
+          const t = await token();
+          const buf = await file.arrayBuffer();
+          const res = await fetch(
+            `${GRAPH}/drives/${driveId}/root:/BP_Requests/${reqId}/${encodeURIComponent(file.name)}:/content`,
+            { method: 'PUT', headers: { Authorization: `Bearer ${t}`, 'Content-Type': file.type||'application/octet-stream' }, body: buf }
+          );
+          if (res.ok) {
+            const uploaded = await res.json();
+            fileLinks.push(`${file.name}|${uploaded.webUrl}`);
+            console.log('업로드 성공:', file.name);
+          } else {
+            const err = await res.text();
+            console.warn('업로드 실패:', res.status, err);
+          }
+        } catch(e) { console.warn('업로드 오류:', e); }
       }
-    }
+    } catch(e) { console.warn('드라이브 조회 실패:', e); }
     if (fileLinks.length) {
       await api(`/sites/${siteId}/lists/BP_Requests/items/${reqId}`, 'PATCH', {
         fields: { AttachedFiles: fileLinks.join(';') }
