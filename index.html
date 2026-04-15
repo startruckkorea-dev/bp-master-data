@@ -272,6 +272,12 @@ async function checkApprover() {
   } catch(e) {}
 }
 
+function fmtDate(iso) {
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function switchTab(name) {
   ['form','list','approval'].forEach(t => {
     document.getElementById('tab-'+t).style.display = t===name ? 'block' : 'none';
@@ -453,7 +459,7 @@ async function loadMyList() {
         <td>${item.id}</td><td>${f.BPType||''}</td><td>${f.SubCategory||''}</td>
         <td>${f.BPCode||'-'}</td>
         <td><span class="badge badge-${f.Status}">${f.Status}</span></td>
-        <td>${f.RequestDate?f.RequestDate.slice(0,10):''}</td>
+        <td>${f.RequestDate?fmtDate(f.RequestDate):''}</td>
       </tr>`;
     }).join('');
   } catch(e) { tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:32px;color:#a4262c">오류: ${e.message}</td></tr>`; }
@@ -477,7 +483,7 @@ async function loadApprovalQueue() {
         <td style="cursor:pointer;color:#0078d4" onclick="showDetail(${f.RequestID})">${f.RequestID}</td>
         <td>${rf.RequesterEmail||''}</td><td>${rf.BPType||''}</td><td>${rf.SubCategory||''}</td>
         <td><span class="badge badge-${rf.Status}">${rf.Status||''}</span></td>
-        <td>${rf.RequestDate?rf.RequestDate.slice(0,10):''}</td>
+        <td>${rf.RequestDate?fmtDate(rf.RequestDate):''}</td>
         <td>
           <button class="btn-primary" style="padding:4px 12px;font-size:12px" onclick="processApproval(${item.id},'승인',${f.RequestID},'${f.ApproverRole}')">승인</button>
           <button class="btn-secondary" style="padding:4px 12px;font-size:12px;margin-left:4px" onclick="processApproval(${item.id},'반려',${f.RequestID},'${f.ApproverRole}')">반려</button>
@@ -496,11 +502,19 @@ async function showDetail(requestId) {
     let filesHtml = '<div style="font-size:13px;color:#605e5c">첨부파일 없음</div>';
     if (f.AttachedFiles) {
       filesHtml = f.AttachedFiles.split(';').map(entry => {
-        const [name, url] = entry.split('|');
+        const pipeIdx = entry.indexOf('|');
+        if (pipeIdx === -1) return '';
+        const name = entry.slice(0, pipeIdx);
+        let url = entry.slice(pipeIdx + 1);
+        if (url && !url.startsWith('http')) url = 'https:' + url;
+        if (!url || url === '#업로드실패') {
+          return `<div style="padding:5px 0;border-bottom:0.5px solid #edebe9;font-size:13px;color:#605e5c">📎 ${name} (링크 없음)</div>`;
+        }
         return `<div style="padding:5px 0;border-bottom:0.5px solid #edebe9;font-size:13px">
           📎 <a href="${url}" target="_blank" style="color:#0078d4;text-decoration:none">${name}</a>
         </div>`;
-      }).join('');
+      }).filter(Boolean).join('');
+      if (!filesHtml) filesHtml = '<div style="font-size:13px;color:#605e5c">첨부파일 없음</div>';
     }
     document.getElementById('modal-content').innerHTML = `
       <div class="modal-row"><div class="modal-label">신청번호</div><div class="modal-value">${requestId}</div></div>
@@ -508,7 +522,7 @@ async function showDetail(requestId) {
       <div class="modal-row"><div class="modal-label">Type</div><div class="modal-value">${f.BPType||''}</div></div>
       <div class="modal-row"><div class="modal-label">Sub Category</div><div class="modal-value">${f.SubCategory||''}</div></div>
       <div class="modal-row"><div class="modal-label">BP Code</div><div class="modal-value">${f.BPCode||'-'}</div></div>
-      <div class="modal-row"><div class="modal-label">신청일</div><div class="modal-value">${f.RequestDate?f.RequestDate.slice(0,10):''}</div></div>
+      <div class="modal-row"><div class="modal-label">신청일</div><div class="modal-value">${f.RequestDate?fmtDate(f.RequestDate):''}</div></div>
       <div class="modal-row"><div class="modal-label">요청사항</div><div class="modal-value" style="white-space:pre-wrap">${f.Description||''}</div></div>
       <div style="margin-top:14px;font-size:13px;font-weight:600;margin-bottom:8px">첨부파일</div>
       ${filesHtml}
