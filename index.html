@@ -509,15 +509,21 @@ async function showDetail(requestId) {
     const f = r.fields;
     let filesHtml = '<div style="font-size:13px;color:#605e5c">첨부파일 없음</div>';
     if (f.AttachedFiles) {
-      filesHtml = f.AttachedFiles.split(';').map(entry => {
+      const decoded = f.AttachedFiles
+        .replace(/&#58;/g, ':')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/<[^>]*>/g, '');
+      filesHtml = decoded.split(';').map(entry => {
         const pipeIdx = entry.indexOf('|');
         if (pipeIdx === -1) return '';
-        const name = entry.slice(0, pipeIdx);
-        let url = entry.slice(pipeIdx + 1);
-        if (url && !url.startsWith('http')) url = 'https:' + url;
+        const name = entry.slice(0, pipeIdx).trim();
+        let url = entry.slice(pipeIdx + 1).trim();
         if (!url || url === '#업로드실패') {
           return `<div style="padding:5px 0;border-bottom:0.5px solid #edebe9;font-size:13px;color:#605e5c">📎 ${name} (링크 없음)</div>`;
         }
+        if (!url.startsWith('http')) url = 'https:' + url;
         return `<div style="padding:5px 0;border-bottom:0.5px solid #edebe9;font-size:13px">
           📎 <a href="${url}" target="_blank" style="color:#0078d4;text-decoration:none">${name}</a>
         </div>`;
