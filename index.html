@@ -513,7 +513,7 @@ async function submitRequest() {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': file.type || 'application/octet-stream',
-            'x-ms-file-name': file.name
+            'x-ms-file-name': encodedName
           },
           body: buf
         }
