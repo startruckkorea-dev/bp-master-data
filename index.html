@@ -118,6 +118,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
     <button class="tab active" onclick="switchTab('form')">신청서 작성</button>
     <button class="tab" onclick="switchTab('list')">내 신청 목록</button>
     <button class="tab" id="tab-appr-btn" onclick="switchTab('approval')" style="display:none">결재함</button>
+    <button class="tab" id="tab-admin-btn" onclick="switchTab('admin')" style="display:none">관리자</button>
   </div>
 
   <div id="tab-form">
@@ -214,8 +215,8 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
       <div style="margin-bottom:8px">
         <div style="font-size:13px;font-weight:500;color:#323130;margin-bottom:8px">회계 담당자 <span style="font-size:11px;color:#605e5c;font-weight:400">(고정)</span></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <input type="text" id="a3-name" value="Hyunju Gong" readonly style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px;background:#f3f2f1;color:#605e5c">
-          <input type="email" id="a3-email" value="Hyunju.gong@hyosung.com" readonly style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px;background:#f3f2f1;color:#605e5c">
+          <input type="text" id="a3-name" readonly placeholder="Type 선택 후 자동 설정" style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px;background:#f3f2f1;color:#605e5c">
+          <input type="email" id="a3-email" readonly placeholder="Type 선택 후 자동 설정" style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px;background:#f3f2f1;color:#605e5c">
         </div>
       </div>
 
@@ -247,6 +248,33 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
   </div>
 </div>
 
+  <div id="tab-admin" style="display:none">
+    <div class="card" style="padding:16px 24px;margin-bottom:12px">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="admin-filter-status" onchange="loadAdminList()" style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px">
+          <option value="">전체 상태</option>
+          <option value="대기">대기</option>
+          <option value="승인완료">승인완료</option>
+          <option value="반려">반려</option>
+        </select>
+        <select id="admin-filter-type" onchange="loadAdminList()" style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px">
+          <option value="">전체 Type</option>
+          <option value="Vendor">Vendor</option>
+          <option value="Customer">Customer</option>
+        </select>
+        <input type="text" id="admin-filter-search" oninput="loadAdminList()" placeholder="신청자 검색..." style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;width:180px">
+        <span id="admin-count" style="font-size:13px;color:#605e5c;margin-left:auto"></span>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="list-table">
+        <thead><tr><th>번호</th><th>신청자</th><th>Type</th><th>Sub Category</th><th>BP Code</th><th>상태</th><th>신청일</th></tr></thead>
+        <tbody id="admin-body"><tr><td colspan="7" style="text-align:center;padding:32px;color:#605e5c">불러오는 중...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <div id="detail-modal">
   <div class="modal-box">
     <button class="modal-close" onclick="closeModal()">×</button>
@@ -263,6 +291,12 @@ const TENANT_ID = '19cab1f5-21f4-44df-8ac6-96d6ca595203';
 const SITE_PATH = 'startruckkorea.sharepoint.com:/sites/STK-DB:';
 const GRAPH     = 'https://graph.microsoft.com/v1.0';
 const SCOPES    = ['User.Read', 'Sites.ReadWrite.All', 'Files.ReadWrite.All'];
+const ADMIN_EMAILS = [
+  'jihyun.ma@hyosung.com',
+  'hyunju.gong@hyosung.com',
+  'Jihyun.ma@hyosung.com',
+  'Hyunju.gong@hyosung.com'
+];
 
 let msalApp = null, user = null, siteId = null;
 let files = [];
@@ -318,6 +352,8 @@ async function checkApprover() {
     document.getElementById('tab-appr-btn').style.display = mine.length ? 'block' : 'none';
     if (mine.length) await loadApprovalQueue();
   } catch(e) {}
+  const isAdmin = ADMIN_EMAILS.map(e=>e.toLowerCase()).includes(user.username.toLowerCase());
+  document.getElementById('tab-admin-btn').style.display = isAdmin ? 'block' : 'none';
 }
 
 let employeeData = [];
@@ -401,14 +437,15 @@ function fmtDate(iso) {
 }
 
 function switchTab(name) {
-  ['form','list','approval'].forEach(t => {
+  ['form','list','approval','admin'].forEach(t => {
     document.getElementById('tab-'+t).style.display = t===name ? 'block' : 'none';
   });
   document.querySelectorAll('.tab').forEach((b,i) => {
-    b.classList.toggle('active', ['form','list','approval'][i]===name);
+    b.classList.toggle('active', ['form','list','approval','admin'][i]===name);
   });
   if (name==='list') loadMyList();
   if (name==='approval') loadApprovalQueue();
+  if (name==='admin') loadAdminList();
 }
 
 function onTypeChange() {
@@ -423,6 +460,16 @@ function onTypeChange() {
     Customer: '1. Customer Registration Form\n2. 통장사본(환불)\n3. 사업자등록증\n4. Sanction Check(해외업체의 경우)'
   };
   document.getElementById('docs-box').textContent = docs[type] || 'Type을 먼저 선택해주세요.';
+  if (type === 'Vendor') {
+    document.getElementById('a3-name').value = 'Jihyun Ma';
+    document.getElementById('a3-email').value = 'Jihyun.ma@hyosung.com';
+  } else if (type === 'Customer') {
+    document.getElementById('a3-name').value = 'Hyunju Gong';
+    document.getElementById('a3-email').value = 'Hyunju.gong@hyosung.com';
+  } else {
+    document.getElementById('a3-name').value = '';
+    document.getElementById('a3-email').value = '';
+  }
 }
 
 function onSubCatChange() {
@@ -701,6 +748,45 @@ async function showDetail(requestId) {
     modal.style.justifyContent = 'center';
   } catch(e) { alert('상세 조회 오류: ' + e.message); }
   finally { loading(false); }
+}
+
+let allRequestsCache = [];
+
+async function loadAdminList() {
+  if (!siteId) return;
+  const tbody = document.getElementById('admin-body');
+  const filterStatus = document.getElementById('admin-filter-status').value;
+  const filterType = document.getElementById('admin-filter-type').value;
+  const filterSearch = (document.getElementById('admin-filter-search').value||'').toLowerCase();
+  try {
+    if (!allRequestsCache.length) {
+      const data = await api(`/sites/${siteId}/lists/BP_Requests/items?$expand=fields&$top=500`);
+      allRequestsCache = data.value.sort((a,b) => new Date(b.fields.RequestDate)-new Date(a.fields.RequestDate));
+    }
+    let items = allRequestsCache;
+    if (filterStatus) items = items.filter(i => i.fields.Status === filterStatus);
+    if (filterType)   items = items.filter(i => i.fields.BPType === filterType);
+    if (filterSearch) items = items.filter(i => (i.fields.RequesterEmail||'').toLowerCase().includes(filterSearch));
+    document.getElementById('admin-count').textContent = `총 ${items.length}건`;
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:#605e5c">조회된 항목이 없습니다.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = items.map(item => {
+      const f = item.fields;
+      return `<tr style="cursor:pointer" onclick="showDetail(${item.id})">
+        <td>${item.id}</td>
+        <td>${f.RequesterEmail||''}</td>
+        <td>${f.BPType||''}</td>
+        <td>${f.SubCategory||''}</td>
+        <td>${f.BPCode||'-'}</td>
+        <td><span class="badge badge-${f.Status}">${f.Status}</span></td>
+        <td>${f.RequestDate?fmtDate(f.RequestDate):''}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:#a4262c">오류: ${e.message}</td></tr>`;
+  }
 }
 
 async function processApproval(apprId, action, reqId, role) {
