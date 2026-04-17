@@ -302,11 +302,20 @@ let files = [];
 
 async function signIn() {
   try {
-    const r = await msal.loginPopup({ scopes: SCOPES });
-    msal.setActiveAccount(r.account);
-    await boot(r.account);
+    // iframe/팝업 환경 감지 → redirect 방식으로 전환
+    if (window !== window.top) {
+      await msal.loginRedirect({ scopes: SCOPES });
+    } else {
+      const r = await msal.loginPopup({ scopes: SCOPES });
+      msal.setActiveAccount(r.account);
+      await boot(r.account);
+    }
   } catch(e) {
-    showError(e.message);
+    if (e.errorCode === 'block_nested_popups') {
+      await msal.loginRedirect({ scopes: SCOPES });
+    } else {
+      showError(e.message);
+    }
   }
 }
 
