@@ -294,7 +294,7 @@ const SCOPES    = ['User.Read', 'Sites.ReadWrite.All', 'Files.ReadWrite.All'];
 const ADMIN_EMAILS = [
   'jihyun.ma@hyosung.com',
   'hyunju.gong@hyosung.com',
-  'admin@startruckkorea.onmicrosoft.com'
+  'admin@corptb.onmicrosoft.com'
 ];
 
 let msalApp = null, user = null, siteId = null;
@@ -302,14 +302,6 @@ let files = [];
 
 async function signIn() {
   try {
-    // iframe 안이면 새 탭으로 열기
-    if (window !== window.top) {
-      window.open(
-        'https://startruckkorea-dev.github.io/bp-master-data/',
-        '_blank'
-      );
-      return;
-    }
     const r = await msal.loginPopup({ scopes: SCOPES });
     msal.setActiveAccount(r.account);
     await boot(r.account);
