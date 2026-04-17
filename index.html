@@ -302,20 +302,19 @@ let files = [];
 
 async function signIn() {
   try {
-    // iframe/팝업 환경 감지 → redirect 방식으로 전환
+    // iframe 안이면 새 탭으로 열기
     if (window !== window.top) {
-      await msal.loginRedirect({ scopes: SCOPES });
-    } else {
-      const r = await msal.loginPopup({ scopes: SCOPES });
-      msal.setActiveAccount(r.account);
-      await boot(r.account);
+      window.open(
+        'https://startruckkorea-dev.github.io/bp-master-data/',
+        '_blank'
+      );
+      return;
     }
+    const r = await msal.loginPopup({ scopes: SCOPES });
+    msal.setActiveAccount(r.account);
+    await boot(r.account);
   } catch(e) {
-    if (e.errorCode === 'block_nested_popups') {
-      await msal.loginRedirect({ scopes: SCOPES });
-    } else {
-      showError(e.message);
-    }
+    showError(e.message);
   }
 }
 
