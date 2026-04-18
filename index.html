@@ -10,6 +10,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100vh; }
 
+/* ── Login ── */
 #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 16px; }
 #login-screen .logo { font-size: 22px; font-weight: 600; color: #323130; letter-spacing: 1px; }
 #login-screen .subtitle { font-size: 14px; color: #605e5c; }
@@ -17,82 +18,110 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 #btn-login:hover:not(:disabled) { background: #006cbe; }
 #btn-login:disabled { background: #c8c6c4; cursor: not-allowed; }
 
-#app { display: none; max-width: 860px; margin: 0 auto; padding: 24px 16px; }
+/* ── App shell ── */
+#app { display: none; max-width: 900px; margin: 0 auto; padding: 24px 16px; }
 
 .header { background: #fff; border-radius: 6px; padding: 16px 24px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #edebe9; }
 .header .title { font-size: 18px; font-weight: 600; color: #323130; }
 .header .user-info { font-size: 13px; color: #605e5c; display: flex; align-items: center; gap: 12px; }
 #btn-logout { background: none; border: 1px solid #d2d0ce; border-radius: 4px; padding: 4px 12px; font-size: 12px; cursor: pointer; color: #323130; }
 
-.tabs { display: flex; gap: 2px; margin-bottom: 16px; }
-.tab { padding: 8px 20px; border: none; background: #fff; border-radius: 4px 4px 0 0; font-size: 14px; cursor: pointer; color: #605e5c; border-bottom: 3px solid transparent; }
+/* ── Tabs ── */
+.tabs { display: flex; gap: 2px; margin-bottom: 16px; flex-wrap: wrap; }
+.tab { padding: 8px 18px; border: none; background: #fff; border-radius: 4px 4px 0 0; font-size: 14px; cursor: pointer; color: #605e5c; border-bottom: 3px solid transparent; }
 .tab.active { color: #0078d4; border-bottom: 3px solid #0078d4; font-weight: 500; }
 
+/* ── Cards ── */
 .card { background: #fff; border-radius: 6px; border: 1px solid #edebe9; padding: 24px; margin-bottom: 16px; }
-.card-title { font-size: 14px; font-weight: 600; color: #323130; margin-bottom: 16px; }
+.card-title { font-size: 14px; font-weight: 600; color: #323130; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #edebe9; }
+.section-title { font-size: 13px; font-weight: 600; color: #0078d4; margin: 18px 0 10px; padding: 6px 10px; background: #f0f6ff; border-radius: 4px; border-left: 3px solid #0078d4; }
 
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+/* ── Form ── */
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px; }
 .form-row.three { grid-template-columns: 1fr 1fr 1fr; }
-.form-group { display: flex; flex-direction: column; gap: 6px; }
-.form-group label { font-size: 13px; font-weight: 500; color: #323130; }
+.form-row.full { grid-template-columns: 1fr; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: 12px; font-weight: 500; color: #605e5c; }
 .form-group label .req { color: #a4262c; margin-left: 3px; }
-.form-group select, .form-group input, .form-group textarea { border: 1px solid #d2d0ce; border-radius: 4px; padding: 7px 10px; font-size: 14px; color: #323130; background: #fff; font-family: inherit; }
+.form-group select, .form-group input, .form-group textarea {
+  border: 1px solid #d2d0ce; border-radius: 4px; padding: 7px 10px;
+  font-size: 13px; color: #323130; background: #fff; font-family: inherit;
+}
 .form-group select:focus, .form-group input:focus, .form-group textarea:focus { outline: none; border-color: #0078d4; }
 .form-group select:disabled, .form-group input:disabled { background: #f3f2f1; color: #a19f9d; cursor: not-allowed; }
+.form-group input[readonly] { background: #f3f2f1; color: #605e5c; }
 .form-group textarea { resize: vertical; min-height: 90px; }
 
-.docs-box { background: #f3f2f1; border-radius: 4px; padding: 10px 12px; font-size: 13px; color: #323130; line-height: 1.7; white-space: pre-line; }
+/* ── Docs box ── */
+.docs-box { background: #f3f2f1; border-radius: 4px; padding: 10px 14px; font-size: 13px; color: #323130; line-height: 1.8; white-space: pre-line; border-left: 3px solid #0078d4; }
 
-.file-area { border: 1.5px dashed #d2d0ce; border-radius: 4px; padding: 16px; text-align: center; cursor: pointer; }
-.file-area:hover { border-color: #0078d4; }
+/* ── Approver block ── */
+.appr-block { background: #f9f9f9; border: 1px solid #edebe9; border-radius: 6px; padding: 14px; margin-bottom: 10px; }
+.appr-block .appr-title { font-size: 12px; font-weight: 600; color: #323130; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.appr-block .appr-title::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #0078d4; }
+.appr-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: end; }
+
+/* ── Files ── */
+.file-area { border: 1.5px dashed #d2d0ce; border-radius: 4px; padding: 16px; text-align: center; cursor: pointer; transition: border-color 0.2s; }
+.file-area:hover { border-color: #0078d4; background: #f0f6ff; }
 .file-area input { display: none; }
 .file-area .hint { font-size: 13px; color: #605e5c; }
-.file-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
-.file-item { display: flex; justify-content: space-between; align-items: center; background: #f3f2f1; border-radius: 4px; padding: 6px 10px; font-size: 13px; }
-.file-item button { background: none; border: none; color: #a4262c; cursor: pointer; font-size: 16px; line-height: 1; }
+.file-list { margin-top: 8px; display: flex; flex-direction: column; gap: 5px; }
+.file-item { display: flex; justify-content: space-between; align-items: center; background: #f3f2f1; border-radius: 4px; padding: 5px 10px; font-size: 12px; }
+.file-item button { background: none; border: none; color: #a4262c; cursor: pointer; }
 
-.appr-row { display: grid; grid-template-columns: 110px 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
-.appr-row label { font-size: 13px; font-weight: 500; color: #323130; }
-
-.btn-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+/* ── Buttons ── */
+.btn-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 .btn-primary { background: #0078d4; color: #fff; border: none; border-radius: 4px; padding: 9px 24px; font-size: 14px; cursor: pointer; font-weight: 500; }
 .btn-primary:hover { background: #006cbe; }
 .btn-secondary { background: #fff; color: #323130; border: 1px solid #d2d0ce; border-radius: 4px; padding: 9px 24px; font-size: 14px; cursor: pointer; }
 .btn-secondary:hover { background: #f3f2f1; }
 
+/* ── Notices ── */
 .notice { font-size: 12px; padding: 8px 12px; border-radius: 4px; margin-top: 6px; }
 .notice.warn { background: #fff4ce; color: #7d5700; }
 .notice.error { background: #fde7e9; color: #a4262c; }
 .notice.info { background: #dff6dd; color: #107c10; }
 
+/* ── Tables ── */
 .list-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.list-table th { background: #f3f2f1; padding: 10px 12px; text-align: left; font-weight: 600; color: #323130; border-bottom: 1px solid #edebe9; }
-.list-table td { padding: 10px 12px; border-bottom: 1px solid #edebe9; color: #323130; }
-.list-table tr:hover td { background: #f3f2f1; cursor: pointer; }
+.list-table th { background: #f3f2f1; padding: 10px 12px; text-align: left; font-weight: 600; color: #323130; border-bottom: 2px solid #edebe9; font-size: 12px; }
+.list-table td { padding: 10px 12px; border-bottom: 1px solid #edebe9; color: #323130; font-size: 13px; }
+.list-table tr:hover td { background: #f0f6ff; cursor: pointer; }
+.list-table tr:last-child td { border-bottom: none; }
 
-.badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+/* ── Badges ── */
+.badge { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; }
 .badge-대기 { background: #fff4ce; color: #7d5700; }
 .badge-승인완료 { background: #dff6dd; color: #107c10; }
 .badge-반려 { background: #fde7e9; color: #a4262c; }
+.badge-type { background: #e8f4ff; color: #0078d4; }
 
+/* ── Modal ── */
 #detail-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 998; align-items: center; justify-content: center; }
-.modal-box { background: #fff; border-radius: 8px; padding: 28px 32px; max-width: 580px; width: 90%; max-height: 80vh; overflow-y: auto; position: relative; }
+.modal-box { background: #fff; border-radius: 8px; padding: 28px 32px; max-width: 600px; width: 95%; max-height: 85vh; overflow-y: auto; position: relative; }
 .modal-close { position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 20px; cursor: pointer; color: #605e5c; }
 .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #323130; }
 .modal-row { display: flex; padding: 7px 0; border-bottom: 0.5px solid #edebe9; font-size: 13px; }
 .modal-row:last-child { border-bottom: none; }
-.modal-label { width: 110px; min-width: 110px; color: #605e5c; }
+.modal-label { width: 120px; min-width: 120px; color: #605e5c; font-size: 12px; }
 .modal-value { flex: 1; color: #323130; word-break: break-all; }
 
+/* ── Loading ── */
 #loading { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); align-items: center; justify-content: center; z-index: 999; }
 #loading.show { display: flex; }
 .loading-box { background: #fff; border-radius: 6px; padding: 28px 40px; font-size: 15px; color: #323130; display: flex; flex-direction: column; align-items: center; gap: 16px; }
 .spinner { width: 32px; height: 32px; border: 3px solid #edebe9; border-top: 3px solid #0078d4; border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Admin filter bar ── */
+.filter-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.filter-bar select, .filter-bar input { border: 1px solid #d2d0ce; border-radius: 4px; padding: 6px 10px; font-size: 13px; }
+.filter-bar input { width: 180px; }
+
 @media (max-width: 600px) {
   .form-row, .form-row.three { grid-template-columns: 1fr; }
-  .appr-row { grid-template-columns: 1fr; }
+  .appr-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -101,8 +130,8 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 <div id="login-screen">
   <div class="logo">STAR TRUCK KOREA</div>
   <div class="subtitle">BP Master Data Management</div>
-  <button id="btn-login" onclick="signIn()" disabled>초기화 중...</button>
-  <div id="login-error" class="notice error" style="display:none;max-width:320px;text-align:center;"></div>
+  <button id="btn-login" onclick="signIn()" disabled>로딩 중...</button>
+  <div id="login-error" class="notice error" style="display:none;max-width:400px;text-align:center"></div>
 </div>
 
 <div id="app">
@@ -115,18 +144,21 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
   </div>
 
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('form')">신청서 작성</button>
-    <button class="tab" onclick="switchTab('list')">내 신청 목록</button>
-    <button class="tab" id="tab-appr-btn" onclick="switchTab('approval')" style="display:none">결재함</button>
+    <button class="tab active" id="tab-form-btn" onclick="switchTab('form')">신청서 작성</button>
+    <button class="tab" id="tab-list-btn" onclick="switchTab('list')">내 신청 목록</button>
+    <button class="tab" id="tab-approval-btn" onclick="switchTab('approval')">결재함 <span id="appr-badge" style="display:none;background:#a4262c;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px"></span></button>
     <button class="tab" id="tab-admin-btn" onclick="switchTab('admin')" style="display:none">관리자</button>
   </div>
 
+  <!-- ── 신청서 작성 ── -->
   <div id="tab-form">
     <div class="card">
-      <div class="card-title">기본 정보</div>
+      <div class="card-title">BP Master Data 신청</div>
+
+      <div class="section-title">1. 기본 정보</div>
       <div class="form-row three">
         <div class="form-group">
-          <label>Type <span class="req">*</span></label>
+          <label>BP Type <span class="req">*</span></label>
           <select id="sel-type" onchange="onTypeChange()">
             <option value="">-- Type 선택 --</option>
             <option value="Vendor">Vendor</option>
@@ -149,133 +181,124 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
           <div id="bpcode-notice" class="notice warn" style="display:none">BP Code는 필수 입력 항목입니다.</div>
         </div>
       </div>
-    </div>
 
-    <div class="card">
-      <div class="card-title">필수 제출 서류</div>
+      <div class="section-title">2. 필수 제출 서류</div>
       <div id="docs-box" class="docs-box">Type을 먼저 선택해주세요.</div>
-    </div>
 
-    <div class="card">
-      <div class="card-title">요청사항 <span class="req" style="color:#a4262c">*</span></div>
-      <textarea id="inp-desc" placeholder="요청사항을 자세히 기입해주시기 바랍니다.&#10;Ex. 통장 계좌 추가 등록, 신규 Vendor Code 생성 등" style="width:100%;min-height:100px;border:1px solid #d2d0ce;border-radius:4px;padding:8px 10px;font-size:14px;font-family:inherit;resize:vertical"></textarea>
-    </div>
+      <div class="section-title">3. 요청사항</div>
+      <div class="form-row full">
+        <div class="form-group">
+          <label>요청사항 <span class="req">*</span></label>
+          <textarea id="inp-desc" placeholder="요청사항을 자세히 기입해주시기 바랍니다.&#10;Ex. 통장 계좌 추가 등록, 신규 Vendor Code 생성 등"></textarea>
+        </div>
+      </div>
 
-    <div class="card">
-      <div class="card-title">첨부파일 <span class="req" style="color:#a4262c">*</span></div>
+      <div class="section-title">4. 결재자 지정</div>
+      <div class="appr-block">
+        <div class="appr-title">1차 결재자 <span style="color:#a4262c;font-size:11px">*</span></div>
+        <div class="appr-grid">
+          <select id="a1-dept" onchange="onDeptChange(1)"><option value="">부서</option></select>
+          <select id="a1-team" onchange="onTeamChange(1)" disabled><option value="">팀</option></select>
+          <select id="a1-person" onchange="onPersonChange(1)" disabled><option value="">직원 선택</option></select>
+        </div>
+        <div class="form-row" style="margin-top:8px">
+          <input type="text" id="a1-name" readonly placeholder="이름" style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;background:#f3f2f1">
+          <input type="email" id="a1-email" readonly placeholder="이메일" style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;background:#f3f2f1">
+        </div>
+      </div>
+      <div class="appr-block">
+        <div class="appr-title">2차 결재자</div>
+        <div class="appr-grid">
+          <select id="a2-dept" onchange="onDeptChange(2)"><option value="">부서</option></select>
+          <select id="a2-team" onchange="onTeamChange(2)" disabled><option value="">팀</option></select>
+          <select id="a2-person" onchange="onPersonChange(2)" disabled><option value="">직원 선택</option></select>
+        </div>
+        <div class="form-row" style="margin-top:8px">
+          <input type="text" id="a2-name" readonly placeholder="이름" style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;background:#f3f2f1">
+          <input type="email" id="a2-email" readonly placeholder="이메일" style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;background:#f3f2f1">
+        </div>
+      </div>
+      <div class="appr-block">
+        <div class="appr-title">회계담당자 <span style="font-size:11px;color:#605e5c;font-weight:400">(자동 지정)</span></div>
+        <div class="form-row">
+          <input type="text" id="a3-name" readonly placeholder="Type 선택 후 자동 설정" style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;background:#f3f2f1;color:#605e5c">
+          <input type="email" id="a3-email" readonly placeholder="Type 선택 후 자동 설정" style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;background:#f3f2f1;color:#605e5c">
+        </div>
+      </div>
+      <div class="notice info" style="margin-top:4px">최종 승인 후 회계담당자가 BP Code를 입력합니다.</div>
+
+      <div class="section-title">5. 첨부파일</div>
       <div class="file-area" onclick="document.getElementById('file-input').click()">
         <input type="file" id="file-input" multiple onchange="onFileSelect(event)">
-        <div class="hint">클릭하여 파일 첨부 (여러 파일 선택 가능)</div>
+        <div class="hint">📎 클릭하여 파일 첨부 (최대 10MB)</div>
       </div>
       <div class="file-list" id="file-list"></div>
       <div id="file-notice" class="notice error" style="display:none">첨부파일은 필수입니다.</div>
-    </div>
 
-    <div class="card">
-      <div class="card-title">결재라인 설정</div>
-
-      <div style="margin-bottom:16px">
-        <div style="font-size:13px;font-weight:500;color:#323130;margin-bottom:8px">1차 결재자 <span style="color:#a4262c">*</span></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:6px">
-          <select id="a1-dept" onchange="onDeptChange(1)" style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px">
-            <option value="">-- 부서 선택 --</option>
-          </select>
-          <select id="a1-team" onchange="onTeamChange(1)" disabled style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px">
-            <option value="">-- 팀 선택 --</option>
-          </select>
-          <select id="a1-person" onchange="onPersonChange(1)" disabled style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px">
-            <option value="">-- 직원 선택 --</option>
-          </select>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <input type="text" id="a1-name" placeholder="이름" readonly style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px;background:#f3f2f1">
-          <input type="email" id="a1-email" placeholder="이메일" readonly style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px;background:#f3f2f1">
-        </div>
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="resetForm()">초기화</button>
+        <button class="btn-primary" onclick="submitRequest()">상신</button>
       </div>
-
-      <div style="margin-bottom:16px">
-        <div style="font-size:13px;font-weight:500;color:#323130;margin-bottom:8px">2차 결재자</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:6px">
-          <select id="a2-dept" onchange="onDeptChange(2)" style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px">
-            <option value="">-- 부서 선택 --</option>
-          </select>
-          <select id="a2-team" onchange="onTeamChange(2)" disabled style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px">
-            <option value="">-- 팀 선택 --</option>
-          </select>
-          <select id="a2-person" onchange="onPersonChange(2)" disabled style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px">
-            <option value="">-- 직원 선택 --</option>
-          </select>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <input type="text" id="a2-name" placeholder="이름" readonly style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px;background:#f3f2f1">
-          <input type="email" id="a2-email" placeholder="이메일" readonly style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px;background:#f3f2f1">
-        </div>
-      </div>
-
-      <div style="margin-bottom:8px">
-        <div style="font-size:13px;font-weight:500;color:#323130;margin-bottom:8px">회계 담당자 <span style="font-size:11px;color:#605e5c;font-weight:400">(고정)</span></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <input type="text" id="a3-name" readonly placeholder="Type 선택 후 자동 설정" style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px;background:#f3f2f1;color:#605e5c">
-          <input type="email" id="a3-email" readonly placeholder="Type 선택 후 자동 설정" style="border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px;background:#f3f2f1;color:#605e5c">
-        </div>
-      </div>
-
-      <div class="notice info" style="margin-top:8px">최종 승인 후 회계 담당자가 BP Code를 직접 입력합니다.</div>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn-secondary" onclick="resetForm()">초기화</button>
-      <button class="btn-primary" onclick="submitRequest()">상신</button>
     </div>
   </div>
 
+  <!-- ── 내 신청 목록 ── -->
   <div id="tab-list" style="display:none">
     <div class="card" style="padding:0;overflow:hidden">
       <table class="list-table">
-        <thead><tr><th>번호</th><th>Type</th><th>Sub Category</th><th>BP Code</th><th>상태</th><th>신청일</th></tr></thead>
-        <tbody id="list-body"><tr><td colspan="6" style="text-align:center;padding:32px;color:#605e5c">불러오는 중...</td></tr></tbody>
+        <thead><tr>
+          <th>번호</th><th>Type</th><th>Sub Category</th><th>BP Code</th><th>상태</th><th>신청일</th>
+        </tr></thead>
+        <tbody id="list-body">
+          <tr><td colspan="6" style="text-align:center;padding:32px;color:#605e5c">불러오는 중...</td></tr>
+        </tbody>
       </table>
     </div>
   </div>
 
+  <!-- ── 결재함 ── -->
   <div id="tab-approval" style="display:none">
     <div class="card" style="padding:0;overflow:hidden">
       <table class="list-table">
-        <thead><tr><th>번호</th><th>신청자</th><th>Type</th><th>Sub Category</th><th>상태</th><th>신청일</th><th>처리</th></tr></thead>
-        <tbody id="appr-body"><tr><td colspan="7" style="text-align:center;padding:32px;color:#605e5c">불러오는 중...</td></tr></tbody>
+        <thead><tr>
+          <th>신청번호</th><th>신청자</th><th>Type</th><th>Sub Category</th><th>상태</th><th>신청일</th><th>처리</th>
+        </tr></thead>
+        <tbody id="appr-body">
+          <tr><td colspan="7" style="text-align:center;padding:32px;color:#605e5c">결재 대기 항목이 없습니다.</td></tr>
+        </tbody>
       </table>
     </div>
   </div>
-</div>
 
+  <!-- ── 관리자 ── -->
   <div id="tab-admin" style="display:none">
-    <div class="card" style="padding:16px 24px;margin-bottom:12px">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <select id="admin-filter-status" onchange="loadAdminList()" style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px">
+    <div class="card">
+      <div class="filter-bar">
+        <select id="admin-filter-status" onchange="loadAdminList()">
           <option value="">전체 상태</option>
-          <option value="대기">대기</option>
-          <option value="승인완료">승인완료</option>
-          <option value="반려">반려</option>
+          <option>대기</option><option>승인완료</option><option>반려</option>
         </select>
-        <select id="admin-filter-type" onchange="loadAdminList()" style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px">
+        <select id="admin-filter-type" onchange="loadAdminList()">
           <option value="">전체 Type</option>
-          <option value="Vendor">Vendor</option>
-          <option value="Customer">Customer</option>
+          <option>Vendor</option><option>Customer</option>
         </select>
-        <input type="text" id="admin-filter-search" oninput="loadAdminList()" placeholder="신청자 검색..." style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;width:180px">
+        <input type="text" id="admin-filter-search" oninput="loadAdminList()" placeholder="신청자 검색...">
         <span id="admin-count" style="font-size:13px;color:#605e5c;margin-left:auto"></span>
       </div>
-    </div>
-    <div class="card" style="padding:0;overflow:hidden">
       <table class="list-table">
-        <thead><tr><th>번호</th><th>신청자</th><th>Type</th><th>Sub Category</th><th>BP Code</th><th>상태</th><th>신청일</th></tr></thead>
-        <tbody id="admin-body"><tr><td colspan="7" style="text-align:center;padding:32px;color:#605e5c">불러오는 중...</td></tr></tbody>
+        <thead><tr>
+          <th>번호</th><th>신청자</th><th>Type</th><th>Sub Category</th><th>BP Code</th><th>상태</th><th>신청일</th>
+        </tr></thead>
+        <tbody id="admin-body">
+          <tr><td colspan="7" style="text-align:center;padding:32px;color:#605e5c">불러오는 중...</td></tr>
+        </tbody>
       </table>
     </div>
   </div>
 </div>
 
-<div id="detail-modal">
+<!-- ── Detail Modal ── -->
+<div id="detail-modal" onclick="if(event.target===this)closeModal()">
   <div class="modal-box">
     <button class="modal-close" onclick="closeModal()">×</button>
     <div class="modal-title">신청 상세 내용</div>
@@ -299,157 +322,136 @@ const ADMIN_EMAILS = [
 
 let msalApp = null, user = null, siteId = null;
 let files = [];
+let allRequestsCache = [];
+let employeeData = [];
 
+// ── MSAL ──
 async function signIn() {
   try {
+    if (window !== window.top) { window.open(window.location.href, '_blank'); return; }
     const r = await msal.loginPopup({ scopes: SCOPES });
     msal.setActiveAccount(r.account);
     await boot(r.account);
-  } catch(e) {
-    showError(e.message);
-  }
+  } catch(e) { showError(e.message); }
 }
-
 function signOut() { msal.logoutRedirect(); }
-
 async function token() {
   const r = await msal.acquireTokenSilent({ scopes: SCOPES, account: msal.getActiveAccount() });
   return r.accessToken;
 }
-
 async function api(path, method='GET', body=null) {
   const t = await token();
-  const opts = { method, headers: { Authorization: `Bearer ${t}`, 'Content-Type': 'application/json' } };
+  const opts = { method, headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' } };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(GRAPH + path, opts);
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw new Error((await res.json()).error?.message || res.status);
   return res.status === 204 ? null : res.json();
 }
 
+// ── Boot ──
 async function boot(account) {
   user = account;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('user-name').textContent = account.name || account.username;
   try {
-    const site = await api(`/sites/${SITE_PATH}`);
+    const site = await api('/sites/' + SITE_PATH);
     siteId = site.id;
-    await loadMyList();
-    await checkApprover();
     await loadEmployees();
+    await checkApprover();
+    switchTab('form');
   } catch(e) { alert('SharePoint 연결 오류: ' + e.message); }
 }
 
+// ── Employees ──
+async function loadEmployees() {
+  try {
+    const drivesData = await api('/sites/' + siteId + '/drives');
+    const docDrive = drivesData.value.find(d => d.name === '문서') || drivesData.value[0];
+    const t = await token();
+    const res = await fetch(GRAPH + '/drives/' + docDrive.id + '/root:/employee_search.xlsx:/content',
+      { headers: { Authorization: 'Bearer ' + t } });
+    if (!res.ok) throw new Error('employee_search.xlsx 로드 실패');
+    const buf = await res.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+    employeeData = rows.map(r => ({
+      dept: r['Department'] || '',
+      team: r['Team'] || '',
+      name: r['EngName'] || '',
+      email: r['EMail'] || r['email'] || ''
+    })).filter(r => r.email && r.name);
+    populateDepts(1);
+    populateDepts(2);
+  } catch(e) { console.warn('직원 데이터 로드 실패:', e); }
+}
+
+function populateDepts(idx) {
+  const depts = [...new Set(employeeData.map(e => e.dept))].sort();
+  const sel = document.getElementById('a' + idx + '-dept');
+  sel.innerHTML = '<option value="">부서</option>' + depts.map(d => '<option value="' + d + '">' + d + '</option>').join('');
+}
+function onDeptChange(idx) {
+  const dept = document.getElementById('a' + idx + '-dept').value;
+  const teamSel = document.getElementById('a' + idx + '-team');
+  const personSel = document.getElementById('a' + idx + '-person');
+  document.getElementById('a' + idx + '-name').value = '';
+  document.getElementById('a' + idx + '-email').value = '';
+  const teams = [...new Set(employeeData.filter(e => e.dept === dept).map(e => e.team))].sort();
+  teamSel.innerHTML = '<option value="">팀</option>' + teams.map(t => '<option value="' + t + '">' + t + '</option>').join('');
+  teamSel.disabled = !dept;
+  personSel.innerHTML = '<option value="">직원 선택</option>';
+  personSel.disabled = true;
+}
+function onTeamChange(idx) {
+  const dept = document.getElementById('a' + idx + '-dept').value;
+  const team = document.getElementById('a' + idx + '-team').value;
+  const personSel = document.getElementById('a' + idx + '-person');
+  document.getElementById('a' + idx + '-name').value = '';
+  document.getElementById('a' + idx + '-email').value = '';
+  const persons = employeeData.filter(e => e.dept === dept && e.team === team);
+  personSel.innerHTML = '<option value="">직원 선택</option>' + persons.map(p => '<option value="' + p.email + '">' + p.name + '</option>').join('');
+  personSel.disabled = !team;
+}
+function onPersonChange(idx) {
+  const email = document.getElementById('a' + idx + '-person').value;
+  const person = employeeData.find(e => e.email === email);
+  document.getElementById('a' + idx + '-name').value = person ? person.name : '';
+  document.getElementById('a' + idx + '-email').value = person ? person.email : '';
+}
+
+// ── Approver check ──
 async function checkApprover() {
   if (!siteId) return;
   try {
-    const data = await api(`/sites/${siteId}/lists/BP_Approvals/items?$expand=fields&$top=500`);
+    const data = await api('/sites/' + siteId + '/lists/BP_Approvals/items?$expand=fields&$top=500');
     const mine = data.value.filter(i =>
-      (i.fields.ApproverEmail||'').toLowerCase() === user.username.toLowerCase() &&
-      i.fields.Status === '대기'
+      (i.fields.ApproverEmail||'').toLowerCase() === user.username.toLowerCase() && i.fields.Status === '대기'
     );
-    document.getElementById('tab-appr-btn').style.display = mine.length ? 'block' : 'none';
-    if (mine.length) await loadApprovalQueue();
+    const badge = document.getElementById('appr-badge');
+    if (mine.length) { badge.textContent = mine.length; badge.style.display = 'inline'; }
+    else badge.style.display = 'none';
   } catch(e) {}
   const isAdmin = ADMIN_EMAILS.map(e=>e.toLowerCase()).includes(user.username.toLowerCase());
   document.getElementById('tab-admin-btn').style.display = isAdmin ? 'block' : 'none';
 }
 
-let employeeData = [];
-
-async function loadEmployees() {
-  try {
-    const drivesData = await api(`/sites/${siteId}/drives`);
-    const docDrive = drivesData.value.find(d => d.name === '문서') || drivesData.value[0];
-    const driveId = docDrive.id;
-    const t = await token();
-    const res = await fetch(
-      `${GRAPH}/drives/${driveId}/root:/employee_search.xlsx:/content`,
-      { headers: { Authorization: `Bearer ${t}` } }
-    );
-    if (!res.ok) throw new Error('파일 로드 실패');
-    const buf = await res.arrayBuffer();
-    const wb = XLSX.read(buf, { type: 'array' });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws);
-    employeeData = rows.map(r => ({
-      company: r['Company'] || '',
-      dept: r['Department'] || '',
-      team: r['Team'] || '',
-      name: r['EngName'] || '',
-      email: r['EMail'] || ''
-    })).filter(r => r.email);
-    populateDepts(1);
-    populateDepts(2);
-  } catch(e) {
-    console.warn('직원 데이터 로드 실패:', e);
-  }
-}
-
-function populateDepts(idx) {
-  const depts = [...new Set(employeeData.map(e => e.dept))].sort();
-  const sel = document.getElementById(`a${idx}-dept`);
-  sel.innerHTML = '<option value="">-- 부서 선택 --</option>' +
-    depts.map(d => `<option value="${d}">${d}</option>`).join('');
-}
-
-function onDeptChange(idx) {
-  const dept = document.getElementById(`a${idx}-dept`).value;
-  const teamSel = document.getElementById(`a${idx}-team`);
-  const personSel = document.getElementById(`a${idx}-person`);
-  teamSel.innerHTML = '<option value="">-- 팀 선택 --</option>';
-  personSel.innerHTML = '<option value="">-- 직원 선택 --</option>';
-  document.getElementById(`a${idx}-name`).value = '';
-  document.getElementById(`a${idx}-email`).value = '';
-  if (!dept) { teamSel.disabled = true; personSel.disabled = true; return; }
-  const teams = [...new Set(employeeData.filter(e => e.dept === dept).map(e => e.team))].sort();
-  teamSel.innerHTML = '<option value="">-- 팀 선택 --</option>' +
-    teams.map(t => `<option value="${t}">${t}</option>`).join('');
-  teamSel.disabled = false;
-  personSel.disabled = true;
-}
-
-function onTeamChange(idx) {
-  const dept = document.getElementById(`a${idx}-dept`).value;
-  const team = document.getElementById(`a${idx}-team`).value;
-  const personSel = document.getElementById(`a${idx}-person`);
-  document.getElementById(`a${idx}-name`).value = '';
-  document.getElementById(`a${idx}-email`).value = '';
-  if (!team) { personSel.disabled = true; personSel.innerHTML = '<option value="">-- 직원 선택 --</option>'; return; }
-  const persons = employeeData.filter(e => e.dept === dept && e.team === team);
-  personSel.innerHTML = '<option value="">-- 직원 선택 --</option>' +
-    persons.map(p => `<option value="${p.email}">${p.name}</option>`).join('');
-  personSel.disabled = false;
-}
-
-function onPersonChange(idx) {
-  const email = document.getElementById(`a${idx}-person`).value;
-  const person = employeeData.find(e => e.email === email);
-  document.getElementById(`a${idx}-name`).value = person ? person.name : '';
-  document.getElementById(`a${idx}-email`).value = person ? person.email : '';
-}
-
-function fmtDate(iso) {
-  const d = new Date(iso);
-  const pad = n => String(n).padStart(2,'0');
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
+// ── Tabs ──
 function switchTab(name) {
   ['form','list','approval','admin'].forEach(t => {
-    document.getElementById('tab-'+t).style.display = t===name ? 'block' : 'none';
+    document.getElementById('tab-' + t).style.display = t === name ? 'block' : 'none';
+    const btn = document.getElementById('tab-' + t + '-btn');
+    if (btn) btn.classList.toggle('active', t === name);
   });
-  document.querySelectorAll('.tab').forEach((b,i) => {
-    b.classList.toggle('active', ['form','list','approval','admin'][i]===name);
-  });
-  if (name==='list') loadMyList();
-  if (name==='approval') loadApprovalQueue();
-  if (name==='admin') loadAdminList();
+  if (name === 'list') loadMyList();
+  if (name === 'approval') loadApprovalQueue();
+  if (name === 'admin') { allRequestsCache = []; loadAdminList(); }
 }
 
+// ── Form logic ──
 function onTypeChange() {
   const type = document.getElementById('sel-type').value;
-  const sub  = document.getElementById('sel-subcat');
+  const sub = document.getElementById('sel-subcat');
   sub.disabled = !type; sub.value = '';
   document.getElementById('inp-bpcode').disabled = true;
   document.getElementById('inp-bpcode').value = '';
@@ -491,45 +493,34 @@ function onSubCatChange() {
   }
 }
 
+// ── Files ──
 function onFileSelect(e) {
   const newFiles = Array.from(e.target.files);
-  for (const f of newFiles) {
-    if (files.find(x => x.name === f.name)) continue;
-    files.push(f);
-  }
-  const totalMB = files.reduce((sum, f) => sum + f.size, 0) / 1024 / 1024;
-  if (totalMB > 10) {
-    alert(`첨부파일 총 용량이 ${totalMB.toFixed(1)}MB입니다. 10MB 이하로 첨부해주세요.`);
-    files = files.filter(f => !newFiles.includes(f));
-  }
+  for (const f of newFiles) { if (!files.find(x => x.name === f.name)) files.push(f); }
+  const totalMB = files.reduce((s,f) => s + f.size, 0) / 1024 / 1024;
+  if (totalMB > 10) { alert('첨부파일 총 용량이 ' + totalMB.toFixed(1) + 'MB입니다. 10MB 이하로 첨부해주세요.'); files = files.filter(f => !newFiles.includes(f)); }
   renderFiles();
   document.getElementById('file-notice').style.display = 'none';
   document.getElementById('file-input').value = '';
 }
-function removeFile(i) { files.splice(i,1); renderFiles(); }
+function removeFile(i) { files.splice(i, 1); renderFiles(); }
 function renderFiles() {
-  const totalMB = files.reduce((sum, f) => sum + f.size, 0) / 1024 / 1024;
-  const totalColor = totalMB > 10 ? '#a4262c' : '#605e5c';
-  const totalHtml = files.length ? `<div style="font-size:12px;color:${totalColor};margin-top:6px;text-align:right">총 ${totalMB.toFixed(1)} MB / 10 MB</div>` : '';
+  const totalMB = files.reduce((s,f) => s + f.size, 0) / 1024 / 1024;
   document.getElementById('file-list').innerHTML = files.map((f,i) =>
-    `<div class="file-item"><span>${f.name} <span style="color:#605e5c">(${(f.size/1024).toFixed(1)} KB)</span></span><button onclick="removeFile(${i})">×</button></div>`
-  ).join('') + totalHtml;
+    '<div class="file-item"><span>' + f.name + ' <span style="color:#605e5c">(' + (f.size/1024).toFixed(1) + ' KB)</span></span><button onclick="removeFile(' + i + ')">×</button></div>'
+  ).join('') + (files.length ? '<div style="font-size:11px;color:#605e5c;text-align:right;margin-top:4px">총 ' + totalMB.toFixed(1) + ' MB / 10 MB</div>' : '');
 }
 
 function resetForm() {
   ['sel-type','sel-subcat','inp-bpcode','inp-desc'].forEach(id => {
     const el = document.getElementById(id);
     el.value = '';
-    if (id==='sel-subcat'||id==='inp-bpcode') el.disabled = true;
+    if (id === 'sel-subcat' || id === 'inp-bpcode') el.disabled = true;
   });
   [1,2].forEach(idx => {
-    document.getElementById(`a${idx}-dept`).value = '';
-    document.getElementById(`a${idx}-team`).innerHTML = '<option value="">-- 팀 선택 --</option>';
-    document.getElementById(`a${idx}-team`).disabled = true;
-    document.getElementById(`a${idx}-person`).innerHTML = '<option value="">-- 직원 선택 --</option>';
-    document.getElementById(`a${idx}-person`).disabled = true;
-    document.getElementById(`a${idx}-name`).value = '';
-    document.getElementById(`a${idx}-email`).value = '';
+    document.getElementById('a' + idx + '-dept').value = '';
+    document.getElementById('a' + idx + '-name').value = '';
+    document.getElementById('a' + idx + '-email').value = '';
   });
   files = []; renderFiles();
   document.getElementById('docs-box').textContent = 'Type을 먼저 선택해주세요.';
@@ -537,13 +528,7 @@ function resetForm() {
   document.getElementById('file-notice').style.display = 'none';
 }
 
-function loading(v) { document.getElementById('loading').classList.toggle('show', v); }
-function showError(msg) {
-  document.getElementById('login-error').style.display = 'block';
-  document.getElementById('login-error').textContent = '오류: ' + msg;
-}
-function closeModal() { document.getElementById('detail-modal').style.display = 'none'; }
-
+// ── Submit ──
 async function submitRequest() {
   const type   = document.getElementById('sel-type').value;
   const subcat = document.getElementById('sel-subcat').value;
@@ -553,15 +538,16 @@ async function submitRequest() {
   if (!subcat) return alert('Sub Category를 선택해주세요.');
   if (subcat !== 'BP creation' && !bpcode) return alert('BP Code를 입력해주세요.');
   if (!desc)   return alert('요청사항을 입력해주세요.');
-  if (!files.length) { document.getElementById('file-notice').style.display='block'; return; }
+  if (!document.getElementById('a1-email').value) return alert('1차 결재자를 지정해주세요.');
+  if (!files.length) { document.getElementById('file-notice').style.display = 'block'; return; }
 
   loading(true);
   try {
-    const item = await api(`/sites/${siteId}/lists/BP_Requests/items`, 'POST', {
+    const item = await api('/sites/' + siteId + '/lists/BP_Requests/items', 'POST', {
       fields: {
-        Title: `${type} - ${subcat}`,
+        Title: type + ' - ' + subcat,
         BPType: type, SubCategory: subcat,
-        BPCode: subcat==='BP creation' ? '' : bpcode,
+        BPCode: subcat === 'BP creation' ? '' : bpcode,
         Description: desc, Status: '대기',
         RequesterEmail: user.username,
         RequestDate: new Date().toISOString()
@@ -569,187 +555,181 @@ async function submitRequest() {
     });
     const reqId = item.id;
 
+    // Upload files
     const fileLinks = [];
     try {
-      const drivesData = await api(`/sites/${siteId}/drives`);
+      const drivesData = await api('/sites/' + siteId + '/drives');
       const drive = drivesData.value.find(d => d.name === 'AttachedFiles') || drivesData.value[0];
-      const driveId = drive.id;
+      const t = await token();
       for (const file of files) {
         try {
-          const t = await token();
           const buf = await file.arrayBuffer();
           const res = await fetch(
-            `${GRAPH}/drives/${driveId}/root:/BP_Requests_AttachedFiles/${reqId}/${encodeURIComponent(file.name)}:/content`,
-            { method: 'PUT', headers: { Authorization: `Bearer ${t}`, 'Content-Type': file.type||'application/octet-stream' }, body: buf }
+            GRAPH + '/drives/' + drive.id + '/root:/BP_Requests_AttachedFiles/' + reqId + '/' + encodeURIComponent(file.name) + ':/content',
+            { method: 'PUT', headers: { Authorization: 'Bearer ' + t, 'Content-Type': file.type || 'application/octet-stream' }, body: buf }
           );
-          if (res.ok) {
-            const uploaded = await res.json();
-            let fileUrl = uploaded.webUrl || '';
-            if (!fileUrl.startsWith('http')) fileUrl = 'https:' + fileUrl;
-            // webUrl이 github pages URL이면 sharepoint URL 직접 조합
-            if (fileUrl.includes('github.io')) {
-              fileUrl = `https://startruckkorea.sharepoint.com/sites/STK-DB/AttachedFiles/BP_Requests_AttachedFiles/${reqId}/${encodeURIComponent(file.name)}`;
-            }
-            fileLinks.push(`${file.name}|${fileUrl}`);
-            console.log('업로드 성공:', file.name, uploaded.webUrl);
-          } else {
-            const err = await res.text();
-            console.warn('업로드 실패:', res.status, err);
-          }
-        } catch(e) { console.warn('업로드 오류:', e); }
+          if (res.ok) { const u = await res.json(); fileLinks.push(file.name + '|' + (u.webUrl || '')); }
+        } catch(e) { console.warn('Upload error:', e); }
       }
-    } catch(e) { console.warn('드라이브 조회 실패:', e); }
+    } catch(e) { console.warn('Drive error:', e); }
     if (fileLinks.length) {
-      await api(`/sites/${siteId}/lists/BP_Requests/items/${reqId}`, 'PATCH', {
-        fields: { AttachedFiles: fileLinks.join(';') }
-      });
+      await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { AttachedFiles: fileLinks.join(';') } });
     }
 
+    // Create approvals
     const approvers = [
-      { name: document.getElementById('a1-name').value, email: document.getElementById('a1-email').value, role:'1차결재자', order:1 },
-      { name: document.getElementById('a2-name').value, email: document.getElementById('a2-email').value, role:'2차결재자', order:2 },
-      { name: document.getElementById('a3-name').value, email: document.getElementById('a3-email').value, role:'회계담당자', order:3 },
+      { name: document.getElementById('a1-name').value, email: document.getElementById('a1-email').value, role: '1차결재자', order: 1 },
+      { name: document.getElementById('a2-name').value, email: document.getElementById('a2-email').value, role: '2차결재자', order: 2 },
+      { name: document.getElementById('a3-name').value, email: document.getElementById('a3-email').value, role: '회계담당자', order: 3 },
     ].filter(a => a.email);
     for (const a of approvers) {
-      await api(`/sites/${siteId}/lists/BP_Approvals/items`, 'POST', {
-        fields: {
-          Title: `${reqId}-${a.order}`, RequestID: parseInt(reqId),
-          ApproverEmail: a.email, ApproverName: a.name,
-          ApproverRole: a.role, ApprovalOrder: a.order,
-          Status: a.order===1 ? '대기' : '대기(잠김)'
-        }
-      });
+      await api('/sites/' + siteId + '/lists/BP_Approvals/items', 'POST', { fields: {
+        Title: reqId + '-' + a.order, RequestID: parseInt(reqId),
+        ApproverEmail: a.email, ApproverName: a.name,
+        ApproverRole: a.role, ApprovalOrder: a.order,
+        Status: a.order === 1 ? '대기' : '대기(잠김)'
+      }});
     }
     alert('상신이 완료되었습니다.');
     resetForm(); switchTab('list');
-  } catch(e) {
-    alert('오류: ' + e.message);
-  } finally { loading(false); }
+  } catch(e) { alert('오류: ' + e.message); }
+  finally { loading(false); }
+}
+
+// ── Lists ──
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
 async function loadMyList() {
   if (!siteId) return;
   const tbody = document.getElementById('list-body');
   try {
-    const data = await api(`/sites/${siteId}/lists/BP_Requests/items?$expand=fields&$top=500`);
+    const data = await api('/sites/' + siteId + '/lists/BP_Requests/items?$expand=fields&$top=500');
     const mine = data.value
-      .filter(i => (i.fields.RequesterEmail||'').toLowerCase()===user.username.toLowerCase())
-      .sort((a,b) => new Date(b.fields.RequestDate)-new Date(a.fields.RequestDate));
-    if (!mine.length) { tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:32px;color:#605e5c">신청 내역이 없습니다.</td></tr>'; return; }
+      .filter(i => (i.fields.RequesterEmail||'').toLowerCase() === user.username.toLowerCase())
+      .sort((a,b) => new Date(b.fields.RequestDate) - new Date(a.fields.RequestDate));
+    if (!mine.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:#605e5c">신청 내역이 없습니다.</td></tr>'; return; }
     tbody.innerHTML = mine.map(item => {
       const f = item.fields;
-      return `<tr onclick="showDetail(${item.id})">
-        <td>${item.id}</td><td>${f.BPType||''}</td><td>${f.SubCategory||''}</td>
-        <td>${f.BPCode||'-'}</td>
-        <td><span class="badge badge-${f.Status}">${f.Status}</span></td>
-        <td>${f.RequestDate?fmtDate(f.RequestDate):''}</td>
-      </tr>`;
+      return '<tr onclick="showDetail(' + item.id + ')">' +
+        '<td>' + item.id + '</td>' +
+        '<td><span class="badge badge-type">' + (f.BPType||'') + '</span></td>' +
+        '<td>' + (f.SubCategory||'') + '</td>' +
+        '<td>' + (f.BPCode||'-') + '</td>' +
+        '<td><span class="badge badge-' + f.Status + '">' + f.Status + '</span></td>' +
+        '<td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td>' +
+        '</tr>';
     }).join('');
-  } catch(e) { tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:32px;color:#a4262c">오류: ${e.message}</td></tr>`; }
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#a4262c">' + e.message + '</td></tr>'; }
 }
 
 async function loadApprovalQueue() {
   if (!siteId) return;
   const tbody = document.getElementById('appr-body');
   try {
-    const data = await api(`/sites/${siteId}/lists/BP_Approvals/items?$expand=fields&$top=500`);
+    const data = await api('/sites/' + siteId + '/lists/BP_Approvals/items?$expand=fields&$top=500');
     const mine = data.value.filter(i =>
-      (i.fields.ApproverEmail||'').toLowerCase()===user.username.toLowerCase() &&
-      i.fields.Status==='대기'
+      (i.fields.ApproverEmail||'').toLowerCase() === user.username.toLowerCase() && i.fields.Status === '대기'
     );
-    if (!mine.length) { tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:32px;color:#605e5c">결재 대기 항목이 없습니다.</td></tr>'; return; }
+    if (!mine.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:#605e5c">결재 대기 항목이 없습니다.</td></tr>'; return; }
     const rows = await Promise.all(mine.map(async item => {
       const f = item.fields;
       let rf = {};
-      try { const r = await api(`/sites/${siteId}/lists/BP_Requests/items/${f.RequestID}?$expand=fields`); rf = r.fields; } catch(e) {}
-      return `<tr style="cursor:pointer" onclick="showDetail(${f.RequestID})">
-        <td style="color:#0078d4">${f.RequestID}</td>
-        <td>${rf.RequesterEmail||''}</td><td>${rf.BPType||''}</td><td>${rf.SubCategory||''}</td>
-        <td><span class="badge badge-${rf.Status}">${rf.Status||''}</span></td>
-        <td>${rf.RequestDate?fmtDate(rf.RequestDate):''}</td>
-        <td onclick="event.stopPropagation()">
-          <button class="btn-primary" style="padding:4px 12px;font-size:12px" onclick="processApproval(${item.id},'승인',${f.RequestID},'${f.ApproverRole}')">승인</button>
-          <button class="btn-secondary" style="padding:4px 12px;font-size:12px;margin-left:4px" onclick="processApproval(${item.id},'반려',${f.RequestID},'${f.ApproverRole}')">반려</button>
-        </td>
-      </tr>`;
+      try { const r = await api('/sites/' + siteId + '/lists/BP_Requests/items/' + f.RequestID + '?$expand=fields'); rf = r.fields; } catch(e) {}
+      return `<tr><td style="color:#0078d4;cursor:pointer" onclick="showDetail(${f.RequestID})">${f.RequestID}</td><td>${rf.RequesterEmail||''}</td><td><span class="badge badge-type">${rf.BPType||''}</span></td><td>${rf.SubCategory||''}</td><td><span class="badge badge-${rf.Status||'대기'}">${rf.Status||''}</span></td><td>${rf.RequestDate?fmtDate(rf.RequestDate):''}</td><td onclick="event.stopPropagation()"><button class="btn-primary" style="padding:3px 10px;font-size:12px" onclick="processApproval(${item.id},'승인',${f.RequestID},'${f.ApproverRole}')">승인</button> <button class="btn-secondary" style="padding:3px 10px;font-size:12px" onclick="processApproval(${item.id},'반려',${f.RequestID},'${f.ApproverRole}')">반려</button></td></tr>`;
     }));
     tbody.innerHTML = rows.join('');
+    // update badge
+    const badge = document.getElementById('appr-badge');
+    badge.textContent = mine.length; badge.style.display = 'inline';
   } catch(e) {}
+}
+
+async function processApproval(apprId, action, reqId, role) {
+  const comment = prompt(action + ' 의견 (선택사항):');
+  if (comment === null) return;
+  loading(true);
+  try {
+    await api('/sites/' + siteId + '/lists/BP_Approvals/items/' + apprId, 'PATCH', {
+      fields: { Status: action, ApprovalDate: new Date().toISOString(), Comment: comment || '' }
+    });
+    if (action === '반려') {
+      await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { Status: '반려' } });
+    } else if (action === '승인' && role === '회계담당자') {
+      const bpCode = prompt('최종 승인되었습니다. BP Code를 입력해주세요:');
+      if (bpCode) await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { Status: '승인완료', BPCode: bpCode } });
+    } else if (action === '승인') {
+      const all = await api('/sites/' + siteId + '/lists/BP_Approvals/items?$expand=fields&$top=500');
+      const next = all.value.filter(i => i.fields.RequestID == reqId && i.fields.Status === '대기(잠김)').sort((a,b) => a.fields.ApprovalOrder - b.fields.ApprovalOrder);
+      if (next.length) await api('/sites/' + siteId + '/lists/BP_Approvals/items/' + next[0].id, 'PATCH', { fields: { Status: '대기' } });
+    }
+    alert(action + ' 처리되었습니다.');
+    await loadApprovalQueue();
+    await checkApprover();
+  } catch(e) { alert('오류: ' + e.message); }
+  finally { loading(false); }
 }
 
 async function showDetail(requestId) {
   loading(true);
   try {
-    const r = await api(`/sites/${siteId}/lists/BP_Requests/items/${requestId}?$expand=fields`);
+    const r = await api('/sites/' + siteId + '/lists/BP_Requests/items/' + requestId + '?$expand=fields');
     const f = r.fields;
+
+    const sec = (title) => '<div style="margin:16px 0 8px;font-size:13px;font-weight:700;color:#1F4E79;padding:6px 10px;background:#EFF6FF;border-left:3px solid #1F4E79;border-radius:3px">' + title + '</div>';
+
+    // Files
     let filesHtml = '<div style="font-size:13px;color:#605e5c">첨부파일 없음</div>';
     if (f.AttachedFiles) {
-      const decoded = f.AttachedFiles
-        .replace(/&#58;/g, ':')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/<[^>]*>/g, '');
-      filesHtml = decoded.split(';').map(entry => {
-        const pipeIdx = entry.indexOf('|');
-        if (pipeIdx === -1) return '';
-        const name = entry.slice(0, pipeIdx).trim();
-        let url = entry.slice(pipeIdx + 1).trim();
-        if (!url || url === '#업로드실패') {
-          return `<div style="padding:5px 0;border-bottom:0.5px solid #edebe9;font-size:13px;color:#605e5c">📎 ${name} (링크 없음)</div>`;
-        }
-        if (!url.startsWith('http')) url = 'https:' + url;
-        return `<div style="padding:5px 0;border-bottom:0.5px solid #edebe9;font-size:13px">
-          📎 <a href="${url}" target="_blank" style="color:#0078d4;text-decoration:none">${name}</a>
-        </div>`;
-      }).filter(Boolean).join('');
-      if (!filesHtml) filesHtml = '<div style="font-size:13px;color:#605e5c">첨부파일 없음</div>';
+      filesHtml = f.AttachedFiles
+        .replace(/&#58;/g,':').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/<[^>]*>/g,'')
+        .split(';').map(entry => {
+          const pi = entry.indexOf('|'); if (pi === -1) return '';
+          const name = entry.slice(0, pi).trim();
+          let url = entry.slice(pi + 1).trim();
+          if (!url) return '<div style="padding:4px 0;font-size:13px;color:#605e5c">📎 ' + name + ' (링크 없음)</div>';
+          if (!url.startsWith('http')) url = 'https:' + url;
+          return '<div style="padding:4px 0;font-size:13px">📎 <a href="' + url + '" target="_blank" style="color:#0078d4">' + name + '</a></div>';
+        }).filter(Boolean).join('');
     }
+
+    // Approval history
     let apprHtml = '';
     try {
-      const apprData = await api(`/sites/${siteId}/lists/BP_Approvals/items?$expand=fields&$top=500`);
-      const apprList = apprData.value
-        .filter(i => i.fields.RequestID == requestId)
-        .sort((a,b) => a.fields.ApprovalOrder - b.fields.ApprovalOrder);
+      const apprData = await api('/sites/' + siteId + '/lists/BP_Approvals/items?$expand=fields&$top=500');
+      const apprList = apprData.value.filter(i => i.fields.RequestID == requestId).sort((a,b) => a.fields.ApprovalOrder - b.fields.ApprovalOrder);
       if (apprList.length) {
-        const statusColor = { '대기':'#7d5700', '승인':'#107c10', '반려':'#a4262c', '대기(잠김)':'#605e5c' };
-        apprHtml = `<div style="margin-top:14px;font-size:13px;font-weight:600;margin-bottom:8px">결재 이력</div>` +
-          apprList.map(a => {
-            const af = a.fields;
-            const color = statusColor[af.Status] || '#323130';
-            return `<div style="padding:8px 0;border-bottom:0.5px solid #edebe9;font-size:13px">
-              <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-                <span style="font-weight:500">${af.ApproverRole||''} — ${af.ApproverName||af.ApproverEmail||''}</span>
-                <span style="color:${color};font-weight:500">${af.Status||''}</span>
-              </div>
-              ${af.ApprovalDate ? `<div style="color:#605e5c;font-size:12px">${fmtDate(af.ApprovalDate)}</div>` : ''}
-              ${af.Comment ? `<div style="margin-top:4px;color:#323130;background:#f3f2f1;border-radius:4px;padding:6px 8px;font-size:12px">${af.Comment}</div>` : ''}
-            </div>`;
-          }).join('');
+        const sc = { '대기':'#7d5700','승인':'#107c10','반려':'#a4262c','대기(잠김)':'#605e5c' };
+        apprHtml = sec('결재 이력') + apprList.map(a => {
+          const af = a.fields;
+          return '<div style="padding:7px 0;border-bottom:0.5px solid #edebe9;font-size:13px"><div style="display:flex;justify-content:space-between"><span style="font-weight:500">' + (af.ApproverRole||'') + ' — ' + (af.ApproverName||af.ApproverEmail||'') + '</span><span style="color:' + (sc[af.Status]||'#323130') + ';font-weight:600">' + (af.Status||'') + '</span></div>' + (af.ApprovalDate ? '<div style="color:#605e5c;font-size:11px">' + fmtDate(af.ApprovalDate) + '</div>' : '') + (af.Comment ? '<div style="margin-top:3px;background:#f3f2f1;border-radius:3px;padding:4px 7px;font-size:12px">💬 ' + af.Comment + '</div>' : '') + '</div>';
+        }).join('');
       }
     } catch(e) {}
 
-    document.getElementById('modal-content').innerHTML = `
-      <div class="modal-row"><div class="modal-label">신청번호</div><div class="modal-value">${requestId}</div></div>
-      <div class="modal-row"><div class="modal-label">신청자</div><div class="modal-value">${f.RequesterEmail||''}</div></div>
-      <div class="modal-row"><div class="modal-label">Type</div><div class="modal-value">${f.BPType||''}</div></div>
-      <div class="modal-row"><div class="modal-label">Sub Category</div><div class="modal-value">${f.SubCategory||''}</div></div>
-      <div class="modal-row"><div class="modal-label">BP Code</div><div class="modal-value">${f.BPCode||'-'}</div></div>
-      <div class="modal-row"><div class="modal-label">신청일</div><div class="modal-value">${f.RequestDate?fmtDate(f.RequestDate):''}</div></div>
-      <div class="modal-row"><div class="modal-label">요청사항</div><div class="modal-value" style="white-space:pre-wrap">${f.Description||''}</div></div>
-      <div style="margin-top:14px;font-size:13px;font-weight:600;margin-bottom:8px">첨부파일</div>
-      ${filesHtml}
-      ${apprHtml}
-    `;
+    const statusColor = f.Status === '승인완료' ? '#107c10' : f.Status === '반려' ? '#a4262c' : '#7d5700';
+
+    document.getElementById('modal-content').innerHTML =
+      sec('기본 정보') +
+      '<div class="modal-row"><div class="modal-label">신청번호</div><div class="modal-value">' + requestId + '</div></div>' +
+      '<div class="modal-row"><div class="modal-label">신청자</div><div class="modal-value">' + (f.RequesterEmail||'') + '</div></div>' +
+      '<div class="modal-row"><div class="modal-label">BP Type</div><div class="modal-value"><span class="badge badge-type">' + (f.BPType||'') + '</span></div></div>' +
+      '<div class="modal-row"><div class="modal-label">Sub Category</div><div class="modal-value">' + (f.SubCategory||'') + '</div></div>' +
+      '<div class="modal-row"><div class="modal-label">BP Code</div><div class="modal-value"><strong style="color:#107c10">' + (f.BPCode||'-') + '</strong></div></div>' +
+      '<div class="modal-row"><div class="modal-label">상태</div><div class="modal-value"><span style="font-weight:600;color:' + statusColor + '">' + (f.Status||'') + '</span></div></div>' +
+      '<div class="modal-row"><div class="modal-label">신청일</div><div class="modal-value">' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</div></div>' +
+      sec('요청사항') +
+      '<div style="padding:8px 0;font-size:13px;white-space:pre-wrap;color:#323130">' + (f.Description||'') + '</div>' +
+      sec('첨부파일') + filesHtml +
+      apprHtml;
+
     const modal = document.getElementById('detail-modal');
     modal.style.display = 'flex';
-    modal.style.alignItems = 'center';
-    modal.style.justifyContent = 'center';
   } catch(e) { alert('상세 조회 오류: ' + e.message); }
   finally { loading(false); }
 }
-
-let allRequestsCache = [];
 
 async function loadAdminList() {
   if (!siteId) return;
@@ -759,69 +739,28 @@ async function loadAdminList() {
   const filterSearch = (document.getElementById('admin-filter-search').value||'').toLowerCase();
   try {
     if (!allRequestsCache.length) {
-      const data = await api(`/sites/${siteId}/lists/BP_Requests/items?$expand=fields&$top=500`);
-      allRequestsCache = data.value.sort((a,b) => new Date(b.fields.RequestDate)-new Date(a.fields.RequestDate));
+      const data = await api('/sites/' + siteId + '/lists/BP_Requests/items?$expand=fields&$top=500');
+      allRequestsCache = data.value.sort((a,b) => new Date(b.fields.RequestDate) - new Date(a.fields.RequestDate));
     }
     let items = allRequestsCache;
     if (filterStatus) items = items.filter(i => i.fields.Status === filterStatus);
     if (filterType)   items = items.filter(i => i.fields.BPType === filterType);
     if (filterSearch) items = items.filter(i => (i.fields.RequesterEmail||'').toLowerCase().includes(filterSearch));
-    document.getElementById('admin-count').textContent = `총 ${items.length}건`;
-    if (!items.length) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:#605e5c">조회된 항목이 없습니다.</td></tr>';
-      return;
-    }
+    document.getElementById('admin-count').textContent = '총 ' + items.length + '건';
     tbody.innerHTML = items.map(item => {
       const f = item.fields;
-      return `<tr style="cursor:pointer" onclick="showDetail(${item.id})">
-        <td>${item.id}</td>
-        <td>${f.RequesterEmail||''}</td>
-        <td>${f.BPType||''}</td>
-        <td>${f.SubCategory||''}</td>
-        <td>${f.BPCode||'-'}</td>
-        <td><span class="badge badge-${f.Status}">${f.Status}</span></td>
-        <td>${f.RequestDate?fmtDate(f.RequestDate):''}</td>
-      </tr>`;
+      return '<tr style="cursor:pointer" onclick="showDetail(' + item.id + ')"><td>' + item.id + '</td><td>' + (f.RequesterEmail||'') + '</td><td><span class="badge badge-type">' + (f.BPType||'') + '</span></td><td>' + (f.SubCategory||'') + '</td><td>' + (f.BPCode||'-') + '</td><td><span class="badge badge-' + f.Status + '">' + f.Status + '</span></td><td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td></tr>';
     }).join('');
-  } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:#a4262c">오류: ${e.message}</td></tr>`;
-  }
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#a4262c">' + e.message + '</td></tr>'; }
 }
 
-async function processApproval(apprId, action, reqId, role) {
-  const comment = prompt(`${action} 의견 (선택사항):`);
-  if (comment === null) return;
-  loading(true);
-  try {
-    await api(`/sites/${siteId}/lists/BP_Approvals/items/${apprId}`, 'PATCH', {
-      fields: { Status: action, ApprovalDate: new Date().toISOString(), Comment: comment||'' }
-    });
-    if (action==='반려') {
-      await api(`/sites/${siteId}/lists/BP_Requests/items/${reqId}`, 'PATCH', { fields: { Status:'반려' } });
-    } else if (action==='승인' && role==='회계담당자') {
-      const bpCode = prompt('최종 승인되었습니다. BP Code를 입력해주세요:');
-      if (bpCode) await api(`/sites/${siteId}/lists/BP_Requests/items/${reqId}`, 'PATCH', { fields: { Status:'승인완료', BPCode:bpCode } });
-    } else if (action==='승인') {
-      const all = await api(`/sites/${siteId}/lists/BP_Approvals/items?$expand=fields&$top=500`);
-      const next = all.value
-        .filter(i => i.fields.RequestID==reqId && i.fields.Status==='대기(잠김)')
-        .sort((a,b) => a.fields.ApprovalOrder-b.fields.ApprovalOrder);
-      if (next.length) await api(`/sites/${siteId}/lists/BP_Approvals/items/${next[0].id}`, 'PATCH', { fields:{ Status:'대기' } });
-    }
-    alert(`${action} 처리되었습니다.`);
-    await loadApprovalQueue();
-    await checkApprover();
-  } catch(e) { alert('오류: ' + e.message); }
-  finally { loading(false); }
-}
+function loading(v) { document.getElementById('loading').classList.toggle('show', v); }
+function showError(msg) { const el = document.getElementById('login-error'); el.style.display = 'block'; el.textContent = '오류: ' + msg; }
+function closeModal() { document.getElementById('detail-modal').style.display = 'none'; }
 
 (async () => {
   const msalInstance = await msal.PublicClientApplication.createPublicClientApplication({
-    auth: {
-      clientId: CLIENT_ID,
-      authority: `https://login.microsoftonline.com/${TENANT_ID}`,
-      redirectUri: window.location.origin + window.location.pathname
-    },
+    auth: { clientId: CLIENT_ID, authority: 'https://login.microsoftonline.com/' + TENANT_ID, redirectUri: window.location.origin + window.location.pathname },
     cache: { cacheLocation: 'localStorage' }
   });
   msalApp = msalInstance; msal = msalApp;
