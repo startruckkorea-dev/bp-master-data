@@ -585,8 +585,8 @@ async function submitRequest() {
           );
           if (uploadRes.ok) {
             const uploaded = await uploadRes.json();
-            // driveId|itemId 저장 (Graph API downloadUrl 조회용)
-            fileLinks.push(file.name + '|' + drive.id + '|' + uploaded.id);
+            // driveId + itemId 저장
+            fileLinks.push(file.name + '||' + drive.id + '||' + uploaded.id);
           }
         } catch(e) { console.warn('Upload error:', e); }
       }
@@ -705,15 +705,21 @@ async function showDetail(requestId) {
       const fileEntries = f.AttachedFiles
         .replace(/&#58;/g,':').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/<[^>]*>/g,'')
         .split(';').filter(e => e.trim());
-      filesHtml = fileEntries.map((entry, idx) => {
+      filesHtml = fileEntries.map(entry => {
+        const name = entry.split('|')[0].trim();
+        if (!name) return '';
+        // 새 형식: name||driveId||itemId
+        const newFmt = entry.split('||');
+        if (newFmt.length === 3) {
+          const driveId = newFmt[1].trim();
+          const itemId  = newFmt[2].trim();
+          return '<div style="padding:4px 0;font-size:13px">📎 <a href="#" class="file-dl-link" data-drive="' + encodeURIComponent(driveId) + '" data-id="' + encodeURIComponent(itemId) + '" data-name="' + encodeURIComponent(name) + '" style="color:#0078d4;cursor:pointer">' + name + '</a></div>';
+        }
+        // 구 형식: name|webUrl → webUrl 직접 링크
         const parts = entry.split('|');
-        const name = parts[0].trim();
-        const graphUrl = parts[1] ? parts[1].trim() : '';
-        if (!graphUrl) return '<div style="padding:4px 0;font-size:13px;color:#605e5c">📎 ' + name + '</div>';
-        // data-속성에 URL 저장 후 클릭 이벤트로 처리 (따옴표 충돌 방지)
-        const driveId = parts[1] ? parts[1].trim() : '';
-        const itemId  = parts[2] ? parts[2].trim() : '';
-        return '<div style="padding:4px 0;font-size:13px">📎 <a href="#" class="file-dl-link" data-drive="' + encodeURIComponent(driveId) + '" data-id="' + encodeURIComponent(itemId) + '" data-name="' + encodeURIComponent(name) + '" style="color:#0078d4;cursor:pointer">' + name + '</a></div>';
+        const url = parts[1] ? parts[1].trim() : '';
+        if (!url) return '<div style="padding:4px 0;font-size:13px;color:#605e5c">📎 ' + name + '</div>';
+        return '<div style="padding:4px 0;font-size:13px">📎 <a href="' + url + '" target="_blank" style="color:#0078d4">' + name + '</a></div>';
       }).filter(Boolean).join('');
     }
 
@@ -776,28 +782,25 @@ async function loadAdminList() {
   } catch(e) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#a4262c">' + e.message + '</td></tr>'; }
 }
 
-// ── 파일 열기: Graph API로 @microsoft.graph.downloadUrl 받아서 새 탭 열기 ──
+// ── 파일 열기: Graph API downloadUrl → 새 탭 ──
 document.addEventListener('click', async function(e) {
   const link = e.target.closest('.file-dl-link');
   if (!link) return;
   e.preventDefault();
   const itemId  = decodeURIComponent(link.getAttribute('data-id')   || '');
   const driveId = decodeURIComponent(link.getAttribute('data-drive') || '');
-  const fileName = decodeURIComponent(link.getAttribute('data-name') || 'file');
-  if (!itemId || !driveId) return;
+  if (!itemId || !driveId) { alert('파일 정보가 없습니다.'); return; }
   loading(true);
   try {
-    // Graph API로 파일 메타데이터 조회 → @microsoft.graph.downloadUrl 추출
     const t = await token();
     const res = await fetch(
-      GRAPH + '/drives/' + driveId + '/items/' + itemId + '?select=id,name,@microsoft.graph.downloadUrl',
+      GRAPH + '/drives/' + driveId + '/items/' + itemId + '?$select=id,name,%40microsoft.graph.downloadUrl',
       { headers: { Authorization: 'Bearer ' + t } }
     );
-    if (!res.ok) throw new Error('파일 정보 조회 실패: ' + res.status);
+    if (!res.ok) throw new Error('파일 정보 조회 실패 (' + res.status + ')');
     const data = await res.json();
     const dlUrl = data['@microsoft.graph.downloadUrl'];
-    if (!dlUrl) throw new Error('다운로드 URL을 가져올 수 없습니다.');
-    // 인증 없이 접근 가능한 임시 URL로 새 탭에서 열기
+    if (!dlUrl) throw new Error('다운로드 URL 없음');
     window.open(dlUrl, '_blank');
   } catch(err) { alert('파일 열기 오류: ' + err.message); }
   finally { loading(false); }
