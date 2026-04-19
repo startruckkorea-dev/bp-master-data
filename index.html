@@ -342,8 +342,17 @@ async function signIn() {
 }
 function signOut() { msal.logoutRedirect(); }
 async function token() {
-  const r = await msal.acquireTokenSilent({ scopes: SCOPES, account: msal.getActiveAccount() });
-  return r.accessToken;
+  try {
+    const r = await msal.acquireTokenSilent({ scopes: SCOPES, account: msal.getActiveAccount() });
+    return r.accessToken;
+  } catch(e) {
+    if (e.name === 'InteractionRequiredAuthError' || (e.errorCode && e.errorCode.includes('interaction_required'))) {
+      const r = await msal.acquireTokenPopup({ scopes: SCOPES });
+      msal.setActiveAccount(r.account);
+      return r.accessToken;
+    }
+    throw e;
+  }
 }
 async function api(path, method='GET', body=null) {
   const t = await token();
