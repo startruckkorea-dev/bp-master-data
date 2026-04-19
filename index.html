@@ -136,7 +136,10 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 
 <div id="app">
   <div class="header">
-    <div class="title">BP Master Data Management</div>
+    <div>
+      <div class="title">BP Master Data Management</div>
+      <div style="font-size:11px;color:#605e5c;margin-top:3px">Vendor 관련 문의 Email: hyunju.gong@hyosung.com &nbsp;|&nbsp; Customer 관련 문의 Email: jihyun.ma@hyosung.com</div>
+    </div>
     <div class="user-info">
       <span id="user-name"></span>
       <button id="btn-logout" onclick="signOut()">로그아웃</button>
@@ -195,7 +198,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 
       <div class="section-title">4. 결재자 지정</div>
       <div class="appr-block">
-        <div class="appr-title">1차 결재자 <span style="color:#a4262c;font-size:11px">*</span></div>
+        <div class="appr-title">1차 결재자 <span style="color:#a4262c;font-size:11px">*</span> <span style="font-size:11px;color:#605e5c;font-weight:400">— Line Manager (팀장)</span></div>
         <div class="appr-grid">
           <select id="a1-dept" onchange="onDeptChange(1)"><option value="">부서</option></select>
           <select id="a1-team" onchange="onTeamChange(1)" disabled><option value="">팀</option></select>
@@ -207,7 +210,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
         </div>
       </div>
       <div class="appr-block">
-        <div class="appr-title">2차 결재자</div>
+        <div class="appr-title">2차 결재자 <span style="font-size:11px;color:#605e5c;font-weight:400">— Department Head (부서장)</span></div>
         <div class="appr-grid">
           <select id="a2-dept" onchange="onDeptChange(2)"><option value="">부서</option></select>
           <select id="a2-team" onchange="onTeamChange(2)" disabled><option value="">팀</option></select>
