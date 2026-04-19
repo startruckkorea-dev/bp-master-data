@@ -570,7 +570,7 @@ async function submitRequest() {
     });
     const reqId = item.id;
 
-    // Upload files
+    // Upload files + 조직 공유 링크 생성
     const fileLinks = [];
     try {
       const drivesData = await api('/sites/' + siteId + '/drives');
@@ -579,11 +579,27 @@ async function submitRequest() {
       for (const file of files) {
         try {
           const buf = await file.arrayBuffer();
-          const res = await fetch(
+          const uploadRes = await fetch(
             GRAPH + '/drives/' + drive.id + '/root:/BP_Requests_AttachedFiles/' + reqId + '/' + encodeURIComponent(file.name) + ':/content',
             { method: 'PUT', headers: { Authorization: 'Bearer ' + t, 'Content-Type': file.type || 'application/octet-stream' }, body: buf }
           );
-          if (res.ok) { const u = await res.json(); fileLinks.push(file.name + '|' + (u.webUrl || '')); }
+          if (uploadRes.ok) {
+            const uploaded = await uploadRes.json();
+            // 조직 내 공유 링크 생성 (STK-DB 사이트 권한 없어도 접근 가능)
+            try {
+              const shareRes = await fetch(
+                GRAPH + '/drives/' + drive.id + '/items/' + uploaded.id + '/createLink',
+                { method: 'POST', headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ type: 'view', scope: 'organization' }) }
+              );
+              if (shareRes.ok) {
+                const shareData = await shareRes.json();
+                fileLinks.push(file.name + '|' + (shareData.link?.webUrl || uploaded.webUrl || ''));
+              } else {
+                fileLinks.push(file.name + '|' + (uploaded.webUrl || ''));
+              }
+            } catch(se) { fileLinks.push(file.name + '|' + (uploaded.webUrl || '')); }
+          }
         } catch(e) { console.warn('Upload error:', e); }
       }
     } catch(e) { console.warn('Drive error:', e); }
@@ -614,8 +630,7 @@ async function submitRequest() {
 // ── Lists ──
 function fmtDate(iso) {
   const d = new Date(iso);
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') +
-    ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
 async function loadMyList() {
