@@ -701,19 +701,19 @@ async function showDetail(requestId) {
     const sec = (title) => '<div style="margin:16px 0 8px;font-size:13px;font-weight:700;color:#1F4E79;padding:6px 10px;background:#EFF6FF;border-left:3px solid #1F4E79;border-radius:3px">' + title + '</div>';
 
     // Files
-    let filesHtml = '<div style="font-size:13px;color:#605e5c">첨부파일 없음</div>';
+        let filesHtml = '<div style="font-size:13px;color:#605e5c">첨부파일 없음</div>';
     if (f.AttachedFiles) {
-      filesHtml = f.AttachedFiles
+      const fileEntries = f.AttachedFiles
         .replace(/&#58;/g,':').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/<[^>]*>/g,'')
-        .split(';').map(entry => {
-          if (!entry.trim()) return '';
-          const parts = entry.split('|');
-          const name = parts[0].trim();
-          const graphUrl = parts[1] ? parts[1].trim() : '';
-          if (!graphUrl) return '<div style="padding:4px 0;font-size:13px;color:#605e5c">📎 ' + name + '</div>';
-          // Graph API로 파일 다운로드 (토큰 인증) — onclick으로 처리
-          return '<div style="padding:4px 0;font-size:13px">📎 <a href="#" onclick="openFile('' + graphUrl.replace(/'/g,"\'") + '','' + name.replace(/'/g,"\'") + '');return false;" style="color:#0078d4;cursor:pointer">' + name + '</a></div>';
-        }).filter(Boolean).join('');
+        .split(';').filter(e => e.trim());
+      filesHtml = fileEntries.map((entry, idx) => {
+        const parts = entry.split('|');
+        const name = parts[0].trim();
+        const graphUrl = parts[1] ? parts[1].trim() : '';
+        if (!graphUrl) return '<div style="padding:4px 0;font-size:13px;color:#605e5c">📎 ' + name + '</div>';
+        // data-속성에 URL 저장 후 클릭 이벤트로 처리 (따옴표 충돌 방지)
+        return '<div style="padding:4px 0;font-size:13px">📎 <a href="#" class="file-dl-link" data-url="' + encodeURIComponent(graphUrl) + '" data-name="' + encodeURIComponent(name) + '" style="color:#0078d4;cursor:pointer">' + name + '</a></div>';
+      }).filter(Boolean).join('');
     }
 
     // Approval history
@@ -776,7 +776,14 @@ async function loadAdminList() {
 }
 
 // ── 파일 열기 (Graph API 토큰 인증 다운로드) ──
-async function openFile(graphUrl, fileName) {
+// data-url / data-name 속성 방식으로 클릭 이벤트 처리
+document.addEventListener('click', async function(e) {
+  const link = e.target.closest('.file-dl-link');
+  if (!link) return;
+  e.preventDefault();
+  const graphUrl = decodeURIComponent(link.getAttribute('data-url') || '');
+  const fileName = decodeURIComponent(link.getAttribute('data-name') || 'file');
+  if (!graphUrl) return;
   loading(true);
   try {
     const t = await token();
@@ -787,13 +794,12 @@ async function openFile(graphUrl, fileName) {
     const a = document.createElement('a');
     a.href = blobUrl;
     a.download = fileName;
-    a.target = '_blank';
     document.body.appendChild(a);
     a.click();
     setTimeout(() => { URL.revokeObjectURL(blobUrl); document.body.removeChild(a); }, 1000);
-  } catch(e) { alert('파일 열기 오류: ' + e.message); }
+  } catch(err) { alert('파일 열기 오류: ' + err.message); }
   finally { loading(false); }
-}
+});
 
 function loading(v) { document.getElementById('loading').classList.toggle('show', v); }
 function showError(msg) { const el = document.getElementById('login-error'); el.style.display = 'block'; el.textContent = '오류: ' + msg; }
