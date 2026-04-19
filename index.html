@@ -793,14 +793,16 @@ document.addEventListener('click', async function(e) {
   loading(true);
   try {
     const t = await token();
+    // @microsoft.graph.downloadUrl은 $select 없이 기본 응답에 포함됨
     const res = await fetch(
-      GRAPH + '/drives/' + driveId + '/items/' + itemId + '?$select=id,name,%40microsoft.graph.downloadUrl',
+      GRAPH + '/drives/' + driveId + '/items/' + itemId,
       { headers: { Authorization: 'Bearer ' + t } }
     );
     if (!res.ok) throw new Error('파일 정보 조회 실패 (' + res.status + ')');
     const data = await res.json();
-    const dlUrl = data['@microsoft.graph.downloadUrl'];
-    if (!dlUrl) throw new Error('다운로드 URL 없음');
+    // downloadUrl 우선, 없으면 webUrl로 fallback
+    const dlUrl = data['@microsoft.graph.downloadUrl'] || data.webUrl;
+    if (!dlUrl) throw new Error('다운로드 URL을 가져올 수 없습니다.');
     window.open(dlUrl, '_blank');
   } catch(err) { alert('파일 열기 오류: ' + err.message); }
   finally { loading(false); }
