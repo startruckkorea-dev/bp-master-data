@@ -617,8 +617,10 @@ async function submitRequest() {
 
 // ── Lists ──
 function fmtDate(iso) {
+  if (!iso) return '';
   const d = new Date(iso);
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') +
+    ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
 }
 
 async function loadMyList() {
@@ -649,9 +651,9 @@ async function loadApprovalQueue() {
   const tbody = document.getElementById('appr-body');
   try {
     const data = await api('/sites/' + siteId + '/lists/BP_Approvals/items?$expand=fields&$top=500');
-    const mine = data.value.filter(i =>
-      (i.fields.ApproverEmail||'').toLowerCase() === user.username.toLowerCase() && i.fields.Status === '대기'
-    );
+    const mine = data.value
+      .filter(i => (i.fields.ApproverEmail||'').toLowerCase() === user.username.toLowerCase() && i.fields.Status === '대기')
+      .sort((a, b) => b.fields.RequestID - a.fields.RequestID);
     if (!mine.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:#605e5c">결재 대기 항목이 없습니다.</td></tr>'; return; }
     const rows = await Promise.all(mine.map(async item => {
       const f = item.fields;
