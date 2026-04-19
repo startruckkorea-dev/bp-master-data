@@ -139,8 +139,8 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
     <div>
       <div class="title">BP Master Data Management</div>
       <div style="font-size:11px;color:#605e5c;margin-top:3px">
-        <div>Vendor 관련 문의 Email: jihyun.ma@hyosung.com</div>
-        <div>Customer 관련 문의 Email: hyunju.gong@hyosung.com</div>
+        <div>Vendor 관련 문의 Email: hyunju.gong@hyosung.com</div>
+        <div>Customer 관련 문의 Email: jihyun.ma@hyosung.com</div>
       </div>
     </div>
     <div class="user-info">
@@ -614,7 +614,8 @@ async function submitRequest() {
 // ── Lists ──
 function fmtDate(iso) {
   const d = new Date(iso);
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') +
+    ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
 }
 
 async function loadMyList() {
