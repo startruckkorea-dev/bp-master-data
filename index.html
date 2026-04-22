@@ -640,22 +640,25 @@ async function loadApprovalQueue() {
   if (!siteId) return;
   const tbody = document.getElementById('appr-body');
   try {
-    const data = await api('/sites/' + siteId + '/lists/BP_Approvals/items?$expand=fields&$top=500');
-    const mine = data.value
-      .filter(i => (i.fields.ApproverEmail||'').toLowerCase() === user.username.toLowerCase() && i.fields.Status === '대기')
-      .sort((a, b) => b.fields.RequestID - a.fields.RequestID);
+    const [apprData, reqData] = await Promise.all([
+      api('/sites/' + siteId + '/lists/BP_Approvals/items?$expand=fields&$top=500'),
+      api('/sites/' + siteId + '/lists/BP_Requests/items?$expand=fields&$top=500')
+    ]);
+    const reqMap = {};
+    reqData.value.forEach(function(r){ reqMap[r.id] = r.fields; });
+    const mine = apprData.value
+      .filter(function(i){ return (i.fields.ApproverEmail||'').toLowerCase() === (user.email||user.username||'').toLowerCase() && i.fields.Status === '대기'; })
+      .sort(function(a,b){ return b.fields.RequestID - a.fields.RequestID; });
     if (!mine.length) { pgSet('appr', [], null, '결재 대기 항목이 없습니다.', 7); return; }
-    const rows = await Promise.all(mine.map(async item => {
+    const rows = mine.map(function(item) {
       const f = item.fields;
-      let rf = {};
-      try { const r = await api('/sites/' + siteId + '/lists/BP_Requests/items/' + f.RequestID + '?$expand=fields'); rf = r.fields; } catch(e) {}
-      return `<tr><td style="color:#0078d4;cursor:pointer" onclick="showDetail(${f.RequestID})">${f.RequestID}</td><td>${rf.RequesterEmail||''}</td><td><span class="badge badge-type">${rf.BPType||''}</span></td><td>${rf.SubCategory||''}</td><td><span class="badge badge-${rf.Status||'대기'}">${rf.Status||''}</span></td><td>${rf.RequestDate?fmtDate(rf.RequestDate):''}</td><td onclick="event.stopPropagation()"><button class="btn-primary" style="padding:3px 10px;font-size:12px" onclick="processApproval(${item.id},'승인',${f.RequestID},'${f.ApproverRole}')">승인</button> <button class="btn-secondary" style="padding:3px 10px;font-size:12px" onclick="processApproval(${item.id},'반려',${f.RequestID},'${f.ApproverRole}')">반려</button></td></tr>`;
-    }));
-    pgSet('appr', rows, r => r, '결재 대기 항목이 없습니다.', 7);
-    // update badge
+      const rf = reqMap[String(f.RequestID)] || {};
+      return '<tr><td style="color:#0078d4;cursor:pointer" onclick="showDetail(' + f.RequestID + ')">' + f.RequestID + '</td><td>' + (rf.RequesterEmail||'') + '</td><td><span class="badge badge-type">' + (rf.BPType||'') + '</span></td><td>' + (rf.SubCategory||'') + '</td><td><span class="badge badge-' + (rf.Status||'대기') + '">' + (rf.Status||'') + '</span></td><td>' + (rf.RequestDate?fmtDate(rf.RequestDate):'') + '</td><td onclick="event.stopPropagation()"><button class="btn-primary" style="padding:3px 10px;font-size:12px" onclick="processApproval(' + item.id + ',\'승인\',' + f.RequestID + ',\'' + (f.ApproverRole||'') + '\')">승인</button> <button class="btn-secondary" style="padding:3px 10px;font-size:12px" onclick="processApproval(' + item.id + ',\'반려\',' + f.RequestID + ',\'' + (f.ApproverRole||'') + '\')">반려</button></td></tr>';
+    });
+    pgSet('appr', rows, function(r){ return r; }, '결재 대기 항목이 없습니다.', 7);
     const badge = document.getElementById('appr-badge');
     badge.textContent = mine.length; badge.style.display = 'inline';
-  } catch(e) {}
+  } catch(e) { console.error('loadApprovalQueue error:', e); }
 }
 
 async function processApproval(apprId, action, reqId, role) {
@@ -814,6 +817,89 @@ function closeModal() { document.getElementById('detail-modal').style.display = 
   if (accounts.length) { msal.setActiveAccount(accounts[0]); await boot(accounts[0]); return; }
   btn.disabled = false; btn.style.background = ''; btn.textContent = 'Microsoft 계정으로 로그인';
 })();
+
+// ── Pagination Utility ──
+const PAGE_SIZE = 20;
+const _pgState = {};
+
+function pgRender(scopeId) {
+  const s = _pgState[scopeId];
+  if (!s) return;
+  const { items, page, renderer, emptyMsg, colSpan } = s;
+  const tbody = document.getElementById(scopeId + '-body');
+  if (!tbody) return;
+  const total = items.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const cur = Math.min(page, totalPages - 1);
+  _pgState[scopeId].page = cur;
+  const slice = items.slice(cur * PAGE_SIZE, (cur + 1) * PAGE_SIZE);
+  if (!slice.length) {
+    tbody.innerHTML = '<tr><td colspan="' + (colSpan||7) + '" style="text-align:center;padding:32px;color:#605e5c">' + (emptyMsg||'항목이 없습니다.') + '</td></tr>';
+  } else {
+    tbody.innerHTML = slice.map(renderer).join('');
+  }
+  let pgEl = document.getElementById(scopeId + '-pagination');
+  if (!pgEl) {
+    pgEl = document.createElement('div');
+    pgEl.id = scopeId + '-pagination';
+    pgEl.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:4px;margin-top:12px;flex-wrap:wrap';
+    tbody.closest('table').insertAdjacentElement('afterend', pgEl);
+  }
+  if (totalPages <= 1) { pgEl.innerHTML = ''; return; }
+  let html = '';
+  html += '<button onclick="pgGo(\'' + scopeId + '\',' + (cur-1) + ')" style="' + pgBtnStyle(cur>0) + '" ' + (cur===0?'disabled':'') + '>&#8249;</button>';
+  const range = pgRange(cur, totalPages);
+  range.forEach(function(p) {
+    if (p === '...') {
+      html += '<span style="padding:0 4px;color:#605e5c">&hellip;</span>';
+    } else {
+      html += '<button onclick="pgGo(\'' + scopeId + '\',' + p + ')" style="' + pgBtnStyle(true, p===cur) + '">' + (p+1) + '</button>';
+    }
+  });
+  html += '<button onclick="pgGo(\'' + scopeId + '\',' + (cur+1) + ')" style="' + pgBtnStyle(cur<totalPages-1) + '" ' + (cur===totalPages-1?'disabled':'') + '>&#8250;</button>';
+  pgEl.innerHTML = html;
+}
+
+function pgBtnStyle(active, current) {
+  const base = 'border-radius:4px;padding:4px 9px;font-size:13px;cursor:pointer;border:1px solid ';
+  if (current) return base + '#0078d4;background:#0078d4;color:#fff;font-weight:700';
+  if (active)  return base + '#d2d0ce;background:#fff;color:#323130';
+  return base + '#edebe9;background:#f3f2f1;color:#a19f9d;cursor:default';
+}
+
+function pgRange(cur, total) {
+  if (total <= 7) return Array.from({length:total}, function(_,i){ return i; });
+  const r = [];
+  if (cur < 4) {
+    for (let i=0;i<5;i++) r.push(i);
+    r.push('...'); r.push(total-1);
+  } else if (cur > total-5) {
+    r.push(0); r.push('...');
+    for (let i=total-5;i<total;i++) r.push(i);
+  } else {
+    r.push(0); r.push('...');
+    for (let i=cur-1;i<=cur+1;i++) r.push(i);
+    r.push('...'); r.push(total-1);
+  }
+  return r;
+}
+
+function pgGo(scopeId, page) {
+  if (!_pgState[scopeId]) return;
+  const total = _pgState[scopeId].items.length;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  if (page < 0 || page >= totalPages) return;
+  _pgState[scopeId].page = page;
+  pgRender(scopeId);
+  const tbody = document.getElementById(scopeId + '-body');
+  if (tbody) { const tbl = tbody.closest('table'); if(tbl) tbl.scrollIntoView({behavior:'smooth', block:'start'}); }
+}
+
+function pgSet(scopeId, items, renderer, emptyMsg, colSpan) {
+  _pgState[scopeId] = { items: items, page: 0, renderer: renderer, emptyMsg: emptyMsg, colSpan: colSpan };
+  pgRender(scopeId);
+}
+
 </script>
 </body>
 </html>
