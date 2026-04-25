@@ -948,19 +948,26 @@ function loading(v) { document.getElementById('loading').classList.toggle('show'
 function showError(msg) { const el = document.getElementById('login-error'); el.style.display = 'block'; el.textContent = '오류: ' + msg; }
 function closeModal() { document.getElementById('detail-modal').style.display = 'none'; }
 
-(async () => {
-  const msalInstance = await msal.PublicClientApplication.createPublicClientApplication({
-    auth: { clientId: CLIENT_ID, authority: 'https://login.microsoftonline.com/' + TENANT_ID, redirectUri: window.location.origin + window.location.pathname },
-    cache: { cacheLocation: 'localStorage' }
-  });
-  msalApp = msalInstance;
+window.addEventListener('load', async () => {
   const btn = document.getElementById('btn-login');
-  const resp = await msalApp.handleRedirectPromise();
-  if (resp) { msalApp.setActiveAccount(resp.account); await boot(resp.account); return; }
-  const accounts = msalApp.getAllAccounts();
-  if (accounts.length) { msalApp.setActiveAccount(accounts[0]); await boot(accounts[0]); return; }
-  btn.disabled = false; btn.style.background = ''; btn.textContent = 'Microsoft 계정으로 로그인';
-})();
+  try {
+    const msalInstance = await msal.PublicClientApplication.createPublicClientApplication({
+      auth: { clientId: CLIENT_ID, authority: 'https://login.microsoftonline.com/' + TENANT_ID, redirectUri: window.location.origin + window.location.pathname },
+      cache: { cacheLocation: 'localStorage' }
+    });
+    msalApp = msalInstance;
+    const resp = await msalApp.handleRedirectPromise();
+    if (resp) { msalApp.setActiveAccount(resp.account); await boot(resp.account); return; }
+    const accounts = msalApp.getAllAccounts();
+    if (accounts.length) { msalApp.setActiveAccount(accounts[0]); await boot(accounts[0]); return; }
+    btn.disabled = false; btn.style.background = ''; btn.textContent = 'Microsoft 계정으로 로그인';
+  } catch(e) {
+    console.error('MSAL init error:', e);
+    btn.disabled = false; btn.style.background = ''; btn.textContent = 'Microsoft 계정으로 로그인';
+    document.getElementById('login-error').style.display = 'block';
+    document.getElementById('login-error').textContent = '초기화 오류: ' + e.message;
+  }
+});
 
 // ── Pagination Utility ──
 const PAGE_SIZE = 20;
