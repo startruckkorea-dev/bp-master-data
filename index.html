@@ -445,20 +445,20 @@ let employeeData = [];
 async function signIn() {
   try {
     if (window !== window.top) { window.open(window.location.href, '_blank'); return; }
-    const r = await msal.loginPopup({ scopes: SCOPES });
-    msal.setActiveAccount(r.account);
+    const r = await msalApp.loginPopup({ scopes: SCOPES });
+    msalApp.setActiveAccount(r.account);
     await boot(r.account);
   } catch(e) { showError(e.message); }
 }
-function signOut() { msal.logoutRedirect(); }
+function signOut() { msalApp.logoutRedirect(); }
 async function token() {
   try {
-    const r = await msal.acquireTokenSilent({ scopes: SCOPES, account: msal.getActiveAccount() });
+    const r = await msalApp.acquireTokenSilent({ scopes: SCOPES, account: msalApp.getActiveAccount() });
     return r.accessToken;
   } catch(e) {
     if (e.name === 'InteractionRequiredAuthError' || (e.errorCode && e.errorCode.includes('interaction_required'))) {
-      const r = await msal.acquireTokenPopup({ scopes: SCOPES });
-      msal.setActiveAccount(r.account);
+      const r = await msalApp.acquireTokenPopup({ scopes: SCOPES });
+      msalApp.setActiveAccount(r.account);
       return r.accessToken;
     }
     throw e;
@@ -953,12 +953,12 @@ function closeModal() { document.getElementById('detail-modal').style.display = 
     auth: { clientId: CLIENT_ID, authority: 'https://login.microsoftonline.com/' + TENANT_ID, redirectUri: window.location.origin + window.location.pathname },
     cache: { cacheLocation: 'localStorage' }
   });
-  msalApp = msalInstance; msal = msalApp;
+  msalApp = msalInstance;
   const btn = document.getElementById('btn-login');
-  const resp = await msal.handleRedirectPromise();
-  if (resp) { msal.setActiveAccount(resp.account); await boot(resp.account); return; }
-  const accounts = msal.getAllAccounts();
-  if (accounts.length) { msal.setActiveAccount(accounts[0]); await boot(accounts[0]); return; }
+  const resp = await msalApp.handleRedirectPromise();
+  if (resp) { msalApp.setActiveAccount(resp.account); await boot(resp.account); return; }
+  const accounts = msalApp.getAllAccounts();
+  if (accounts.length) { msalApp.setActiveAccount(accounts[0]); await boot(accounts[0]); return; }
   btn.disabled = false; btn.style.background = ''; btn.textContent = 'Microsoft 계정으로 로그인';
 })();
 
