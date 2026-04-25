@@ -390,7 +390,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
     <div class="unified-header">
       <div>
         <div class="unified-title">📬 나의 통합 결재함</div>
-        <div class="unified-sub">IT · SCC · Goodwill · BP Master · FA — 전체 결재 대기 항목</div>
+        <div class="unified-sub">STK 결재 시스템 전체 대기 항목</div>
       </div>
       <button class="unified-close" onclick="closeUnifiedAppr()">✕</button>
     </div>
@@ -1111,7 +1111,7 @@ async function loadUnifiedBadge() {
   await Promise.all(SYSTEMS.map(async sys => {
     try {
       const data = await api('/sites/' + siteId + '/lists/' + sys.list + "/items?$expand=fields&$top=500");
-      const mine = data.value.filter(i => (i.fields.ApproverEmail||'').toLowerCase() === (user.email||'').toLowerCase());
+      const mine = data.value.filter(i => (i.fields.ApproverEmail||'').toLowerCase() === (user.email||'').toLowerCase() && (i.fields.Status||'').trim() === '대기');
       total += mine.length;
     } catch(e) {}
   }));
@@ -1151,7 +1151,7 @@ async function loadUnifiedData() {
       const reqMap = {};
       reqData.value.forEach(r => { reqMap[r.id] = r.fields; });
       const mine = apprData.value
-        .filter(i => (i.fields.ApproverEmail||'').toLowerCase() === (user.email||'').toLowerCase() && i.fields.Status === '대기')
+        .filter(i => (i.fields.ApproverEmail||'').toLowerCase() === (user.email||'').toLowerCase() && (i.fields.Status||'').trim() === '대기')
         .sort((a,b) => b.fields.RequestID - a.fields.RequestID);
       return { sys, mine, reqMap };
     } catch(e) {
