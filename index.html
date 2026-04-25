@@ -1205,10 +1205,10 @@ async function loadUnifiedData() {
         } else {
           cols = '<td><span class="sys-badge ' + sys.color + '" style="font-size:.65rem">' + (rf.TicketType||'-') + '</span></td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (rf.Title||'-') + '</td><td>' + (rf.RequesterEmail||'-') + '</td><td>' + fmtDate(rf.RequestDate) + '</td>';
         }
-        html += '<tr onclick="window.open('' + sys.url + '','_blank')" title="' + sys.url + '에서 처리">';
+        html += '<tr onclick="window.open(\'' + sys.url + '\',' + "'_blank'" + ')" title="' + sys.url + '에서 처리">';
         html += '<td style="color:#0078d4;font-weight:600">' + (f.RequestID||item.id) + '</td>';
         html += cols;
-        html += '<td><button onclick="event.stopPropagation();window.open('' + sys.url + '','_blank')" style="background:#0078d4;color:#fff;border:none;border-radius:4px;padding:3px 10px;font-size:.7rem;cursor:pointer">처리하기</button></td>';
+        html += '<td><button onclick="event.stopPropagation();window.open(\'' + sys.url + '\',' + "'_blank'" + ')" style="background:#0078d4;color:#fff;border:none;border-radius:4px;padding:3px 10px;font-size:.7rem;cursor:pointer">처리하기</button></td>';
         html += '</tr>';
       });
       html += '</tbody></table>';
