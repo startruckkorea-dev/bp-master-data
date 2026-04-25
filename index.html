@@ -123,6 +123,22 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
   .form-row, .form-row.three { grid-template-columns: 1fr; }
   .appr-grid { grid-template-columns: 1fr; }
 }
+
+/* Dynamic Loading Overlay */
+#dyn-loading{display:none;position:fixed;inset:0;background:rgba(255,255,255,0.92);z-index:500;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+#dyn-loading.show{display:flex}
+.dyn-spinner{width:40px;height:40px;border:3px solid #edebe9;border-top:3px solid #0078d4;border-radius:50%;animation:dynSpin .8s linear infinite}
+@keyframes dynSpin{to{transform:rotate(360deg)}}
+.dyn-msg{font-size:.88rem;color:#323130;font-weight:500;display:flex;align-items:center;gap:6px}
+.dyn-dots{display:inline-flex;gap:3px}
+.dyn-dots span{width:4px;height:4px;background:#0078d4;border-radius:50%;animation:dotPulse 1.2s infinite}
+.dyn-dots span:nth-child(2){animation-delay:.2s}
+.dyn-dots span:nth-child(3){animation-delay:.4s}
+@keyframes dotPulse{0%,80%,100%{transform:scale(0);opacity:.3}40%{transform:scale(1);opacity:1}}
+.dyn-sub{font-size:.72rem;color:#a19f9d}
+.dyn-refresh{display:none;background:#0078d4;color:#fff;border:none;border-radius:4px;padding:8px 20px;font-size:.82rem;cursor:pointer;font-family:inherit;margin-top:4px}
+.dyn-refresh:hover{background:#106ebe}
+
 </style>
 </head>
 <body>
@@ -256,7 +272,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
           <th>번호</th><th>Type</th><th>Sub Category</th><th>BP Code</th><th>상태</th><th>신청일</th>
         </tr></thead>
         <tbody id="list-body">
-          <tr><td colspan="6" style="text-align:center;padding:32px;color:#605e5c">불러오는 중...</td></tr>
+          <tr><td colspan="6" style="text-align:center;padding:32px;color:#605e5c"><div class="dyn-dots" style="justify-content:center"><span></span><span></span><span></span></div></td></tr>
         </tbody>
       </table>
     </div>
@@ -296,7 +312,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
           <th>번호</th><th>신청자</th><th>Type</th><th>Sub Category</th><th>BP Code</th><th>상태</th><th>신청일</th>
         </tr></thead>
         <tbody id="admin-body">
-          <tr><td colspan="7" style="text-align:center;padding:32px;color:#605e5c">불러오는 중...</td></tr>
+          <tr><td colspan="7" style="text-align:center;padding:32px;color:#605e5c"><div class="dyn-dots" style="justify-content:center"><span></span><span></span><span></span></div></td></tr>
         </tbody>
       </table>
     </div>
@@ -324,6 +340,15 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
       <button id="confirm-ok-btn" style="border:none;border-radius:4px;padding:7px 20px;font-size:.85rem;cursor:pointer;font-weight:600;font-family:inherit"></button>
     </div>
   </div>
+</div>
+
+
+<!-- Dynamic Loading Overlay -->
+<div id="dyn-loading">
+  <div class="dyn-spinner"></div>
+  <div class="dyn-msg"><span id="dyn-msg-text">데이터 불러오는 중</span><div class="dyn-dots"><span></span><span></span><span></span></div></div>
+  <div class="dyn-sub" id="dyn-sub-text"></div>
+  <button class="dyn-refresh" id="dyn-refresh-btn" onclick="location.reload()">🔄 새로고침</button>
 </div>
 
 <div id="loading"><div class="loading-box"><div class="spinner"></div><span>처리 중입니다...</span></div></div>
@@ -640,19 +665,21 @@ function fmtDate(iso) {
 async function loadMyList() {
   if (!siteId) return;
   const tbody = document.getElementById('list-body');
+  dynLoadStart('BP 데이터 불러오는 중');
   try {
     const data = await api('/sites/' + siteId + '/lists/BP_Requests/items?$expand=fields&$top=500');
     const mine = data.value
       .filter(i => (i.fields.RequesterEmail||'').toLowerCase() === user.username.toLowerCase())
       .sort((a,b) => new Date(b.fields.RequestDate) - new Date(a.fields.RequestDate));
-    if (!mine.length) { pgSet('list', [], null, '신청 내역이 없습니다.', 6); return; }
-    pgSet('list', mine, item => { const f = item.fields; return '<tr onclick="showDetail(' + item.id + ')"><td>' + item.id + '</td><td><span class="badge badge-type">' + (f.BPType||'') + '</span></td><td>' + (f.SubCategory||'') + '</td><td>' + (f.BPCode||'-') + '</td><td><span class="badge badge-' + f.Status + '">' + f.Status + '</span></td><td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td></tr>'; }, '신청 내역이 없습니다.', 6);
+    if (!mine.length) { dynLoadEnd(); pgSet('list', [], null, '신청 내역이 없습니다.', 6); return; }
+    dynLoadEnd(); pgSet('list', mine, item => { const f = item.fields; return '<tr onclick="showDetail(' + item.id + ')"><td>' + item.id + '</td><td><span class="badge badge-type">' + (f.BPType||'') + '</span></td><td>' + (f.SubCategory||'') + '</td><td>' + (f.BPCode||'-') + '</td><td><span class="badge badge-' + f.Status + '">' + f.Status + '</span></td><td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td></tr>'; }, '신청 내역이 없습니다.', 6);
   } catch(e) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#a4262c">' + e.message + '</td></tr>'; }
 }
 
 async function loadApprovalQueue() {
   if (!siteId) return;
   const tbody = document.getElementById('appr-body');
+  dynLoadStart('결재 정보 확인 중');
   try {
     const [apprData, reqData] = await Promise.all([
       api('/sites/' + siteId + '/lists/BP_Approvals/items?$expand=fields&$top=500'),
@@ -663,13 +690,13 @@ async function loadApprovalQueue() {
     const mine = apprData.value
       .filter(function(i){ return (i.fields.ApproverEmail||'').toLowerCase() === (user.email||user.username||'').toLowerCase() && i.fields.Status === '대기'; })
       .sort(function(a,b){ return b.fields.RequestID - a.fields.RequestID; });
-    if (!mine.length) { pgSet('appr', [], null, '결재 대기 항목이 없습니다.', 7); return; }
+    if (!mine.length) { dynLoadEnd(); pgSet('appr', [], null, '결재 대기 항목이 없습니다.', 7); return; }
     const rows = mine.map(function(item) {
       const f = item.fields;
       const rf = reqMap[String(f.RequestID)] || {};
       return '<tr><td style="color:#0078d4;cursor:pointer" onclick="showDetail(' + f.RequestID + ')">' + f.RequestID + '</td><td>' + (rf.RequesterEmail||'') + '</td><td><span class="badge badge-type">' + (rf.BPType||'') + '</span></td><td>' + (rf.SubCategory||'') + '</td><td><span class="badge badge-' + (rf.Status||'대기') + '">' + (rf.Status||'') + '</span></td><td>' + (rf.RequestDate?fmtDate(rf.RequestDate):'') + '</td><td onclick="event.stopPropagation()"><button class="btn-primary" style="padding:3px 10px;font-size:12px" onclick="showConfirm(' + item.id + ',\'승인\',' + f.RequestID + ',\'' + (f.ApproverRole||'') + '\')">승인</button> <button class="btn-secondary" style="padding:3px 10px;font-size:12px" onclick="showConfirm(' + item.id + ',\'반려\',' + f.RequestID + ',\'' + (f.ApproverRole||'') + '\')">반려</button></td></tr>';
     });
-    pgSet('appr', rows, function(r){ return r; }, '결재 대기 항목이 없습니다.', 7);
+    dynLoadEnd(); pgSet('appr', rows, function(r){ return r; }, '결재 대기 항목이 없습니다.', 7);
     const badge = document.getElementById('appr-badge');
     badge.textContent = mine.length; badge.style.display = 'inline';
   } catch(e) { console.error('loadApprovalQueue error:', e); }
@@ -804,6 +831,7 @@ async function loadAdminList() {
   const filterStatus = document.getElementById('admin-filter-status').value;
   const filterType = document.getElementById('admin-filter-type').value;
   const filterSearch = (document.getElementById('admin-filter-search').value||'').toLowerCase();
+  dynLoadStart('BP 데이터 불러오는 중');
   try {
     if (!allRequestsCache.length) {
       const data = await api('/sites/' + siteId + '/lists/BP_Requests/items?$expand=fields&$top=500');
@@ -814,7 +842,7 @@ async function loadAdminList() {
     if (filterType)   items = items.filter(i => i.fields.BPType === filterType);
     if (filterSearch) items = items.filter(i => (i.fields.RequesterEmail||'').toLowerCase().includes(filterSearch));
     document.getElementById('admin-count').textContent = '총 ' + items.length + '건';
-    pgSet('admin', items, item => { const f = item.fields; return '<tr style="cursor:pointer" onclick="showDetail(' + item.id + ')"><td>' + item.id + '</td><td>' + (f.RequesterEmail||'') + '</td><td><span class="badge badge-type">' + (f.BPType||'') + '</span></td><td>' + (f.SubCategory||'') + '</td><td>' + (f.BPCode||'-') + '</td><td><span class="badge badge-' + f.Status + '">' + f.Status + '</span></td><td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td></tr>'; }, '조회 결과가 없습니다.', 7);
+    dynLoadEnd(); pgSet('admin', items, item => { const f = item.fields; return '<tr style="cursor:pointer" onclick="showDetail(' + item.id + ')"><td>' + item.id + '</td><td>' + (f.RequesterEmail||'') + '</td><td><span class="badge badge-type">' + (f.BPType||'') + '</span></td><td>' + (f.SubCategory||'') + '</td><td>' + (f.BPCode||'-') + '</td><td><span class="badge badge-' + f.Status + '">' + f.Status + '</span></td><td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td></tr>'; }, '조회 결과가 없습니다.', 7);
   } catch(e) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#a4262c">' + e.message + '</td></tr>'; }
 }
 
@@ -942,6 +970,48 @@ function pgGo(scopeId, page) {
 function pgSet(scopeId, items, renderer, emptyMsg, colSpan) {
   _pgState[scopeId] = { items: items, page: 0, renderer: renderer, emptyMsg: emptyMsg, colSpan: colSpan };
   pgRender(scopeId);
+}
+
+
+// ── Dynamic Loading ──
+let _dynLoadTimer = null;
+let _dynMsgTimer = null;
+let _dynMsgIdx = 0;
+const _dynMsgs = ['BP 데이터 불러오는 중', '결재 정보 확인 중', '거래처 목록 로딩 중', '잠시만 기다려주세요'];
+const _dynTimeoutMs = 15000;
+
+function dynLoadStart(msg) {
+  const el = document.getElementById('dyn-loading');
+  const msgEl = document.getElementById('dyn-msg-text');
+  const subEl = document.getElementById('dyn-sub-text');
+  const refreshBtn = document.getElementById('dyn-refresh-btn');
+  if(!el) return;
+  _dynMsgIdx = 0;
+  if(msgEl) msgEl.textContent = msg || _dynMsgs[0];
+  if(subEl) subEl.textContent = '';
+  if(refreshBtn) refreshBtn.style.display = 'none';
+  el.classList.add('show');
+
+  // 메시지 순환
+  _dynMsgTimer = setInterval(() => {
+    _dynMsgIdx = (_dynMsgIdx + 1) % _dynMsgs.length;
+    if(msgEl) msgEl.textContent = _dynMsgs[_dynMsgIdx];
+  }, 2500);
+
+  // 타임아웃 (15초) → 새로고침 버튼 표시
+  _dynLoadTimer = setTimeout(() => {
+    if(subEl) subEl.textContent = 'BP 데이터 로딩이 오래 걸리고 있습니다. 페이지를 새로고침해 주세요.';
+    if(subEl) subEl.style.color = '#a4262c';
+    if(refreshBtn) refreshBtn.style.display = 'inline-block';
+    if(msgEl) msgEl.textContent = '연결이 지연되고 있습니다';
+  }, _dynTimeoutMs);
+}
+
+function dynLoadEnd() {
+  const el = document.getElementById('dyn-loading');
+  if(el) el.classList.remove('show');
+  if(_dynLoadTimer) { clearTimeout(_dynLoadTimer); _dynLoadTimer = null; }
+  if(_dynMsgTimer) { clearInterval(_dynMsgTimer); _dynMsgTimer = null; }
 }
 
 </script>
