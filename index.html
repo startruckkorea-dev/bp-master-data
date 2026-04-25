@@ -189,6 +189,13 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 .btn-approve:hover{background:#0e6b0e}
 .btn-reject{background:#a4262c;color:#fff;border:none;border-radius:4px;padding:4px 14px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit}
 .btn-reject:hover{background:#8f1f24}
+
+.unified-table td:last-child, .unified-table td:nth-last-child(2) {
+  white-space:nowrap; text-align:center; width:70px;
+}
+.unified-table .btn-approve, .unified-table .btn-reject {
+  width:60px; text-align:center; padding:4px 0;
+}
 </style>
 </head>
 <body>
@@ -1164,7 +1171,8 @@ function openUniDetail(apprId) {
     '<tr><td style="color:#605e5c;width:110px;padding:5px 0;border-bottom:1px solid #f3f2f1">신청자</td><td style="padding:5px 0;border-bottom:1px solid #f3f2f1">'+(rf.RequesterEmail||'-')+'</td></tr>' +
     rows +
     '<tr><td style="color:#605e5c;padding:5px 0;border-bottom:1px solid #f3f2f1">상태</td><td style="padding:5px 0;border-bottom:1px solid #f3f2f1;font-weight:600;color:'+(sc[rf.Status]||'#323130')+'">'+(rf.Status||'-')+'</td></tr>' +
-    '<tr><td style="color:#605e5c;padding:5px 0">신청일</td><td style="padding:5px 0">'+fmt(rf.RequestDate)+'</td></tr>' +
+    '<tr><td style="color:#605e5c;padding:5px 0;border-bottom:1px solid #f3f2f1">신청일</td><td style="padding:5px 0;border-bottom:1px solid #f3f2f1">'+fmt(rf.RequestDate)+'</td></tr>' +
+    (rf.Description ? '<tr><td style="color:#605e5c;padding:5px 0;vertical-align:top">설명</td><td style="padding:5px 0;white-space:pre-wrap;font-size:.75rem;color:#323130">'+rf.Description+'</td></tr>' : '') +
     '</table>' +
     '<div style="font-size:.72rem;font-weight:600;color:#0078d4;background:#f0f6ff;border-left:3px solid #0078d4;padding:5px 10px;border-radius:4px;margin-bottom:8px">결재 현황</div>' +
     '<div style="background:#f9f9f9;border-radius:6px;border:1px solid #edebe9;overflow:hidden;margin-bottom:14px">' +
@@ -1274,8 +1282,8 @@ async function loadUnifiedData() {
 
         html += '<tr style="cursor:pointer" onclick="openUniDetail('+item.id+')">';
         html += '<td style="color:#0078d4;font-weight:600">'+f.RequestID+'</td>'+cols;
-        html += '<td onclick="event.stopPropagation()"><button onclick="showConfirm('+item.id+',\'승인\','+f.RequestID+')" style="background:#107c10;color:#fff;border:none;border-radius:4px;padding:3px 10px;font-size:.72rem;cursor:pointer;font-family:inherit;white-space:nowrap">✅ 승인</button></td>';
-        html += '<td onclick="event.stopPropagation()"><button onclick="showConfirm('+item.id+',\'반려\','+f.RequestID+')" style="background:#a4262c;color:#fff;border:none;border-radius:4px;padding:3px 10px;font-size:.72rem;cursor:pointer;font-family:inherit;white-space:nowrap">❌ 반려</button></td>';
+        html += '<td onclick="event.stopPropagation()" style="text-align:center"><button class="btn-approve" onclick="showConfirm('+item.id+',\'승인\','+f.RequestID+')">✅ 승인</button></td>';
+        html += '<td onclick="event.stopPropagation()" style="text-align:center"><button class="btn-reject" onclick="showConfirm('+item.id+',\'반려\','+f.RequestID+')">❌ 반려</button></td>';
         html += '</tr>';
       });
       html += '</tbody></table>';
