@@ -400,6 +400,12 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
   </div>
 </div>
 
+
+<!-- 통합결재함 상세 패널 -->
+<div id="uni-detail-box" onclick="if(event.target===this)closeUniDetail()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;align-items:center;justify-content:center">
+  <div id="uni-detail-inner" style="background:#fff;border-radius:10px;padding:22px;width:480px;max-width:94vw;max-height:82vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25)"></div>
+</div>
+
 <!-- 결재 확인 팝업 -->
 <div id="confirm-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:10px;padding:28px 28px 20px;max-width:420px;width:92%;box-shadow:0 4px 24px rgba(0,0,0,.2)">
@@ -890,8 +896,8 @@ async function showDetail(requestId) {
         const myPending = apprList.find(a => (a.fields.ApproverEmail||'').toLowerCase() === (user.email||user.username||'').toLowerCase() && (a.fields.Status||'').trim() === '대기');
         if (myPending) {
           apprHtml += '<div style="display:flex;gap:10px;margin-top:14px">' +
-            '<button onclick="showConfirm(' + myPending.id + ',\'승인\',' + requestId + ',\'' + (myPending.fields.ApproverRole||'') + '\')" style="flex:1;background:#107c10;color:#fff;border:none;border-radius:6px;padding:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">✅ 승인</button>' +
-            '<button onclick="showConfirm(' + myPending.id + ',\'반려\',' + requestId + ',\'' + (myPending.fields.ApproverRole||'') + '\')" style="flex:1;background:#a4262c;color:#fff;border:none;border-radius:6px;padding:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">❌ 반려</button>' +
+            '<button onclick="showConfirm(' + myPending.id + ',\'승인\',' + requestId + ',\'' + (myPending.fields.ApproverRole||'') + '\')" style="flex:1;background:#107c10;color:#fff;border:none;border-radius:6px;padding:11px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit">✅ 승인</button>' +
+            '<button onclick="showConfirm(' + myPending.id + ',\'반려\',' + requestId + ',\'' + (myPending.fields.ApproverRole||'') + '\')" style="flex:1;background:#a4262c;color:#fff;border:none;border-radius:6px;padding:11px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit">❌ 반려</button>' +
             '</div>';
         }
       }
@@ -1144,8 +1150,9 @@ function openUniDetail(apprId) {
   else                      rows='<tr><td style="color:#605e5c;width:110px;padding:5px 0;border-bottom:1px solid #f3f2f1">유형</td><td style="padding:5px 0;border-bottom:1px solid #f3f2f1">'+(rf.TicketType||'-')+'</td></tr><tr><td style="color:#605e5c;padding:5px 0;border-bottom:1px solid #f3f2f1">제목</td><td style="padding:5px 0;border-bottom:1px solid #f3f2f1">'+(rf.Title||'-')+'</td></tr>';
 
   const box = document.getElementById('uni-detail-box');
-  if(!box) return;
-  box.innerHTML =
+  const inner = document.getElementById('uni-detail-inner');
+  if(!box||!inner) return;
+  inner.innerHTML =
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">' +
     '<div style="font-weight:700;font-size:.95rem;color:#323130"><span class="sys-badge '+sys.color+'" style="margin-right:6px">'+sys.key+'</span>신청번호 '+reqId+'</div>' +
     '<button onclick="closeUniDetail()" style="background:none;border:1px solid #d2d0ce;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:.85rem;color:#605e5c">✕</button></div>' +
@@ -1163,8 +1170,8 @@ function openUniDetail(apprId) {
       '<span style="color:'+(sc[af.Status]||'#323130')+';font-weight:700;font-size:.75rem;white-space:nowrap">'+(af.Status||'')+'</span></div>'
     ).join('') + '</div>' +
     '<div style="display:flex;gap:10px;margin-bottom:10px">' +
-    '<button onclick="showConfirm('+apprId+',\'승인\','+reqId+');closeUniDetail();" style="flex:1;background:#107c10;color:#fff;border:none;border-radius:6px;padding:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">✅ 승인</button>' +
-    '<button onclick="showConfirm('+apprId+',\'반려\','+reqId+');closeUniDetail();" style="flex:1;background:#a4262c;color:#fff;border:none;border-radius:6px;padding:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">❌ 반려</button>' +
+    '<button onclick="showConfirm('+apprId+',\'승인\','+reqId+');closeUniDetail();" style="flex:1;background:#107c10;color:#fff;border:none;border-radius:6px;padding:11px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit">✅ 승인</button>' +
+    '<button onclick="showConfirm('+apprId+',\'반려\','+reqId+');closeUniDetail();" style="flex:1;background:#a4262c;color:#fff;border:none;border-radius:6px;padding:11px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit">❌ 반려</button>' +
     '</div>' +
     '<div style="text-align:right"><a href="'+sys.url+'" target="_blank" style="font-size:.72rem;color:#0078d4;text-decoration:none">'+sys.name+' 전체 보기 →</a></div>';
   box.style.display = 'flex';
@@ -1173,6 +1180,8 @@ function openUniDetail(apprId) {
 function closeUniDetail() {
   const box = document.getElementById('uni-detail-box');
   if(box) box.style.display = 'none';
+  const inner = document.getElementById('uni-detail-inner');
+  if(inner) inner.innerHTML = '';
 }
 
 async function loadUnifiedBadge() {
