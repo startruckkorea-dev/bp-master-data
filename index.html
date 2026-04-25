@@ -875,11 +875,25 @@ async function showDetail(requestId) {
       const apprData = await api('/sites/' + siteId + '/lists/BP_Approvals/items?$expand=fields&$top=500');
       const apprList = apprData.value.filter(i => i.fields.RequestID == requestId).sort((a,b) => a.fields.ApprovalOrder - b.fields.ApprovalOrder);
       if (apprList.length) {
-        const sc = { '대기':'#7d5700','승인':'#107c10','반려':'#a4262c','대기(잠김)':'#605e5c' };
-        apprHtml = sec('결재 이력') + apprList.map(a => {
-          const af = a.fields;
-          return '<div style="padding:7px 0;border-bottom:0.5px solid #edebe9;font-size:13px"><div style="display:flex;justify-content:space-between"><span style="font-weight:500">' + (af.ApproverRole||'') + ' — ' + (af.ApproverName||af.ApproverEmail||'') + '</span><span style="color:' + (sc[af.Status]||'#323130') + ';font-weight:600">' + (af.Status||'') + '</span></div>' + (af.ApprovalDate ? '<div style="color:#605e5c;font-size:11px">' + fmtDate(af.ApprovalDate) + '</div>' : '') + (af.Comment ? '<div style="margin-top:3px;background:#f3f2f1;border-radius:3px;padding:4px 7px;font-size:12px">💬 ' + af.Comment + '</div>' : '') + '</div>';
-        }).join('');
+        const sc = { '대기':'#7d5700','승인':'#107c10','반려':'#a4262c','대기(잠김)':'#605e5c','승인완료':'#107c10' };
+        apprHtml = sec('결재 이력') +
+          '<div style="background:#f9f9f9;border-radius:6px;border:1px solid #edebe9;overflow:hidden">' +
+          apprList.map(a => {
+            const af = a.fields;
+            return '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:9px 12px;border-bottom:1px solid #edebe9">' +
+              '<div><div style="font-weight:600;font-size:13px;color:#323130">' + (af.ApprovalOrder||'') + '차 ' + (af.ApproverRole||'') + '</div>' +
+              '<div style="font-size:12px;color:#605e5c;margin-top:2px">' + (af.ApproverName||'') + ' · ' + (af.ApproverEmail||'') + '</div>' +
+              (af.ApprovalDate ? '<div style="font-size:11px;color:#a19f9d;margin-top:2px">' + fmtDate(af.ApprovalDate) + '</div>' : '') +
+              (af.Comment ? '<div style="margin-top:4px;background:#fff;border:1px solid #edebe9;border-radius:4px;padding:4px 8px;font-size:12px;color:#605e5c">💬 ' + af.Comment + '</div>' : '') +
+              '</div><span style="color:' + (sc[af.Status]||'#323130') + ';font-weight:700;font-size:12px;white-space:nowrap;margin-left:8px">' + (af.Status||'') + '</span></div>';
+          }).join('') + '</div>';
+        const myPending = apprList.find(a => (a.fields.ApproverEmail||'').toLowerCase() === (user.email||user.username||'').toLowerCase() && (a.fields.Status||'').trim() === '대기');
+        if (myPending) {
+          apprHtml += '<div style="display:flex;gap:10px;margin-top:14px">' +
+            '<button onclick="showConfirm(' + myPending.id + ',\'승인\',' + requestId + ',\'' + (myPending.fields.ApproverRole||'') + '\')" style="flex:1;background:#107c10;color:#fff;border:none;border-radius:6px;padding:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">✅ 승인</button>' +
+            '<button onclick="showConfirm(' + myPending.id + ',\'반려\',' + requestId + ',\'' + (myPending.fields.ApproverRole||'') + '\')" style="flex:1;background:#a4262c;color:#fff;border:none;border-radius:6px;padding:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">❌ 반려</button>' +
+            '</div>';
+        }
       }
     } catch(e) {}
 
@@ -1102,121 +1116,153 @@ function dynLoadEnd() {
 }
 
 
+
+
 // ════════════════════════════════════════
 // 통합 결재함
 // ════════════════════════════════════════
-const SYSTEMS = [
-  { key:'IT',  name:'IT Ticket',           list:'IT_Approvals',  reqList:'IT_Requests',   url:'https://itsm-ticket.startruckkorea.com/',  color:'sys-IT',  cols:['번호','제목','신청자','신청일'] },
-  { key:'SCC', name:'STK Contract',        list:'STK_ContractApprovals', reqList:'STK_Contracts',  url:'https://scc.startruckkorea.com/',   color:'sys-SCC', cols:['번호','제목','신청자','신청일'] },
-  { key:'GW',  name:'Goodwill Approval',   list:'GW_Approvals',  reqList:'GW_Requests',   url:'https://gw.startruckkorea.com/',           color:'sys-GW',  cols:['번호','Source','Type','신청자','신청일'] },
-  { key:'BP',  name:'BP Master Data',      list:'BP_Approvals',  reqList:'BP_Requests',   url:'https://bp-master.startruckkorea.com/',    color:'sys-BP',  cols:['번호','Type','Sub Category','신청자','신청일'] },
-  { key:'FA',  name:'FA Registration',     list:'FA_Approvals',  reqList:'FA_Requests',   url:'https://fa.startruckkorea.com/',           color:'sys-FA',  cols:['번호','FA Type','제목','신청자','신청일'] },
+const _UNIFIED_SYSTEMS = [
+  { key:'IT',  name:'IT Ticket',         list:'IT_Approvals',          reqList:'IT_Requests',    url:'https://itsm-ticket.startruckkorea.com/', color:'sys-IT'  },
+  { key:'SCC', name:'STK Contract',      list:'STK_ContractApprovals', reqList:'STK_Contracts',  url:'https://scc.startruckkorea.com/',         color:'sys-SCC' },
+  { key:'GW',  name:'Goodwill Approval', list:'GW_Approvals',          reqList:'GW_Requests',    url:'https://gw.startruckkorea.com/',          color:'sys-GW'  },
+  { key:'BP',  name:'BP Master Data',    list:'BP_Approvals',          reqList:'BP_Requests',    url:'https://bp-master.startruckkorea.com/',   color:'sys-BP'  },
+  { key:'FA',  name:'FA Registration',   list:'FA_Approvals',          reqList:'FA_Requests',    url:'https://fa.startruckkorea.com/',          color:'sys-FA'  },
 ];
+
+let _uniCache = {}; // apprId -> { sys, reqId, rf, apprList }
+
+function openUniDetail(apprId) {
+  const d = _uniCache[apprId]; if(!d) return;
+  const { sys, reqId, rf, apprList } = d;
+  const sc = {'대기':'#7d5700','승인':'#107c10','반려':'#a4262c','대기(잠김)':'#605e5c','승인완료':'#107c10'};
+  const fmt = s => { if(!s)return'-'; const v=new Date(s); return v.getFullYear()+'-'+String(v.getMonth()+1).padStart(2,'0')+'-'+String(v.getDate()).padStart(2,'0')+' '+String(v.getHours()).padStart(2,'0')+':'+String(v.getMinutes()).padStart(2,'0'); };
+  let rows = '';
+  if(sys.key==='GW')       rows='<tr><td style="color:#605e5c;width:110px;padding:5px 0;border-bottom:1px solid #f3f2f1">Source</td><td style="padding:5px 0;border-bottom:1px solid #f3f2f1">'+(rf.Source||'-')+'</td></tr><tr><td style="color:#605e5c;padding:5px 0;border-bottom:1px solid #f3f2f1">Type</td><td style="padding:5px 0;border-bottom:1px solid #f3f2f1">'+(rf.GoodwillType||'-')+'</td></tr>';
+  else if(sys.key==='BP')  rows='<tr><td style="color:#605e5c;width:110px;padding:5px 0;border-bottom:1px solid #f3f2f1">BP Type</td><td style="padding:5px 0;border-bottom:1px solid #f3f2f1">'+(rf.BPType||'-')+'</td></tr><tr><td style="color:#605e5c;padding:5px 0;border-bottom:1px solid #f3f2f1">Sub Category</td><td style="padding:5px 0;border-bottom:1px solid #f3f2f1">'+(rf.SubCategory||'-')+'</td></tr>';
+  else if(sys.key==='FA')  rows='<tr><td style="color:#605e5c;width:110px;padding:5px 0;border-bottom:1px solid #f3f2f1">FA Type</td><td style="padding:5px 0;border-bottom:1px solid #f3f2f1">'+(rf.FAType||'-')+'</td></tr><tr><td style="color:#605e5c;padding:5px 0;border-bottom:1px solid #f3f2f1">제목</td><td style="padding:5px 0;border-bottom:1px solid #f3f2f1">'+(rf.Title||'-')+'</td></tr>';
+  else if(sys.key==='SCC') rows='<tr><td style="color:#605e5c;width:110px;padding:5px 0;border-bottom:1px solid #f3f2f1">제목</td><td style="padding:5px 0;border-bottom:1px solid #f3f2f1">'+(rf.Title||'-')+'</td></tr><tr><td style="color:#605e5c;padding:5px 0;border-bottom:1px solid #f3f2f1">유형</td><td style="padding:5px 0;border-bottom:1px solid #f3f2f1">'+(rf.ContractCompanyType||'-')+'</td></tr>';
+  else                      rows='<tr><td style="color:#605e5c;width:110px;padding:5px 0;border-bottom:1px solid #f3f2f1">유형</td><td style="padding:5px 0;border-bottom:1px solid #f3f2f1">'+(rf.TicketType||'-')+'</td></tr><tr><td style="color:#605e5c;padding:5px 0;border-bottom:1px solid #f3f2f1">제목</td><td style="padding:5px 0;border-bottom:1px solid #f3f2f1">'+(rf.Title||'-')+'</td></tr>';
+
+  const box = document.getElementById('uni-detail-box');
+  if(!box) return;
+  box.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">' +
+    '<div style="font-weight:700;font-size:.95rem;color:#323130"><span class="sys-badge '+sys.color+'" style="margin-right:6px">'+sys.key+'</span>신청번호 '+reqId+'</div>' +
+    '<button onclick="closeUniDetail()" style="background:none;border:1px solid #d2d0ce;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:.85rem;color:#605e5c">✕</button></div>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:.8rem;margin-bottom:12px">' +
+    '<tr><td style="color:#605e5c;width:110px;padding:5px 0;border-bottom:1px solid #f3f2f1">신청자</td><td style="padding:5px 0;border-bottom:1px solid #f3f2f1">'+(rf.RequesterEmail||'-')+'</td></tr>' +
+    rows +
+    '<tr><td style="color:#605e5c;padding:5px 0;border-bottom:1px solid #f3f2f1">상태</td><td style="padding:5px 0;border-bottom:1px solid #f3f2f1;font-weight:600;color:'+(sc[rf.Status]||'#323130')+'">'+(rf.Status||'-')+'</td></tr>' +
+    '<tr><td style="color:#605e5c;padding:5px 0">신청일</td><td style="padding:5px 0">'+fmt(rf.RequestDate)+'</td></tr>' +
+    '</table>' +
+    '<div style="font-size:.72rem;font-weight:600;color:#0078d4;background:#f0f6ff;border-left:3px solid #0078d4;padding:5px 10px;border-radius:4px;margin-bottom:8px">결재 현황</div>' +
+    '<div style="background:#f9f9f9;border-radius:6px;border:1px solid #edebe9;overflow:hidden;margin-bottom:14px">' +
+    apprList.map(af => '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #edebe9">' +
+      '<div><div style="font-weight:600;font-size:.8rem">'+(af.ApprovalOrder||'')+'차 '+(af.ApproverRole||'')+'</div>' +
+      '<div style="font-size:.72rem;color:#605e5c">'+(af.ApproverName||'')+' · '+(af.ApproverEmail||'')+'</div></div>' +
+      '<span style="color:'+(sc[af.Status]||'#323130')+';font-weight:700;font-size:.75rem;white-space:nowrap">'+(af.Status||'')+'</span></div>'
+    ).join('') + '</div>' +
+    '<div style="display:flex;gap:10px;margin-bottom:10px">' +
+    '<button onclick="showConfirm('+apprId+',\'승인\','+reqId+');closeUniDetail();" style="flex:1;background:#107c10;color:#fff;border:none;border-radius:6px;padding:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">✅ 승인</button>' +
+    '<button onclick="showConfirm('+apprId+',\'반려\','+reqId+');closeUniDetail();" style="flex:1;background:#a4262c;color:#fff;border:none;border-radius:6px;padding:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">❌ 반려</button>' +
+    '</div>' +
+    '<div style="text-align:right"><a href="'+sys.url+'" target="_blank" style="font-size:.72rem;color:#0078d4;text-decoration:none">'+sys.name+' 전체 보기 →</a></div>';
+  box.style.display = 'flex';
+}
+
+function closeUniDetail() {
+  const box = document.getElementById('uni-detail-box');
+  if(box) box.style.display = 'none';
+}
 
 async function loadUnifiedBadge() {
   if (!siteId || !user) return;
   let total = 0;
-  await Promise.all(SYSTEMS.map(async sys => {
+  await Promise.all(_UNIFIED_SYSTEMS.map(async sys => {
     try {
-      const data = await api('/sites/' + siteId + '/lists/' + sys.list + "/items?$expand=fields&$top=500");
-      const mine = data.value.filter(i => (i.fields.ApproverEmail||'').toLowerCase() === (user.email||'').toLowerCase() && (i.fields.Status||'').trim() === '대기');
-      total += mine.length;
+      const data = await api('/sites/'+siteId+'/lists/'+sys.list+'/items?$expand=fields&$top=500');
+      total += data.value.filter(i => (i.fields.ApproverEmail||'').toLowerCase() === (user.email||user.username||'').toLowerCase() && (i.fields.Status||'').trim() === '대기').length;
     } catch(e) {}
   }));
   const badge = document.getElementById('unif-badge');
-  if (badge) {
-    if (total > 0) {
-      badge.textContent = total;
-      badge.style.display = 'inline-block';
-    } else {
-      badge.style.display = 'none';
-    }
-  }
+  if(badge) { badge.textContent = total; badge.style.display = total > 0 ? 'inline-block' : 'none'; }
 }
 
 async function openUnifiedAppr() {
   document.getElementById('unified-modal').classList.add('open');
-  document.getElementById('unified-body').innerHTML = '<div class="unified-loading"><div class="dyn-dots" style="justify-content:center;margin-bottom:8px"><span></span><span></span><span></span></div>전체 시스템 결재 항목 불러오는 중...</div>';
+  document.getElementById('unified-body').innerHTML = '<div style="text-align:center;padding:32px;color:#605e5c">불러오는 중...</div>';
   await loadUnifiedData();
 }
-
 function closeUnifiedAppr() {
   document.getElementById('unified-modal').classList.remove('open');
+  closeUniDetail();
 }
 
 async function loadUnifiedData() {
   if (!siteId || !user) return;
+  const myEmail = (user.email||user.username||'').toLowerCase();
   const body = document.getElementById('unified-body');
-  let html = '';
-  let grandTotal = 0;
+  let html = '', grandTotal = 0;
+  _uniCache = {};
 
-  const results = await Promise.all(SYSTEMS.map(async sys => {
+  const results = await Promise.all(_UNIFIED_SYSTEMS.map(async sys => {
     try {
       const [apprData, reqData] = await Promise.all([
-        api('/sites/' + siteId + '/lists/' + sys.list + '/items?$expand=fields&$top=500'),
-        api('/sites/' + siteId + '/lists/' + sys.reqList + '/items?$expand=fields&$top=500'),
+        api('/sites/'+siteId+'/lists/'+sys.list+'/items?$expand=fields&$top=500'),
+        api('/sites/'+siteId+'/lists/'+sys.reqList+'/items?$expand=fields&$top=500'),
       ]);
       const reqMap = {};
       reqData.value.forEach(r => { reqMap[r.id] = r.fields; });
+      const allApprMap = {};
+      apprData.value.forEach(a => {
+        const rid = String(a.fields.RequestID);
+        if(!allApprMap[rid]) allApprMap[rid] = [];
+        allApprMap[rid].push(a.fields);
+      });
       const mine = apprData.value
-        .filter(i => (i.fields.ApproverEmail||'').toLowerCase() === (user.email||'').toLowerCase() && (i.fields.Status||'').trim() === '대기')
+        .filter(i => (i.fields.ApproverEmail||'').toLowerCase() === myEmail && (i.fields.Status||'').trim() === '대기')
         .sort((a,b) => b.fields.RequestID - a.fields.RequestID);
-      return { sys, mine, reqMap };
-    } catch(e) {
-      return { sys, mine: [], reqMap: {}, error: e.message };
-    }
+      return { sys, mine, reqMap, allApprMap };
+    } catch(e) { return { sys, mine:[], reqMap:{}, allApprMap:{}, error:e.message }; }
   }));
 
-  for (const { sys, mine, reqMap, error } of results) {
-    const count = mine.length;
-    grandTotal += count;
-
+  for (const { sys, mine, reqMap, allApprMap, error } of results) {
+    grandTotal += mine.length;
     html += '<div class="unified-sys-section">';
-    html += '<div class="unified-sys-title">';
-    html += '<span><span class="sys-badge ' + sys.color + '">' + sys.key + '</span> ' + sys.name;
-    if (count > 0) html += ' <span style="background:#a4262c;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700;margin-left:6px">' + count + '</span>';
-    html += '</span>';
-    html += '<a href="' + sys.url + '" target="_blank">바로가기 →</a></div>';
+    html += '<div class="unified-sys-title"><span><span class="sys-badge '+sys.color+'">'+sys.key+'</span> '+sys.name;
+    if(mine.length) html += ' <span style="background:#a4262c;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700;margin-left:6px">'+mine.length+'</span>';
+    html += '</span><a href="'+sys.url+'" target="_blank">바로가기 →</a></div>';
 
-    if (error) {
-      html += '<div class="unified-empty" style="color:#a4262c">⚠️ 로드 실패: ' + error + '</div>';
-    } else if (mine.length === 0) {
+    if(error) {
+      html += '<div class="unified-empty" style="color:#a4262c">⚠️ 로드 실패: '+error+'</div>';
+    } else if(!mine.length) {
       html += '<div class="unified-empty">결재 대기 항목이 없습니다</div>';
     } else {
       html += '<table class="unified-table"><thead><tr>';
-      // 시스템별 컬럼 헤더
-      if (sys.key === 'GW') {
-        html += '<th>번호</th><th>Source</th><th>Type</th><th>신청자</th><th>신청일</th><th>처리</th>';
-      } else if (sys.key === 'BP') {
-        html += '<th>번호</th><th>Type</th><th>Sub Category</th><th>신청자</th><th>신청일</th><th>처리</th>';
-      } else if (sys.key === 'FA') {
-        html += '<th>번호</th><th>FA Type</th><th>제목</th><th>신청자</th><th>신청일</th><th>처리</th>';
-      } else if (sys.key === 'SCC') {
-        html += '<th>번호</th><th>제목</th><th>유형</th><th>신청자</th><th>신청일</th><th>처리</th>';
-      } else {
-        html += '<th>번호</th><th>유형</th><th>제목</th><th>신청자</th><th>신청일</th><th>처리</th>';
-      }
+      if(sys.key==='GW')       html += '<th>번호</th><th>Source</th><th>Type</th><th>신청자</th><th>신청일</th><th colspan="2" style="text-align:center">처리</th>';
+      else if(sys.key==='BP')  html += '<th>번호</th><th>Type</th><th>Sub Category</th><th>신청자</th><th>신청일</th><th colspan="2" style="text-align:center">처리</th>';
+      else if(sys.key==='FA')  html += '<th>번호</th><th>FA Type</th><th>제목</th><th>신청자</th><th>신청일</th><th colspan="2" style="text-align:center">처리</th>';
+      else if(sys.key==='SCC') html += '<th>번호</th><th>제목</th><th>유형</th><th>신청자</th><th>신청일</th><th colspan="2" style="text-align:center">처리</th>';
+      else                      html += '<th>번호</th><th>유형</th><th>제목</th><th>신청자</th><th>신청일</th><th colspan="2" style="text-align:center">처리</th>';
       html += '</tr></thead><tbody>';
 
       mine.forEach(item => {
-        const f = item.fields;
-        const rf = reqMap[String(f.RequestID)] || {};
+        const f = item.fields, rf = reqMap[String(f.RequestID)]||{};
+        const apprList = (allApprMap[String(f.RequestID)]||[]).sort((a,b) => (a.ApprovalOrder||0)-(b.ApprovalOrder||0));
+        // 캐시에 저장
+        _uniCache[item.id] = { sys, reqId: f.RequestID, rf, apprList };
+        const fmt = s => { if(!s)return'-'; const v=new Date(s); return v.getFullYear()+'-'+String(v.getMonth()+1).padStart(2,'0')+'-'+String(v.getDate()).padStart(2,'0')+' '+String(v.getHours()).padStart(2,'0')+':'+String(v.getMinutes()).padStart(2,'0'); };
         let cols = '';
-        if (sys.key === 'GW') {
-          cols = '<td>' + (rf.Source||'-') + '</td><td>' + (rf.GoodwillType||'-') + '</td><td>' + (rf.RequesterEmail||'-') + '</td><td>' + fmtDate(rf.RequestDate) + '</td>';
-        } else if (sys.key === 'BP') {
-          cols = '<td><span class="sys-badge ' + sys.color + '" style="font-size:.65rem">' + (rf.BPType||'-') + '</span></td><td>' + (rf.SubCategory||'-') + '</td><td>' + (rf.RequesterEmail||'-') + '</td><td>' + fmtDate(rf.RequestDate) + '</td>';
-        } else if (sys.key === 'FA') {
-          cols = '<td><span class="sys-badge ' + sys.color + '" style="font-size:.65rem">' + (rf.FAType||'-') + '</span></td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (rf.Title||'-') + '</td><td>' + (rf.RequesterEmail||'-') + '</td><td>' + fmtDate(rf.RequestDate) + '</td>';
-        } else if (sys.key === 'SCC') {
-          cols = '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (rf.Title||'-') + '</td><td>' + (rf.ContractCompanyType||'-') + '</td><td>' + (rf.RequesterEmail||'-') + '</td><td>' + fmtDate(rf.RequestDate) + '</td>';
-        } else {
-          cols = '<td><span class="sys-badge ' + sys.color + '" style="font-size:.65rem">' + (rf.TicketType||'-') + '</span></td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (rf.Title||'-') + '</td><td>' + (rf.RequesterEmail||'-') + '</td><td>' + fmtDate(rf.RequestDate) + '</td>';
-        }
-        html += '<tr onclick="window.open(\'' + sys.url + '\',' + "'_blank'" + ')" title="' + sys.url + '에서 처리">';
-        html += '<td style="color:#0078d4;font-weight:600">' + (f.RequestID||item.id) + '</td>';
-        html += cols;
-        html += '<td><button onclick="event.stopPropagation();window.open(\'' + sys.url + '\',' + "'_blank'" + ')" style="background:#0078d4;color:#fff;border:none;border-radius:4px;padding:3px 10px;font-size:.7rem;cursor:pointer">처리하기</button></td>';
+        if(sys.key==='GW')       cols='<td>'+(rf.Source||'-')+'</td><td>'+(rf.GoodwillType||'-')+'</td><td>'+(rf.RequesterEmail||'-')+'</td><td>'+fmt(rf.RequestDate)+'</td>';
+        else if(sys.key==='BP')  cols='<td><span class="sys-badge '+sys.color+'">'+(rf.BPType||'-')+'</span></td><td>'+(rf.SubCategory||'-')+'</td><td>'+(rf.RequesterEmail||'-')+'</td><td>'+fmt(rf.RequestDate)+'</td>';
+        else if(sys.key==='FA')  cols='<td><span class="sys-badge '+sys.color+'">'+(rf.FAType||'-')+'</span></td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(rf.Title||'-')+'</td><td>'+(rf.RequesterEmail||'-')+'</td><td>'+fmt(rf.RequestDate)+'</td>';
+        else if(sys.key==='SCC') cols='<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(rf.Title||'-')+'</td><td>'+(rf.ContractCompanyType||'-')+'</td><td>'+(rf.RequesterEmail||'-')+'</td><td>'+fmt(rf.RequestDate)+'</td>';
+        else                      cols='<td><span class="sys-badge '+sys.color+'">'+(rf.TicketType||'-')+'</span></td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(rf.Title||'-')+'</td><td>'+(rf.RequesterEmail||'-')+'</td><td>'+fmt(rf.RequestDate)+'</td>';
+
+        html += '<tr style="cursor:pointer" onclick="openUniDetail('+item.id+')">';
+        html += '<td style="color:#0078d4;font-weight:600">'+f.RequestID+'</td>'+cols;
+        html += '<td onclick="event.stopPropagation()"><button onclick="showConfirm('+item.id+',\'승인\','+f.RequestID+')" style="background:#107c10;color:#fff;border:none;border-radius:4px;padding:3px 10px;font-size:.72rem;cursor:pointer;font-family:inherit;white-space:nowrap">✅ 승인</button></td>';
+        html += '<td onclick="event.stopPropagation()"><button onclick="showConfirm('+item.id+',\'반려\','+f.RequestID+')" style="background:#a4262c;color:#fff;border:none;border-radius:4px;padding:3px 10px;font-size:.72rem;cursor:pointer;font-family:inherit;white-space:nowrap">❌ 반려</button></td>';
         html += '</tr>';
       });
       html += '</tbody></table>';
@@ -1224,19 +1270,15 @@ async function loadUnifiedData() {
     html += '</div>';
   }
 
-  if (grandTotal === 0) {
-    html = '<div style="text-align:center;padding:48px;color:#a19f9d"><div style="font-size:2rem;margin-bottom:12px">✅</div><div style="font-size:.9rem;font-weight:600;color:#323130;margin-bottom:6px">모든 결재 완료!</div><div style="font-size:.78rem">현재 대기 중인 결재 항목이 없습니다.</div></div>';
-  }
-
+  if(!grandTotal) html = '<div style="text-align:center;padding:48px;color:#a19f9d"><div style="font-size:2rem;margin-bottom:12px">✅</div><div style="font-size:.9rem;font-weight:600;color:#323130;margin-bottom:6px">모든 결재 완료!</div><div style="font-size:.78rem">현재 대기 중인 결재 항목이 없습니다.</div></div>';
   body.innerHTML = html;
-
-  // 배지 갱신
   const badge = document.getElementById('unif-badge');
-  if (badge) {
-    badge.textContent = grandTotal;
-    badge.style.display = grandTotal > 0 ? 'inline-block' : 'none';
-  }
+  if(badge) { badge.textContent = grandTotal; badge.style.display = grandTotal > 0 ? 'inline-block' : 'none'; }
 }
+
+
+
+
 
 </script>
 </body>
