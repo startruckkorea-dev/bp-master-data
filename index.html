@@ -1110,7 +1110,7 @@ async function loadUnifiedBadge() {
   let total = 0;
   await Promise.all(SYSTEMS.map(async sys => {
     try {
-      const data = await api('/sites/' + siteId + '/lists/' + sys.list + '/items?$expand=fields&$top=500&$filter=fields/Status eq '대기'');
+      const data = await api('/sites/' + siteId + '/lists/' + sys.list + "/items?$expand=fields&$top=500");
       const mine = data.value.filter(i => (i.fields.ApproverEmail||'').toLowerCase() === (user.email||'').toLowerCase());
       total += mine.length;
     } catch(e) {}
