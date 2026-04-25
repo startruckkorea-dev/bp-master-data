@@ -970,7 +970,7 @@ document.addEventListener('click', async function(e) {
     const t = await token();
     // @microsoft.graph.downloadUrl은 $select 없이 기본 응답에 포함됨
     const res = await fetch(
-      GRAPH + '/drives/' + driveId + '/items/' + itemId,
+      GRAPH + '/drives/' + driveId + '/items/' + itemId + '?select=id,name,%40microsoft.graph.downloadUrl,webUrl',
       { headers: { Authorization: 'Bearer ' + t } }
     );
     if (!res.ok) throw new Error('파일 정보 조회 실패 (' + res.status + ')');
