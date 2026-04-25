@@ -312,6 +312,20 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
   </div>
 </div>
 
+
+<!-- 결재 확인 팝업 -->
+<div id="confirm-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:10px;padding:28px 28px 20px;max-width:420px;width:92%;box-shadow:0 4px 24px rgba(0,0,0,.2)">
+    <div id="confirm-title" style="font-size:1rem;font-weight:700;color:#323130;margin-bottom:6px"></div>
+    <div id="confirm-sub" style="font-size:.78rem;color:#605e5c;margin-bottom:14px"></div>
+    <textarea id="confirm-comment" rows="3" style="width:100%;border:1px solid #d2d0ce;border-radius:4px;padding:8px 10px;font-size:.82rem;font-family:inherit;resize:vertical;margin-bottom:14px"></textarea>
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button onclick="closeConfirm()" style="background:#fff;border:1px solid #d2d0ce;border-radius:4px;padding:7px 20px;font-size:.85rem;cursor:pointer;font-family:inherit">취소</button>
+      <button id="confirm-ok-btn" style="border:none;border-radius:4px;padding:7px 20px;font-size:.85rem;cursor:pointer;font-weight:600;font-family:inherit"></button>
+    </div>
+  </div>
+</div>
+
 <div id="loading"><div class="loading-box"><div class="spinner"></div><span>처리 중입니다...</span></div></div>
 
 <script>
@@ -653,7 +667,7 @@ async function loadApprovalQueue() {
     const rows = mine.map(function(item) {
       const f = item.fields;
       const rf = reqMap[String(f.RequestID)] || {};
-      return '<tr><td style="color:#0078d4;cursor:pointer" onclick="showDetail(' + f.RequestID + ')">' + f.RequestID + '</td><td>' + (rf.RequesterEmail||'') + '</td><td><span class="badge badge-type">' + (rf.BPType||'') + '</span></td><td>' + (rf.SubCategory||'') + '</td><td><span class="badge badge-' + (rf.Status||'대기') + '">' + (rf.Status||'') + '</span></td><td>' + (rf.RequestDate?fmtDate(rf.RequestDate):'') + '</td><td onclick="event.stopPropagation()"><button class="btn-primary" style="padding:3px 10px;font-size:12px" onclick="processApproval(' + item.id + ',\'승인\',' + f.RequestID + ',\'' + (f.ApproverRole||'') + '\')">승인</button> <button class="btn-secondary" style="padding:3px 10px;font-size:12px" onclick="processApproval(' + item.id + ',\'반려\',' + f.RequestID + ',\'' + (f.ApproverRole||'') + '\')">반려</button></td></tr>';
+      return '<tr><td style="color:#0078d4;cursor:pointer" onclick="showDetail(' + f.RequestID + ')">' + f.RequestID + '</td><td>' + (rf.RequesterEmail||'') + '</td><td><span class="badge badge-type">' + (rf.BPType||'') + '</span></td><td>' + (rf.SubCategory||'') + '</td><td><span class="badge badge-' + (rf.Status||'대기') + '">' + (rf.Status||'') + '</span></td><td>' + (rf.RequestDate?fmtDate(rf.RequestDate):'') + '</td><td onclick="event.stopPropagation()"><button class="btn-primary" style="padding:3px 10px;font-size:12px" onclick="showConfirm(' + item.id + ',\'승인\',' + f.RequestID + ',\'' + (f.ApproverRole||'') + '\')">승인</button> <button class="btn-secondary" style="padding:3px 10px;font-size:12px" onclick="showConfirm(' + item.id + ',\'반려\',' + f.RequestID + ',\'' + (f.ApproverRole||'') + '\')">반려</button></td></tr>';
     });
     pgSet('appr', rows, function(r){ return r; }, '결재 대기 항목이 없습니다.', 7);
     const badge = document.getElementById('appr-badge');
@@ -661,9 +675,39 @@ async function loadApprovalQueue() {
   } catch(e) { console.error('loadApprovalQueue error:', e); }
 }
 
-async function processApproval(apprId, action, reqId, role) {
-  const comment = prompt(action + ' 의견 (선택사항):');
-  if (comment === null) return;
+
+// ── 커스텀 결재 확인 팝업 ──
+let _pendingApproval = null;
+function showConfirm(apprId, action, reqId, role) {
+  _pendingApproval = { apprId, action, reqId, role };
+  const isReject = action === '반려';
+  document.getElementById('confirm-title').textContent = isReject ? '❌ 반려 확인' : '✅ 승인 확인';
+  document.getElementById('confirm-sub').textContent = isReject
+    ? '반려 사유를 입력해주세요. (필수)' : '이 신청을 승인하시겠습니까?';
+  const commentEl = document.getElementById('confirm-comment');
+  commentEl.value = '';
+  commentEl.placeholder = isReject ? '반려 사유 입력 (필수)' : '의견 입력 (선택사항)';
+  const okBtn = document.getElementById('confirm-ok-btn');
+  okBtn.textContent = isReject ? '반려' : '승인';
+  okBtn.style.background = isReject ? '#a4262c' : '#107c10';
+  okBtn.style.color = '#fff';
+  okBtn.onclick = confirmApproval;
+  document.getElementById('confirm-modal').style.display = 'flex';
+}
+function closeConfirm() {
+  document.getElementById('confirm-modal').style.display = 'none';
+  _pendingApproval = null;
+}
+async function confirmApproval() {
+  if (!_pendingApproval) return;
+  const { apprId, action, reqId, role } = _pendingApproval;
+  const comment = document.getElementById('confirm-comment').value.trim();
+  if (action === '반려' && !comment) { alert('반려 사유를 입력해주세요.'); return; }
+  closeConfirm();
+  await processApproval(apprId, action, reqId, role, comment);
+}
+
+async function processApproval(apprId, action, reqId, role, comment='') {
   loading(true);
   try {
     await api('/sites/' + siteId + '/lists/BP_Approvals/items/' + apprId, 'PATCH', {
