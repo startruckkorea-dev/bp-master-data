@@ -26,6 +26,52 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 .header .user-info { font-size: 13px; color: #605e5c; display: flex; align-items: center; gap: 12px; }
 #btn-logout { background: none; border: 1px solid #d2d0ce; border-radius: 4px; padding: 4px 12px; font-size: 12px; cursor: pointer; color: #323130; }
 
+/* ── 통합 결재함 버튼 ── */
+.unified-btn-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.unified-appr-btn {
+  position: relative; background: #fff; border: 1.5px solid #d2d0ce;
+  border-radius: 10px; width: 48px; height: 48px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; transition: all .18s; box-shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+.unified-appr-btn:hover { border-color: #0078d4; background: #f0f6ff; transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,120,212,.15); }
+.unified-appr-btn .unif-badge {
+  display: none; position: absolute; top: -5px; right: -5px;
+  background: #a4262c; color: #fff; border-radius: 10px;
+  padding: 1px 6px; font-size: 11px; font-weight: 700; min-width: 18px;
+  text-align: center; border: 2px solid #fff; animation: badgePop .3s ease;
+}
+@keyframes badgePop { 0%{transform:scale(0)} 70%{transform:scale(1.2)} 100%{transform:scale(1)} }
+.unified-appr-btn .unif-label { font-size: 9px; color: #605e5c; margin-top: 1px; line-height: 1; }
+.unif-btn-label { font-size: 10px; color: #605e5c; text-align: center; letter-spacing: -.3px; }
+
+/* ── 통합 결재함 모달 ── */
+#unified-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 400; align-items: flex-start; justify-content: center; padding-top: 60px; }
+#unified-modal.open { display: flex; }
+.unified-box { background: #fff; border-radius: 10px; width: 720px; max-width: 96vw; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 8px 32px rgba(0,0,0,.18); }
+.unified-header { padding: 18px 22px 14px; border-bottom: 1px solid #edebe9; display: flex; justify-content: space-between; align-items: center; }
+.unified-title { font-size: 1rem; font-weight: 700; color: #323130; }
+.unified-sub { font-size: .72rem; color: #605e5c; margin-top: 2px; }
+.unified-close { background: none; border: 1px solid #d2d0ce; border-radius: 6px; width: 28px; height: 28px; cursor: pointer; font-size: .9rem; color: #605e5c; display: flex; align-items: center; justify-content: center; }
+.unified-body { overflow-y: auto; padding: 16px 22px; flex: 1; }
+.unified-sys-section { margin-bottom: 16px; }
+.unified-sys-title { font-size: .75rem; font-weight: 700; color: #0078d4; background: #f0f6ff; border-left: 3px solid #0078d4; padding: 5px 10px; border-radius: 4px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+.unified-sys-title a { font-size: .68rem; color: #0078d4; text-decoration: none; font-weight: 400; }
+.unified-sys-title a:hover { text-decoration: underline; }
+.unified-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+.unified-table th { padding: 7px 10px; text-align: left; background: #f3f2f1; border-bottom: 1px solid #edebe9; font-weight: 600; color: #323130; font-size: .72rem; }
+.unified-table td { padding: 7px 10px; border-bottom: 1px solid #f3f2f1; color: #323130; }
+.unified-table tr:hover td { background: #faf9f8; cursor: pointer; }
+.unified-empty { text-align: center; padding: 20px; color: #a19f9d; font-size: .78rem; }
+.unified-loading { text-align: center; padding: 32px; color: #605e5c; font-size: .82rem; }
+.sys-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: .65rem; font-weight: 700; margin-right: 4px; }
+.sys-IT { background: #e8f4ff; color: #0078d4; }
+.sys-SCC { background: #f0fff4; color: #107c10; }
+.sys-GW { background: #fff8e1; color: #b45309; }
+.sys-BP { background: #f3e8ff; color: #7b2d8b; }
+.sys-FA { background: #fce8ff; color: #881798; }
+.stat-대기 { background: #fff4ce; color: #7d5700; border-radius: 10px; padding: 2px 8px; font-size: .65rem; font-weight: 600; }
+
 /* ── Tabs ── */
 .tabs { display: flex; gap: 2px; margin-bottom: 16px; flex-wrap: wrap; }
 .tab { padding: 8px 18px; border: none; background: #fff; border-radius: 4px 4px 0 0; font-size: 14px; cursor: pointer; color: #605e5c; border-bottom: 3px solid transparent; }
@@ -159,9 +205,18 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
         <div>Customer 관련 문의 Email: hyunju.gong@hyosung.com</div>
       </div>
     </div>
-    <div class="user-info">
-      <span id="user-name"></span>
-      <button id="btn-logout" onclick="signOut()">로그아웃</button>
+    <div class="user-info" style="flex-direction:column;align-items:flex-end;gap:8px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span id="user-name"></span>
+        <button id="btn-logout" onclick="signOut()">로그아웃</button>
+      </div>
+      <div class="unified-btn-wrap">
+        <button class="unified-appr-btn" onclick="openUnifiedAppr()" title="나의 통합 결재함">
+          <span>📬</span>
+          <span class="unif-badge" id="unif-badge"></span>
+        </button>
+        <span class="unif-btn-label">통합 결재함</span>
+      </div>
     </div>
   </div>
 
@@ -328,6 +383,22 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
   </div>
 </div>
 
+
+<!-- 통합 결재함 모달 -->
+<div id="unified-modal" onclick="if(event.target===this)closeUnifiedAppr()">
+  <div class="unified-box">
+    <div class="unified-header">
+      <div>
+        <div class="unified-title">📬 나의 통합 결재함</div>
+        <div class="unified-sub">IT · SCC · Goodwill · BP Master · FA — 전체 결재 대기 항목</div>
+      </div>
+      <button class="unified-close" onclick="closeUnifiedAppr()">✕</button>
+    </div>
+    <div class="unified-body" id="unified-body">
+      <div class="unified-loading">불러오는 중...</div>
+    </div>
+  </div>
+</div>
 
 <!-- 결재 확인 팝업 -->
 <div id="confirm-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center">
@@ -753,6 +824,7 @@ async function processApproval(apprId, action, reqId, role, comment='') {
     alert(action + ' 처리되었습니다.');
     await loadApprovalQueue();
     await checkApprover();
+    loadUnifiedBadge().catch(()=>{});
   } catch(e) { alert('오류: ' + e.message); }
   finally { loading(false); }
 }
@@ -1012,6 +1084,143 @@ function dynLoadEnd() {
   if(el) el.classList.remove('show');
   if(_dynLoadTimer) { clearTimeout(_dynLoadTimer); _dynLoadTimer = null; }
   if(_dynMsgTimer) { clearInterval(_dynMsgTimer); _dynMsgTimer = null; }
+}
+
+
+// ════════════════════════════════════════
+// 통합 결재함
+// ════════════════════════════════════════
+const SYSTEMS = [
+  { key:'IT',  name:'IT Ticket',           list:'IT_Approvals',  reqList:'IT_Requests',   url:'https://itsm-ticket.startruckkorea.com/',  color:'sys-IT',  cols:['번호','제목','신청자','신청일'] },
+  { key:'SCC', name:'STK Contract',        list:'STK_ContractApprovals', reqList:'STK_Contracts',  url:'https://scc.startruckkorea.com/',   color:'sys-SCC', cols:['번호','제목','신청자','신청일'] },
+  { key:'GW',  name:'Goodwill Approval',   list:'GW_Approvals',  reqList:'GW_Requests',   url:'https://gw.startruckkorea.com/',           color:'sys-GW',  cols:['번호','Source','Type','신청자','신청일'] },
+  { key:'BP',  name:'BP Master Data',      list:'BP_Approvals',  reqList:'BP_Requests',   url:'https://bp-master.startruckkorea.com/',    color:'sys-BP',  cols:['번호','Type','Sub Category','신청자','신청일'] },
+  { key:'FA',  name:'FA Registration',     list:'FA_Approvals',  reqList:'FA_Requests',   url:'https://fa.startruckkorea.com/',           color:'sys-FA',  cols:['번호','FA Type','제목','신청자','신청일'] },
+];
+
+async function loadUnifiedBadge() {
+  if (!siteId || !user) return;
+  let total = 0;
+  await Promise.all(SYSTEMS.map(async sys => {
+    try {
+      const data = await api('/sites/' + siteId + '/lists/' + sys.list + '/items?$expand=fields&$top=500&$filter=fields/Status eq '대기'');
+      const mine = data.value.filter(i => (i.fields.ApproverEmail||'').toLowerCase() === (user.email||'').toLowerCase());
+      total += mine.length;
+    } catch(e) {}
+  }));
+  const badge = document.getElementById('unif-badge');
+  if (badge) {
+    if (total > 0) {
+      badge.textContent = total;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+}
+
+async function openUnifiedAppr() {
+  document.getElementById('unified-modal').classList.add('open');
+  document.getElementById('unified-body').innerHTML = '<div class="unified-loading"><div class="dyn-dots" style="justify-content:center;margin-bottom:8px"><span></span><span></span><span></span></div>전체 시스템 결재 항목 불러오는 중...</div>';
+  await loadUnifiedData();
+}
+
+function closeUnifiedAppr() {
+  document.getElementById('unified-modal').classList.remove('open');
+}
+
+async function loadUnifiedData() {
+  if (!siteId || !user) return;
+  const body = document.getElementById('unified-body');
+  let html = '';
+  let grandTotal = 0;
+
+  const results = await Promise.all(SYSTEMS.map(async sys => {
+    try {
+      const [apprData, reqData] = await Promise.all([
+        api('/sites/' + siteId + '/lists/' + sys.list + '/items?$expand=fields&$top=500'),
+        api('/sites/' + siteId + '/lists/' + sys.reqList + '/items?$expand=fields&$top=500'),
+      ]);
+      const reqMap = {};
+      reqData.value.forEach(r => { reqMap[r.id] = r.fields; });
+      const mine = apprData.value
+        .filter(i => (i.fields.ApproverEmail||'').toLowerCase() === (user.email||'').toLowerCase() && i.fields.Status === '대기')
+        .sort((a,b) => b.fields.RequestID - a.fields.RequestID);
+      return { sys, mine, reqMap };
+    } catch(e) {
+      return { sys, mine: [], reqMap: {}, error: e.message };
+    }
+  }));
+
+  for (const { sys, mine, reqMap, error } of results) {
+    const count = mine.length;
+    grandTotal += count;
+
+    html += '<div class="unified-sys-section">';
+    html += '<div class="unified-sys-title">';
+    html += '<span><span class="sys-badge ' + sys.color + '">' + sys.key + '</span> ' + sys.name;
+    if (count > 0) html += ' <span style="background:#a4262c;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700;margin-left:6px">' + count + '</span>';
+    html += '</span>';
+    html += '<a href="' + sys.url + '" target="_blank">바로가기 →</a></div>';
+
+    if (error) {
+      html += '<div class="unified-empty" style="color:#a4262c">⚠️ 로드 실패: ' + error + '</div>';
+    } else if (mine.length === 0) {
+      html += '<div class="unified-empty">결재 대기 항목이 없습니다</div>';
+    } else {
+      html += '<table class="unified-table"><thead><tr>';
+      // 시스템별 컬럼 헤더
+      if (sys.key === 'GW') {
+        html += '<th>번호</th><th>Source</th><th>Type</th><th>신청자</th><th>신청일</th><th>처리</th>';
+      } else if (sys.key === 'BP') {
+        html += '<th>번호</th><th>Type</th><th>Sub Category</th><th>신청자</th><th>신청일</th><th>처리</th>';
+      } else if (sys.key === 'FA') {
+        html += '<th>번호</th><th>FA Type</th><th>제목</th><th>신청자</th><th>신청일</th><th>처리</th>';
+      } else if (sys.key === 'SCC') {
+        html += '<th>번호</th><th>제목</th><th>유형</th><th>신청자</th><th>신청일</th><th>처리</th>';
+      } else {
+        html += '<th>번호</th><th>유형</th><th>제목</th><th>신청자</th><th>신청일</th><th>처리</th>';
+      }
+      html += '</tr></thead><tbody>';
+
+      mine.forEach(item => {
+        const f = item.fields;
+        const rf = reqMap[String(f.RequestID)] || {};
+        let cols = '';
+        if (sys.key === 'GW') {
+          cols = '<td>' + (rf.Source||'-') + '</td><td>' + (rf.GoodwillType||'-') + '</td><td>' + (rf.RequesterEmail||'-') + '</td><td>' + fmtDate(rf.RequestDate) + '</td>';
+        } else if (sys.key === 'BP') {
+          cols = '<td><span class="sys-badge ' + sys.color + '" style="font-size:.65rem">' + (rf.BPType||'-') + '</span></td><td>' + (rf.SubCategory||'-') + '</td><td>' + (rf.RequesterEmail||'-') + '</td><td>' + fmtDate(rf.RequestDate) + '</td>';
+        } else if (sys.key === 'FA') {
+          cols = '<td><span class="sys-badge ' + sys.color + '" style="font-size:.65rem">' + (rf.FAType||'-') + '</span></td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (rf.Title||'-') + '</td><td>' + (rf.RequesterEmail||'-') + '</td><td>' + fmtDate(rf.RequestDate) + '</td>';
+        } else if (sys.key === 'SCC') {
+          cols = '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (rf.Title||'-') + '</td><td>' + (rf.ContractCompanyType||'-') + '</td><td>' + (rf.RequesterEmail||'-') + '</td><td>' + fmtDate(rf.RequestDate) + '</td>';
+        } else {
+          cols = '<td><span class="sys-badge ' + sys.color + '" style="font-size:.65rem">' + (rf.TicketType||'-') + '</span></td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (rf.Title||'-') + '</td><td>' + (rf.RequesterEmail||'-') + '</td><td>' + fmtDate(rf.RequestDate) + '</td>';
+        }
+        html += '<tr onclick="window.open('' + sys.url + '','_blank')" title="' + sys.url + '에서 처리">';
+        html += '<td style="color:#0078d4;font-weight:600">' + (f.RequestID||item.id) + '</td>';
+        html += cols;
+        html += '<td><button onclick="event.stopPropagation();window.open('' + sys.url + '','_blank')" style="background:#0078d4;color:#fff;border:none;border-radius:4px;padding:3px 10px;font-size:.7rem;cursor:pointer">처리하기</button></td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+    }
+    html += '</div>';
+  }
+
+  if (grandTotal === 0) {
+    html = '<div style="text-align:center;padding:48px;color:#a19f9d"><div style="font-size:2rem;margin-bottom:12px">✅</div><div style="font-size:.9rem;font-weight:600;color:#323130;margin-bottom:6px">모든 결재 완료!</div><div style="font-size:.78rem">현재 대기 중인 결재 항목이 없습니다.</div></div>';
+  }
+
+  body.innerHTML = html;
+
+  // 배지 갱신
+  const badge = document.getElementById('unif-badge');
+  if (badge) {
+    badge.textContent = grandTotal;
+    badge.style.display = grandTotal > 0 ? 'inline-block' : 'none';
+  }
 }
 
 </script>
