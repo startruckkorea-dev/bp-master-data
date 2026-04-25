@@ -479,11 +479,19 @@ async function boot(account) {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('user-name').textContent = account.name || account.username;
+  // /me API로 실제 mail 주소 확보 (ext/guest 계정은 UPN과 mail이 다를 수 있음)
+  try {
+    const me = await api('/me?$select=mail,userPrincipalName');
+    user.email = (me.mail || me.userPrincipalName || account.username).toLowerCase();
+  } catch(e) {
+    user.email = (account.username || '').toLowerCase();
+  }
   try {
     const site = await api('/sites/' + SITE_PATH);
     siteId = site.id;
     await loadEmployees();
     await checkApprover();
+    loadUnifiedBadge().catch(()=>{});
     switchTab('form');
   } catch(e) { alert('SharePoint 연결 오류: ' + e.message); }
 }
