@@ -185,6 +185,10 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 .dyn-refresh{display:none;background:#0078d4;color:#fff;border:none;border-radius:4px;padding:8px 20px;font-size:.82rem;cursor:pointer;font-family:inherit;margin-top:4px}
 .dyn-refresh:hover{background:#106ebe}
 
+.btn-approve{background:#107c10;color:#fff;border:none;border-radius:4px;padding:4px 14px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-approve:hover{background:#0e6b0e}
+.btn-reject{background:#a4262c;color:#fff;border:none;border-radius:4px;padding:4px 14px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-reject:hover{background:#8f1f24}
 </style>
 </head>
 <body>
@@ -779,7 +783,7 @@ async function loadApprovalQueue() {
     const rows = mine.map(function(item) {
       const f = item.fields;
       const rf = reqMap[String(f.RequestID)] || {};
-      return '<tr><td style="color:#0078d4;cursor:pointer" onclick="showDetail(' + f.RequestID + ')">' + f.RequestID + '</td><td>' + (rf.RequesterEmail||'') + '</td><td><span class="badge badge-type">' + (rf.BPType||'') + '</span></td><td>' + (rf.SubCategory||'') + '</td><td><span class="badge badge-' + (rf.Status||'대기') + '">' + (rf.Status||'') + '</span></td><td>' + (rf.RequestDate?fmtDate(rf.RequestDate):'') + '</td><td onclick="event.stopPropagation()"><button class="btn-primary" style="padding:3px 10px;font-size:12px" onclick="showConfirm(' + item.id + ',\'승인\',' + f.RequestID + ',\'' + (f.ApproverRole||'') + '\')">승인</button> <button class="btn-secondary" style="padding:3px 10px;font-size:12px" onclick="showConfirm(' + item.id + ',\'반려\',' + f.RequestID + ',\'' + (f.ApproverRole||'') + '\')">반려</button></td></tr>';
+      return '<tr><td style="color:#0078d4;cursor:pointer" onclick="showDetail(' + f.RequestID + ')">' + f.RequestID + '</td><td>' + (rf.RequesterEmail||'') + '</td><td><span class="badge badge-type">' + (rf.BPType||'') + '</span></td><td>' + (rf.SubCategory||'') + '</td><td><span class="badge badge-' + (rf.Status||'대기') + '">' + (rf.Status||'') + '</span></td><td>' + (rf.RequestDate?fmtDate(rf.RequestDate):'') + '</td><td onclick="event.stopPropagation()"><button class="btn-approve" onclick="showConfirm(' + item.id + ',\'승인\',' + f.RequestID + ',\'' + (f.ApproverRole||'') + '\')">승인</button> <button class="btn-reject" onclick="showConfirm(' + item.id + ',\'반려\',' + f.RequestID + ',\'' + (f.ApproverRole||'') + '\')">반려</button></td></tr>';
     });
     dynLoadEnd(); pgSet('appr', rows, function(r){ return r; }, '결재 대기 항목이 없습니다.', 7);
     const badge = document.getElementById('appr-badge');
@@ -896,8 +900,8 @@ async function showDetail(requestId) {
         const myPending = apprList.find(a => (a.fields.ApproverEmail||'').toLowerCase() === (user.email||user.username||'').toLowerCase() && (a.fields.Status||'').trim() === '대기');
         if (myPending) {
           apprHtml += '<div style="display:flex;gap:10px;margin-top:14px">' +
-            '<button onclick="showConfirm(' + myPending.id + ',\'승인\',' + requestId + ',\'' + (myPending.fields.ApproverRole||'') + '\')" style="flex:1;background:#107c10;color:#fff;border:none;border-radius:6px;padding:11px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit">✅ 승인</button>' +
-            '<button onclick="showConfirm(' + myPending.id + ',\'반려\',' + requestId + ',\'' + (myPending.fields.ApproverRole||'') + '\')" style="flex:1;background:#a4262c;color:#fff;border:none;border-radius:6px;padding:11px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit">❌ 반려</button>' +
+            '<button onclick="showConfirm(' + myPending.id + ',\'승인\',' + requestId + ',\'' + (myPending.fields.ApproverRole||'') + '\')" class="btn-approve" style="flex:1;border-radius:6px;padding:10px;font-size:.9rem;font-weight:700">✅ 승인</button>' +
+            '<button onclick="showConfirm(' + myPending.id + ',\'반려\',' + requestId + ',\'' + (myPending.fields.ApproverRole||'') + '\')" class="btn-reject" style="flex:1;border-radius:6px;padding:10px;font-size:.9rem;font-weight:700">❌ 반려</button>' +
             '</div>';
         }
       }
@@ -1170,8 +1174,8 @@ function openUniDetail(apprId) {
       '<span style="color:'+(sc[af.Status]||'#323130')+';font-weight:700;font-size:.75rem;white-space:nowrap">'+(af.Status||'')+'</span></div>'
     ).join('') + '</div>' +
     '<div style="display:flex;gap:10px;margin-bottom:10px">' +
-    '<button onclick="showConfirm('+apprId+',\'승인\','+reqId+');closeUniDetail();" style="flex:1;background:#107c10;color:#fff;border:none;border-radius:6px;padding:11px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit">✅ 승인</button>' +
-    '<button onclick="showConfirm('+apprId+',\'반려\','+reqId+');closeUniDetail();" style="flex:1;background:#a4262c;color:#fff;border:none;border-radius:6px;padding:11px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit">❌ 반려</button>' +
+    '<button onclick="showConfirm('+apprId+',\'승인\','+reqId+');closeUniDetail();" class="btn-approve" style="flex:1;border-radius:6px;padding:10px;font-size:.9rem;font-weight:700">✅ 승인</button>' +
+    '<button onclick="showConfirm('+apprId+',\'반려\','+reqId+');closeUniDetail();" class="btn-reject" style="flex:1;border-radius:6px;padding:10px;font-size:.9rem;font-weight:700">❌ 반려</button>' +
     '</div>' +
     '<div style="text-align:right"><a href="'+sys.url+'" target="_blank" style="font-size:.72rem;color:#0078d4;text-decoration:none">'+sys.name+' 전체 보기 →</a></div>';
   box.style.display = 'flex';
