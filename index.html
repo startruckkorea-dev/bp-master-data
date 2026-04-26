@@ -69,7 +69,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 .sys-SCC { background: #f0fff4; color: #107c10; }
 .sys-GW { background: #fff8e1; color: #b45309; }
 .sys-BP { background: #f3e8ff; color: #7b2d8b; }
-.sys-FA { background: #fce8ff; color: #881798; }
+.sys-FA { background: #fce8ff; color: #881798; }.sys-MC{background:#e8fff0;color:#006b3e}.sys-RR{background:#fff0f0;color:#c50f1f}
 .stat-대기 { background: #fff4ce; color: #7d5700; border-radius: 10px; padding: 2px 8px; font-size: .65rem; font-weight: 600; }
 
 /* ── Tabs ── */
@@ -1242,7 +1242,7 @@ async function loadUnifiedData() {
       });
       const mine = apprData.value
         .filter(i => (i.fields.ApproverEmail||'').toLowerCase() === myEmail && (i.fields.Status||'').trim() === '대기')
-        .sort((a,b) => b.fields.RequestID - a.fields.RequestID);
+        .sort((a,b) => new Date(reqMap[String(b.fields.RequestID)]?.RequestDate||b.fields.RequestID||0) - new Date(reqMap[String(a.fields.RequestID)]?.RequestDate||a.fields.RequestID||0));
       return { sys, mine, reqMap, allApprMap };
     } catch(e) { return { sys, mine:[], reqMap:{}, allApprMap:{}, error:e.message }; }
   }));
@@ -1264,6 +1264,8 @@ async function loadUnifiedData() {
       else if(sys.key==='BP')  html += '<th>번호</th><th>Type</th><th>Sub Category</th><th>신청자</th><th>신청일</th><th colspan="2" style="text-align:center">처리</th>';
       else if(sys.key==='FA')  html += '<th>번호</th><th>FA Type</th><th>제목</th><th>신청자</th><th>신청일</th><th colspan="2" style="text-align:center">처리</th>';
       else if(sys.key==='SCC') html += '<th>번호</th><th>제목</th><th>유형</th><th>신청자</th><th>신청일</th><th colspan="2" style="text-align:center">처리</th>';
+      else if(sys.key==='MC')  html += '<th>번호</th><th>Department</th><th>사용기간</th><th>신청자</th><th>신청일</th><th colspan="2" style="text-align:center">처리</th>';
+      else if(sys.key==='RR')  html += '<th>번호</th><th>Vehicle Model</th><th>Accident Type</th><th>신청자</th><th>신청일</th><th colspan="2" style="text-align:center">처리</th>';
       else                      html += '<th>번호</th><th>유형</th><th>제목</th><th>신청자</th><th>신청일</th><th colspan="2" style="text-align:center">처리</th>';
       html += '</tr></thead><tbody>';
 
