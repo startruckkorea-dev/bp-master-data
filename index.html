@@ -221,13 +221,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
         <span id="user-name"></span>
         <button id="btn-logout" onclick="signOut()">로그아웃</button>
       </div>
-      <div class="unified-btn-wrap">
-        <button class="unified-appr-btn" onclick="openUnifiedAppr()" title="나의 통합 결재함">
-          <span>📬</span>
-          <span class="unif-badge" id="unif-badge"></span>
-        </button>
-        <span class="unif-btn-label">통합 결재함</span>
-      </div>
+      <a href="https://as.startruckkorea.com/" target="_blank" class="unified-appr-btn" title="통합 결재함" style="text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-size:1.3rem">📬</span><span class="unif-btn-label">통합 결재함</span></a>
     </div>
   </div>
 
@@ -395,14 +389,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 </div>
 
 
-<!-- 통합 결재함 모달 -->
-<div id="unified-modal" onclick="if(event.target===this)closeUnifiedAppr()">
-  <div class="unified-box">
-    <div class="unified-header">
-      <div>
-        <div class="unified-title">📬 나의 통합 결재함</div>
-        <div class="unified-sub">STK 결재 시스템 전체 대기 항목</div>
-      </div>
+
       <button class="unified-close" onclick="closeUnifiedAppr()">✕</button>
     </div>
     <div class="unified-body" id="unified-body">
@@ -413,8 +400,6 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 
 
 <!-- 통합결재함 상세 패널 -->
-<div id="uni-detail-box" onclick="if(event.target===this)closeUniDetail()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;align-items:center;justify-content:center">
-  <div id="uni-detail-inner" style="background:#fff;border-radius:10px;padding:22px;width:480px;max-width:94vw;max-height:82vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25)"></div>
 </div>
 
 <!-- 결재 확인 팝업 -->
