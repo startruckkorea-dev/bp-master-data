@@ -1182,8 +1182,8 @@ function openUniDetail(apprId) {
       '<span style="color:'+(sc[af.Status]||'#323130')+';font-weight:700;font-size:.75rem;white-space:nowrap">'+(af.Status||'')+'</span></div>'
     ).join('') + '</div>' +
     '<div style="display:flex;gap:10px;margin-bottom:10px">' +
-    '<button onclick="showConfirm('+apprId+',\'승인\','+reqId+');closeUniDetail();" class="btn-approve" style="flex:1;border-radius:6px;padding:10px;font-size:.9rem;font-weight:700">✅ 승인</button>' +
-    '<button onclick="showConfirm('+apprId+',\'반려\','+reqId+');closeUniDetail();" class="btn-reject" style="flex:1;border-radius:6px;padding:10px;font-size:.9rem;font-weight:700">❌ 반려</button>' +
+    '<button onclick="uniShowConfirm('+apprId+',\'승인\','+reqId+',\''+sys.key+'\');closeUniDetail();" class="btn-approve" style="flex:1;border-radius:6px;padding:10px;font-size:.9rem;font-weight:700">✅ 승인</button>' +
+    '<button onclick="uniShowConfirm('+apprId+',\'반려\','+reqId+',\''+sys.key+'\');closeUniDetail();" class="btn-reject" style="flex:1;border-radius:6px;padding:10px;font-size:.9rem;font-weight:700">❌ 반려</button>' +
     '</div>' +
     '<div style="text-align:right"><a href="'+sys.url+'" target="_blank" style="font-size:.72rem;color:#0078d4;text-decoration:none">'+sys.name+' 전체 보기 →</a></div>';
   box.style.display = 'flex';
@@ -1284,8 +1284,8 @@ async function loadUnifiedData() {
 
         html += '<tr style="cursor:pointer" onclick="openUniDetail('+item.id+')">';
         html += '<td style="color:#0078d4;font-weight:600">'+f.RequestID+'</td>'+cols;
-        html += '<td onclick="event.stopPropagation()" style="text-align:center"><button class="btn-approve" onclick="showConfirm('+item.id+',\'승인\','+f.RequestID+')">✅ 승인</button></td>';
-        html += '<td onclick="event.stopPropagation()" style="text-align:center"><button class="btn-reject" onclick="showConfirm('+item.id+',\'반려\','+f.RequestID+')">❌ 반려</button></td>';
+        html += '<td onclick="event.stopPropagation()" style="text-align:center"><button class="btn-approve" onclick="uniShowConfirm('+item.id+',\'승인\','+f.RequestID+',\''+sys.key+'\')">✅ 승인</button></td>';
+        html += '<td onclick="event.stopPropagation()" style="text-align:center"><button class="btn-reject" onclick="uniShowConfirm('+item.id+',\'반려\','+f.RequestID+',\''+sys.key+'\')">❌ 반려</button></td>';
         html += '</tr>';
       });
       html += '</tbody></table>';
@@ -1302,6 +1302,62 @@ async function loadUnifiedData() {
 
 
 
+
+
+// ── 통합결재함 전용 승인/반려 처리 (올바른 리스트로 처리) ──
+const _UNI_LIST_MAP = {
+  'IT':  { apr:'IT_Approvals',          req:'IT_Requests'    },
+  'SCC': { apr:'STK_ContractApprovals', req:'STK_Contracts'  },
+  'GW':  { apr:'GW_Approvals',          req:'GW_Requests'    },
+  'BP':  { apr:'BP_Approvals',          req:'BP_Requests'    },
+  'FA':  { apr:'FA_Approvals',          req:'FA_Requests'    },
+  'MC':  { apr:'MC_Approvals',          req:'MC_Requests'    },
+  'RR':  { apr:'RR_Approvals',          req:'RR_Requests'    },
+};
+let _uniPending = null;
+function uniShowConfirm(apprId, action, reqId, sysKey) {
+  _uniPending = {apprId, action, reqId, sysKey};
+  const isReject = action === '반려';
+  document.getElementById('confirm-title').textContent = isReject ? '❌ 반려 확인' : '✅ 승인 확인';
+  document.getElementById('confirm-sub').textContent = isReject ? '반려 사유를 입력해주세요. (필수)' : '이 신청을 승인하시겠습니까?';
+  const commentEl = document.getElementById('confirm-comment');
+  commentEl.value = ''; commentEl.placeholder = isReject ? '반려 사유 입력 (필수)' : '의견 입력 (선택사항)';
+  const okBtn = document.getElementById('confirm-ok-btn');
+  okBtn.textContent = isReject ? '반려' : '승인';
+  okBtn.style.background = isReject ? '#a4262c' : '#107c10';
+  okBtn.style.color = '#fff';
+  okBtn.onclick = uniConfirmApproval;
+  document.getElementById('confirm-modal').classList.add('open');
+}
+async function uniConfirmApproval() {
+  if (!_uniPending) return;
+  const {apprId, action, reqId, sysKey} = _uniPending;
+  const comment = document.getElementById('confirm-comment').value.trim();
+  if (action === '반려' && !comment) { alert('반려 사유를 입력해주세요.'); return; }
+  document.getElementById('confirm-modal').classList.remove('open');
+  _uniPending = null;
+  const lists = _UNI_LIST_MAP[sysKey] || {};
+  if (!lists.apr) { alert('알 수 없는 시스템: ' + sysKey); return; }
+  loading(true);
+  try {
+    await api('/sites/'+siteId+'/lists/'+lists.apr+'/items/'+apprId, 'PATCH', {
+      fields: {Status: action==='승인'?'승인':action, ApprovalDate: new Date().toISOString(), Comment: comment}
+    });
+    if (action === '반려') {
+      await api('/sites/'+siteId+'/lists/'+lists.req+'/items/'+reqId, 'PATCH', {fields:{Status:'반려'}});
+    } else {
+      const all = await api('/sites/'+siteId+'/lists/'+lists.apr+'/items?$expand=fields&$top=500');
+      const next = all.value.filter(i => Number(i.fields.RequestID)===Number(reqId) && (i.fields.Status||'').trim()==='대기(잠김)')
+                            .sort((a,b) => a.fields.ApprovalOrder - b.fields.ApprovalOrder);
+      if (next.length) await api('/sites/'+siteId+'/lists/'+lists.apr+'/items/'+next[0].id, 'PATCH', {fields:{Status:'대기'}});
+      else await api('/sites/'+siteId+'/lists/'+lists.req+'/items/'+reqId, 'PATCH', {fields:{Status:'승인완료'}});
+    }
+    closeModal();
+    setTimeout(() => loadUnifiedData(), 600);
+    setTimeout(() => loadUnifiedBadge(), 1200);
+  } catch(e) { alert('오류: ' + e.message); }
+  finally { loading(false); }
+}
 
 </script>
 </body>
