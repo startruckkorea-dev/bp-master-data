@@ -266,6 +266,11 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 
       <div class="section-title">2. 필수 제출 서류</div>
       <div id="docs-box" class="docs-box">Type을 먼저 선택해주세요.</div>
+      <div style="margin-top:8px;background:#f0f6ff;border:1px solid #c7e0f4;border-radius:6px;padding:9px 14px;font-size:.78rem;color:#323130;line-height:1.8">
+        📎 <b>템플릿 다운 참고 링크</b><br>
+        <a href="https://ehyosung.sharepoint.com.mcas.ms/sites/STK-NAS/SitePages/STK-Policies-Guide.aspx" target="_blank" style="color:#0078d4;font-weight:600;text-decoration:underline">STK-NAS &gt; STK Policies &amp; Guidelines &gt; Accounting &gt; Templates</a><br>
+        <span style="color:#605e5c;font-size:.75rem">위 링크 접속 후 신청 파일 양식을 다운로드하여 첨부해주세요.</span>
+      </div>
 
       <div class="section-title">3. 요청사항</div>
       <div class="form-row full">
@@ -277,7 +282,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 
       <div class="section-title">4. 결재자 지정</div>
       <div class="appr-block">
-        <div class="appr-title">1차 결재자 <span style="color:#a4262c;font-size:11px">*</span> <span style="font-size:11px;color:#605e5c;font-weight:400">— Line Manager (팀장)</span></div>
+        <div class="appr-title">1차 결재자 <span style="font-size:11px;color:#605e5c;font-weight:400">— Department Head (부서장)</span></div>
         <div class="appr-grid">
           <select id="a1-dept" onchange="onDeptChange(1)"><option value="">부서</option></select>
           <select id="a1-team" onchange="onTeamChange(1)" disabled><option value="">팀</option></select>
@@ -289,19 +294,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
         </div>
       </div>
       <div class="appr-block">
-        <div class="appr-title">2차 결재자 <span style="font-size:11px;color:#605e5c;font-weight:400">— Department Head (부서장)</span></div>
-        <div class="appr-grid">
-          <select id="a2-dept" onchange="onDeptChange(2)"><option value="">부서</option></select>
-          <select id="a2-team" onchange="onTeamChange(2)" disabled><option value="">팀</option></select>
-          <select id="a2-person" onchange="onPersonChange(2)" disabled><option value="">직원 선택</option></select>
-        </div>
-        <div class="form-row" style="margin-top:8px">
-          <input type="text" id="a2-name" readonly placeholder="이름" style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;background:#f3f2f1">
-          <input type="email" id="a2-email" readonly placeholder="이메일" style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;background:#f3f2f1">
-        </div>
-      </div>
-      <div class="appr-block">
-        <div class="appr-title">회계담당자 <span style="font-size:11px;color:#605e5c;font-weight:400">(자동 지정)</span></div>
+        <div class="appr-title">2차 결재자 — 회계담당자 <span style="font-size:11px;color:#605e5c;font-weight:400">(자동 지정)</span></div>
         <div class="form-row">
           <input type="text" id="a3-name" readonly placeholder="Type 선택 후 자동 설정" style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;background:#f3f2f1;color:#605e5c">
           <input type="email" id="a3-email" readonly placeholder="Type 선택 후 자동 설정" style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;background:#f3f2f1;color:#605e5c">
@@ -365,6 +358,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
           <option>Vendor</option><option>Customer</option>
         </select>
         <input type="text" id="admin-filter-search" oninput="loadAdminList()" placeholder="신청자 검색...">
+        <input type="text" id="admin-filter-bpcode" oninput="loadAdminList()" placeholder="BP Code 검색..." style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;width:160px">
         <span id="admin-count" style="font-size:13px;color:#605e5c;margin-left:auto"></span>
       </div>
       <table class="list-table">
@@ -673,7 +667,7 @@ async function submitRequest() {
   if (!subcat) return alert('Sub Category를 선택해주세요.');
   if (subcat !== 'BP creation' && !bpcode) return alert('BP Code를 입력해주세요.');
   if (!desc)   return alert('요청사항을 입력해주세요.');
-  if (!document.getElementById('a1-email').value) return alert('1차 결재자를 지정해주세요.');
+  if (!document.getElementById('a1-email').value) return alert('1차 결재자(Department Head)를 지정해주세요.');
   if (!files.length) { document.getElementById('file-notice').style.display = 'block'; return; }
 
   loading(true);
@@ -717,9 +711,8 @@ async function submitRequest() {
 
     // Create approvals
     const approvers = [
-      { name: document.getElementById('a1-name').value, email: document.getElementById('a1-email').value, role: '1차결재자', order: 1 },
-      { name: document.getElementById('a2-name').value, email: document.getElementById('a2-email').value, role: '2차결재자', order: 2 },
-      { name: document.getElementById('a3-name').value, email: document.getElementById('a3-email').value, role: '회계담당자', order: 3 },
+      { name: document.getElementById('a1-name').value, email: document.getElementById('a1-email').value, role: '1차결재자(Department Head)', order: 1 },
+      { name: document.getElementById('a3-name').value, email: document.getElementById('a3-email').value, role: '2차결재자(회계담당자)', order: 2 },
     ].filter(a => a.email);
     for (const a of approvers) {
       await api('/sites/' + siteId + '/lists/BP_Approvals/items', 'POST', { fields: {
