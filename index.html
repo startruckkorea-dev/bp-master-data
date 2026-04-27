@@ -930,6 +930,8 @@ async function loadAdminList() {
     if (filterStatus) items = items.filter(i => i.fields.Status === filterStatus);
     if (filterType)   items = items.filter(i => i.fields.BPType === filterType);
     if (filterSearch) items = items.filter(i => (i.fields.RequesterEmail||'').toLowerCase().includes(filterSearch));
+    const filterBPCode = (document.getElementById('admin-filter-bpcode').value||'').toLowerCase();
+    if (filterBPCode) items = items.filter(i => (i.fields.BPCode||'').toLowerCase().includes(filterBPCode));
     document.getElementById('admin-count').textContent = '총 ' + items.length + '건';
     dynLoadEnd(); pgSet('admin', items, item => { const f = item.fields; return '<tr style="cursor:pointer" onclick="showDetail(' + item.id + ')"><td>' + item.id + '</td><td>' + (f.RequesterEmail||'') + '</td><td><span class="badge badge-type">' + (f.BPType||'') + '</span></td><td>' + (f.SubCategory||'') + '</td><td>' + (f.BPCode||'-') + '</td><td><span class="badge badge-' + f.Status + '">' + f.Status + '</span></td><td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td></tr>'; }, '조회 결과가 없습니다.', 7);
   } catch(e) { dynLoadEnd(); tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#a4262c">' + e.message + '</td></tr>'; }
