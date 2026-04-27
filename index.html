@@ -397,7 +397,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 </div>
 
 <!-- 결재 확인 팝업 -->
-<div id="confirm-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;align-items:center;justify-content:center">
+<div id="confirm-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:10px;padding:28px 28px 20px;max-width:420px;width:92%;box-shadow:0 4px 24px rgba(0,0,0,.2)">
     <div id="confirm-title" style="font-size:1rem;font-weight:700;color:#323130;margin-bottom:6px"></div>
     <div id="confirm-sub" style="font-size:.78rem;color:#605e5c;margin-bottom:14px"></div>
@@ -646,11 +646,10 @@ function resetForm() {
     el.value = '';
     if (id === 'sel-subcat' || id === 'inp-bpcode') el.disabled = true;
   });
-  [1,2].forEach(idx => {
-    document.getElementById('a' + idx + '-dept').value = '';
-    document.getElementById('a' + idx + '-name').value = '';
-    document.getElementById('a' + idx + '-email').value = '';
-  });
+  // 1차 결재자만 초기화 (a1-dept, a1-name, a1-email)
+  ['a1-dept','a1-name','a1-email'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  const t1=document.getElementById('a1-team'); if(t1){t1.innerHTML='<option value="">팀</option>';t1.disabled=true;}
+  const p1=document.getElementById('a1-person'); if(p1){p1.innerHTML='<option value="">직원 선택</option>';p1.disabled=true;}
   files = []; renderFiles();
   document.getElementById('docs-box').textContent = 'Type을 먼저 선택해주세요.';
   document.getElementById('bpcode-notice').style.display = 'none';
@@ -816,9 +815,18 @@ async function processApproval(apprId, action, reqId, role, comment='') {
     });
     if (action === '반려') {
       await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { Status: '반려' } });
-    } else if (action === '승인' && role === '회계담당자') {
-      const bpCode = prompt('최종 승인되었습니다. BP Code를 입력해주세요:');
-      if (bpCode) await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { Status: '승인완료', BPCode: bpCode } });
+    } else if (action === '승인' && role && role.includes('회계담당자')) {
+      // BP creation인 경우만 BP Code 입력 요청, 나머지는 그냥 승인완료
+      const reqItem = await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId + '?$expand=fields');
+      const subCat = reqItem.fields.SubCategory || '';
+      if (subCat === 'BP creation') {
+        const bpCode = prompt('최종 승인되었습니다. BP Code를 입력해주세요:');
+        if (bpCode) await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { Status: '승인완료', BPCode: bpCode } });
+        else await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { Status: '승인완료' } });
+      } else {
+        // Information Change / Inactivation / Activation: BP Code 입력 불필요
+        await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { Status: '승인완료' } });
+      }
     } else if (action === '승인') {
       const all = await api('/sites/' + siteId + '/lists/BP_Approvals/items?$expand=fields&$top=500');
       const next = all.value.filter(i => i.fields.RequestID == reqId && i.fields.Status === '대기(잠김)').sort((a,b) => a.fields.ApprovalOrder - b.fields.ApprovalOrder);
