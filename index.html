@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BP Master Data Management</title>
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.28.0/lib/msal-browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -398,7 +400,12 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 <div id="detail-modal" onclick="if(event.target===this)closeModal()">
   <div class="modal-box">
     <button class="modal-close" onclick="closeModal()">×</button>
-    <div class="modal-title">신청 상세 내용</div>
+    <div class="modal-title" style="display:flex;align-items:center;justify-content:space-between">
+      <span>신청 상세 내용</span>
+      <button id="btn-export-pdf" onclick="exportModalPdf()" style="display:none;background:#0078d4;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit;align-items:center;gap:5px;transition:all .15s" onmouseover="this.style.background='#005a9e'" onmouseout="this.style.background='#0078d4'">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline;vertical-align:middle;margin-right:3px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>PDF 출력
+      </button>
+    </div>
     <div id="modal-content"></div>
   </div>
 </div>
@@ -923,6 +930,8 @@ async function showDetail(requestId) {
 
     const statusColor = f.Status === '승인완료' ? '#107c10' : f.Status === '반려' ? '#a4262c' : '#7d5700';
 
+    
+    const _pdfBtn = document.getElementById('btn-export-pdf'); if(_pdfBtn) _pdfBtn.style.display='flex';
     document.getElementById('modal-content').innerHTML =
       sec('기본 정보') +
       '<div class="modal-row"><div class="modal-label">신청번호</div><div class="modal-value">' + requestId + '</div></div>' +
@@ -994,7 +1003,8 @@ document.addEventListener('click', async function(e) {
 
 function loading(v) { document.getElementById('loading').classList.toggle('show', v); }
 function showError(msg) { const el = document.getElementById('login-error'); el.style.display = 'block'; el.textContent = '오류: ' + msg; }
-function closeModal() { document.getElementById('detail-modal').style.display = 'none'; }
+function closeModal() {
+  const _b=document.getElementById('btn-export-pdf');if(_b)_b.style.display='none'; document.getElementById('detail-modal').style.display = 'none'; }
 
 window.addEventListener('load', async () => {
   const btn = document.getElementById('btn-login');
