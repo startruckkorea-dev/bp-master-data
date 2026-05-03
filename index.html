@@ -492,6 +492,45 @@ async function api(path, method='GET', body=null) {
 }
 
 // ── Boot ──
+
+// ── System Config from SharePoint (system_config.xlsx) ──
+let _sysConfig = null;
+async function loadSystemConfig() {
+  if (_sysConfig) return _sysConfig;
+  try {
+    const t = await token();
+    const drivesRes = await api('/sites/' + siteId + '/drives');
+    let docDrive = (drivesRes.value || []).find(d => d.name === 'Documents' || d.name === '문서');
+    if (!docDrive && drivesRes.value && drivesRes.value.length) docDrive = drivesRes.value[0];
+    const res = await fetch(GRAPH + '/drives/' + docDrive.id + '/root:/system_config.xlsx:/content',
+      { headers: { Authorization: 'Bearer ' + t } });
+    if (!res.ok) throw new Error('system_config.xlsx not found');
+    const buf = await res.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+    const cfg = {};
+    rows.forEach(row => {
+      const key = (row[0] || '').toString().trim();
+      if (!key || key.startsWith('[') || key === '설정 키 (KEY)' || key.startsWith('이 파일') || key.startsWith('STK Korea')) return;
+      cfg[key] = { name: (row[1] || '').toString().trim(), email: (row[2] || '').toString().trim() };
+    });
+    _sysConfig = cfg;
+    console.log('[Config] Loaded system_config.xlsx:', Object.keys(cfg).length, 'entries');
+    return cfg;
+  } catch(e) {
+    console.warn('[Config] system_config.xlsx 로드 실패, 기본값 사용:', e.message);
+    return null;
+  }
+}
+function cfgVal(cfg, key, defaultObj) {
+  if (!cfg || !cfg[key]) return defaultObj;
+  const v = cfg[key];
+  return { ...defaultObj, name: v.name || defaultObj.name, email: v.email || defaultObj.email };
+}
+function cfgEmails(cfg, keys) {
+  return keys.map(k => (cfg && cfg[k] ? cfg[k].email : '')).filter(Boolean);
+}
+
 async function boot(account) {
   user = account;
   document.getElementById('login-screen').style.display = 'none';
@@ -507,6 +546,22 @@ async function boot(account) {
   try {
     const site = await api('/sites/' + SITE_PATH);
     siteId = site.id;
+    const _cfg = await loadSystemConfig();
+    if (_cfg) {
+      // 문의 이메일 (Vendor/Customer 각각)
+      const _vendor  = cfgVal(_cfg,'BP_CONTACT_VENDOR',{name:'Jihyun Ma',email:'jihyun.ma@hyosung.com'});
+      const _customer= cfgVal(_cfg,'BP_CONTACT_CUSTOMER',{name:'Hyunju Gong',email:'hyunju.gong@hyosung.com'});
+      document.querySelectorAll('.sub,.subtitle').forEach(el=>{
+        if(el.textContent.includes('Vendor'))   el.textContent='Vendor 관련 문의 Email: '+_vendor.email;
+        if(el.textContent.includes('Customer')) el.textContent='Customer 관련 문의 Email: '+_customer.email;
+      });
+      // 관리자
+      const _adminList = cfgEmails(_cfg,['BP_ADMIN_1','BP_ADMIN_2','ADMIN_SP']);
+      if(_adminList.length) ADMIN_EMAILS.splice(0,ADMIN_EMAILS.length,..._adminList);
+      // 3차 결재자를 config에서 가져올 수 있도록 전역 변수 세팅
+      window._bpVendorApprover   = cfgVal(_cfg,'BP_VENDOR_APPROVER',  {name:'Jihyun Ma',   email:'Jihyun.ma@hyosung.com'});
+      window._bpCustomerApprover = cfgVal(_cfg,'BP_CUSTOMER_APPROVER',{name:'Hyunju Gong', email:'Hyunju.gong@hyosung.com'});
+    }
     await loadEmployees();
     await checkApprover();
     loadUnifiedBadge().catch(()=>{});
@@ -613,11 +668,13 @@ function onTypeChange() {
   };
   document.getElementById('docs-box').textContent = docs[type] || 'Type을 먼저 선택해주세요.';
   if (type === 'Vendor') {
-    document.getElementById('a3-name').value = 'Jihyun Ma';
-    document.getElementById('a3-email').value = 'Jihyun.ma@hyosung.com';
+    const _va = window._bpVendorApprover || {name:'Jihyun Ma',email:'Jihyun.ma@hyosung.com'};
+    document.getElementById('a3-name').value = _va.name;
+    document.getElementById('a3-email').value = _va.email;
   } else if (type === 'Customer') {
-    document.getElementById('a3-name').value = 'Hyunju Gong';
-    document.getElementById('a3-email').value = 'Hyunju.gong@hyosung.com';
+    const _ca = window._bpCustomerApprover || {name:'Hyunju Gong',email:'Hyunju.gong@hyosung.com'};
+    document.getElementById('a3-name').value = _ca.name;
+    document.getElementById('a3-email').value = _ca.email;
   } else {
     document.getElementById('a3-name').value = '';
     document.getElementById('a3-email').value = '';
