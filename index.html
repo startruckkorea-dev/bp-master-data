@@ -595,6 +595,7 @@ async function loadEmployees() {
 function populateDepts(idx) {
   const depts = [...new Set(employeeData.map(e => e.dept))].sort();
   const sel = document.getElementById('a' + idx + '-dept');
+  if (!sel) return;
   sel.innerHTML = '<option value="">부서</option>' + depts.map(d => '<option value="' + d + '">' + d + '</option>').join('');
 }
 function onDeptChange(idx) {
