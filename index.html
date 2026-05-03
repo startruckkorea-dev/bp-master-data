@@ -500,7 +500,7 @@ async function loadSystemConfig() {
   try {
     const t = await token();
     const drivesRes = await api('/sites/' + siteId + '/drives');
-    let docDrive = (drivesRes.value || []).find(d => d.name === 'Documents' || d.name === '문서');
+    let docDrive = (drivesRes.value || []).find(d => ['Documents','문서','Shared Documents'].includes(d.name));
     if (!docDrive && drivesRes.value && drivesRes.value.length) docDrive = drivesRes.value[0];
     const res = await fetch(GRAPH + '/drives/' + docDrive.id + '/root:/system_config_final.xlsx:/content',
       { headers: { Authorization: 'Bearer ' + t } });
@@ -551,10 +551,8 @@ async function boot(account) {
       // 문의 이메일 (Vendor/Customer 각각)
       const _vendor  = cfgVal(_cfg,'BP_CONTACT_VENDOR',{name:'',email:''});
       const _customer= cfgVal(_cfg,'BP_CONTACT_CUSTOMER',{name:'',email:''});
-      document.querySelectorAll('.sub,.subtitle').forEach(el=>{
-        const _bpV=document.getElementById('bp-contact-vendor');if(_bpV)_bpV.textContent='Vendor 관련 문의 Email: '+_vendor.email;
-        const _bpC=document.getElementById('bp-contact-customer');if(_bpC)_bpC.textContent='Customer 관련 문의 Email: '+_customer.email;
-      });
+      const _bpV=document.getElementById('bp-contact-vendor');if(_bpV)_bpV.textContent='Vendor 관련 문의 Email: '+_vendor.email;
+      const _bpC=document.getElementById('bp-contact-customer');if(_bpC)_bpC.textContent='Customer 관련 문의 Email: '+_customer.email;
       // 관리자
       const _adminList = cfgEmails(_cfg,['BP_ADMIN_1','BP_ADMIN_2','ADMIN_SP']);
       if(_adminList.length) ADMIN_EMAILS.splice(0,ADMIN_EMAILS.length,..._adminList);
