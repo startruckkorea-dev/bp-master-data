@@ -234,8 +234,8 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
     <div>
       <div class="title">BP Master Data Management</div>
       <div style="font-size:11px;color:#605e5c;margin-top:3px">
-        <div>Vendor 관련 문의 Email: jihyun.ma@hyosung.com</div>
-        <div>Customer 관련 문의 Email: hyunju.gong@hyosung.com</div>
+        <div>Vendor 관련 문의 Email: (Excel 설정값)</div>
+        <div>Customer 관련 문의 Email: (Excel 설정값)</div>
       </div>
     </div>
     <div class="user-info" style="flex-direction:column;align-items:flex-end;gap:8px">
@@ -449,9 +449,9 @@ const SITE_PATH = 'startruckkorea.sharepoint.com:/sites/STK-DB:';
 const GRAPH     = 'https://graph.microsoft.com/v1.0';
 const SCOPES    = ['User.Read', 'Sites.ReadWrite.All', 'Files.ReadWrite.All'];
 const ADMIN_EMAILS = [
-  'jihyun.ma@hyosung.com',
-  'hyunju.gong@hyosung.com',
-  'admin@startruckkorea.onmicrosoft.com'
+  '',
+  '',
+  ''
 ];
 
 let msalApp = null, user = null, siteId = null;
@@ -549,8 +549,8 @@ async function boot(account) {
     const _cfg = await loadSystemConfig();
     if (_cfg) {
       // 문의 이메일 (Vendor/Customer 각각)
-      const _vendor  = cfgVal(_cfg,'BP_CONTACT_VENDOR',{name:'Jihyun Ma',email:'jihyun.ma@hyosung.com'});
-      const _customer= cfgVal(_cfg,'BP_CONTACT_CUSTOMER',{name:'Hyunju Gong',email:'hyunju.gong@hyosung.com'});
+      const _vendor  = cfgVal(_cfg,'BP_CONTACT_VENDOR',{name:'',email:''});
+      const _customer= cfgVal(_cfg,'BP_CONTACT_CUSTOMER',{name:'',email:''});
       document.querySelectorAll('.sub,.subtitle').forEach(el=>{
         if(el.textContent.includes('Vendor'))   el.textContent='Vendor 관련 문의 Email: '+_vendor.email;
         if(el.textContent.includes('Customer')) el.textContent='Customer 관련 문의 Email: '+_customer.email;
@@ -559,8 +559,8 @@ async function boot(account) {
       const _adminList = cfgEmails(_cfg,['BP_ADMIN_1','BP_ADMIN_2','ADMIN_SP']);
       if(_adminList.length) ADMIN_EMAILS.splice(0,ADMIN_EMAILS.length,..._adminList);
       // 3차 결재자를 config에서 가져올 수 있도록 전역 변수 세팅
-      window._bpVendorApprover   = cfgVal(_cfg,'BP_VENDOR_APPROVER',  {name:'Jihyun Ma',   email:'Jihyun.ma@hyosung.com'});
-      window._bpCustomerApprover = cfgVal(_cfg,'BP_CUSTOMER_APPROVER',{name:'Hyunju Gong', email:'Hyunju.gong@hyosung.com'});
+      window._bpVendorApprover   = cfgVal(_cfg,'BP_VENDOR_APPROVER',  {name:'',   email:''});
+      window._bpCustomerApprover = cfgVal(_cfg,'BP_CUSTOMER_APPROVER',{name:'', email:''});
     }
     await loadEmployees();
     await checkApprover();
@@ -669,11 +669,11 @@ function onTypeChange() {
   };
   document.getElementById('docs-box').textContent = docs[type] || 'Type을 먼저 선택해주세요.';
   if (type === 'Vendor') {
-    const _va = window._bpVendorApprover || {name:'Jihyun Ma',email:'Jihyun.ma@hyosung.com'};
+    const _va = window._bpVendorApprover || {name:'',email:''};
     document.getElementById('a3-name').value = _va.name;
     document.getElementById('a3-email').value = _va.email;
   } else if (type === 'Customer') {
-    const _ca = window._bpCustomerApprover || {name:'Hyunju Gong',email:'Hyunju.gong@hyosung.com'};
+    const _ca = window._bpCustomerApprover || {name:'',email:''};
     document.getElementById('a3-name').value = _ca.name;
     document.getElementById('a3-email').value = _ca.email;
   } else {
