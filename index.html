@@ -763,7 +763,7 @@ async function submitRequest() {
   try {
     const item = await api('/sites/' + siteId + '/lists/BP_Requests/items', 'POST', {
       fields: {
-        Title: type + ' - ' + subcat,
+        Title: 'BP-tmp',
         BPType: type, SubCategory: subcat,
         BPCode: subcat === 'BP creation' ? '' : bpcode,
         Description: desc, Status: '대기',
@@ -772,6 +772,7 @@ async function submitRequest() {
       }
     });
     const reqId = item.id;
+    await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { Title: 'BP-' + new Date().toISOString().slice(0,10) + '-' + reqId } });
 
     // Upload files → Graph API 다운로드 경로 저장 (SharePoint 사이트 권한 불필요)
     const fileLinks = [];
