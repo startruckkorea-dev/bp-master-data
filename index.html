@@ -942,6 +942,19 @@ async function processApproval(apprId, action, reqId, role, comment='') {
   finally { loading(false); }
 }
 
+
+// ── 로딩 헬퍼 stub ──
+function dynLoadStart(msg) { loading(true, msg||'로딩 중...'); }
+function dynLoadEnd() { loading(false); }
+function pgSet(scope, items, renderer, emptyMsg, colSpan) {
+  const tbody = document.getElementById(scope + '-body');
+  if (!tbody) return;
+  if (!items || !items.length) {
+    tbody.innerHTML = '<tr><td colspan="' + (colSpan||5) + '" style="text-align:center;padding:20px;color:#605e5c">' + (emptyMsg||'데이터가 없습니다.') + '</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(item => renderer ? renderer(item) : item).join('');
+}
 // ── 통합결재함 배지 ──
 async function loadUnifiedBadge() {
   if (!siteId || !user) return;
