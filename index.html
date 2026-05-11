@@ -942,6 +942,27 @@ async function processApproval(apprId, action, reqId, role, comment='') {
   finally { loading(false); }
 }
 
+// ── MSAL 초기화 (ga 방식) ──
+window.addEventListener('load', async () => {
+  const btn = document.getElementById('btn-login');
+  try {
+    const inst = await msal.PublicClientApplication.createPublicClientApplication({
+      auth: { clientId: CLIENT_ID, authority: 'https://login.microsoftonline.com/' + TENANT_ID, redirectUri: window.location.origin + window.location.pathname },
+      cache: { cacheLocation: 'localStorage' }
+    });
+    msalApp = inst;
+    const resp = await msalApp.handleRedirectPromise();
+    if (resp) { msalApp.setActiveAccount(resp.account); await boot(resp.account); return; }
+    const accounts = msalApp.getAllAccounts();
+    if (accounts.length) { msalApp.setActiveAccount(accounts[0]); await boot(accounts[0]); return; }
+    btn.disabled = false;
+    btn.textContent = 'Microsoft 계정으로 로그인';
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Microsoft 계정으로 로그인';
+    console.error('MSAL init error:', e);
+  }
+});
 </script>
 </body>
 </html>
