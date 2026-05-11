@@ -942,6 +942,18 @@ async function processApproval(apprId, action, reqId, role, comment='') {
   finally { loading(false); }
 }
 
+// ── 통합결재함 배지 ──
+async function loadUnifiedBadge() {
+  if (!siteId || !user) return;
+  try {
+    const data = await apiAll('/sites/' + siteId + '/lists/BP_Approvals/items?$expand=fields');
+    const myEmail = (user.email || user.username || '').toLowerCase();
+    const total = data.value.filter(i => (i.fields.ApproverEmail||'').toLowerCase() === myEmail && (i.fields.Status||'').trim() === '대기').length;
+    const badge = document.getElementById('unif-badge');
+    if (badge) { badge.textContent = total; badge.style.display = total > 0 ? 'inline-block' : 'none'; }
+  } catch(e) { console.warn('loadUnifiedBadge error:', e); }
+}
+
 // ── MSAL 초기화 (ga 방식) ──
 window.addEventListener('load', async () => {
   const btn = document.getElementById('btn-login');
