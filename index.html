@@ -943,8 +943,19 @@ async function processApproval(apprId, action, reqId, role, comment='') {
 }
 
 
-// ── 로딩 헬퍼 stub ──
-function dynLoadStart(msg) { loading(true, msg||'로딩 중...'); }
+// ── 로딩 헬퍼 ──
+function loading(show, msg) {
+  const el = document.getElementById('loading');
+  if (!el) return;
+  if (show) {
+    const span = el.querySelector('span');
+    if (span) span.textContent = msg || '처리 중입니다...';
+    el.style.display = 'flex';
+  } else {
+    el.style.display = 'none';
+  }
+}
+function dynLoadStart(msg) { loading(true, msg || '로딩 중...'); }
 function dynLoadEnd() { loading(false); }
 function pgSet(scope, items, renderer, emptyMsg, colSpan) {
   const tbody = document.getElementById(scope + '-body');
