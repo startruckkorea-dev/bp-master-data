@@ -934,9 +934,7 @@ async function showDetail(reqId) {
       row('Type', f.BPType) +
       row('Sub Category', f.SubCategory) +
       row('BP Code', f.BPCode || '-') +
-      row('회사명', f.CompanyName) +
-      row('국가', f.Country) +
-      row('Description', f.Description) +
+      (f.Description ? row('Description', f.Description) : '') +
       sec('첨부파일') + filesHtml +
       sec('결재 이력') +
       '<div style="background:#f9f9f9;border-radius:4px;border:1px solid #edebe9">' + (apprHtml || '<div style="padding:12px;font-size:.8rem;color:#605e5c">결재 이력 없음</div>') + '</div>' +
