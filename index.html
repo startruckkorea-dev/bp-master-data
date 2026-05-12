@@ -708,9 +708,11 @@ function switchTab(name) {
   // 신청서 작성은 기존 너비, 나머지는 넓은 레이아웃
   const appEl = document.getElementById('app');
   if (appEl) appEl.style.maxWidth = name === 'form' ? '900px' : '1280px';
-  if (name === 'list') loadMyList();
+  if (name === 'list') { loadMyList(); loadUnifiedBadge(); }
   if (name === 'approval') loadApprovalQueue();
   if (name === 'admin') { allRequestsCache = []; _adminItems = []; loadAdminList(); }
+  // 탭 이동 시마다 뱃지 갱신
+  loadUnifiedBadge().catch(()=>{});
 }
 
 // ── Form logic ──
@@ -862,6 +864,8 @@ async function submitRequest() {
     }
     alert('✅ 상신이 완료되었습니다!\n\n번호: ' + reqId + '\nTitle: BP-' + new Date().toISOString().slice(0,10) + '_ID-' + reqId);
     resetForm(); switchTab('list');
+    // 결재함 뱃지 갱신
+    setTimeout(() => { loadApprovalQueue(); loadUnifiedBadge(); }, 800);
   } catch(e) { alert('오류: ' + e.message); }
   finally { loading(false); }
 }
