@@ -838,7 +838,7 @@ async function submitRequest() {
         Status: a.order === 1 ? '대기' : '대기(잠김)'
       }});
     }
-    alert('상신이 완료되었습니다.');
+    alert('✅ 상신이 완료되었습니다!\n\n번호: ' + reqId + '\nTitle: BP-' + new Date().toISOString().slice(0,10) + '_ID-' + reqId);
     resetForm(); switchTab('list');
   } catch(e) { alert('오류: ' + e.message); }
   finally { loading(false); }
