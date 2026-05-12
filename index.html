@@ -1001,8 +1001,8 @@ async function loadAdminList(page) {
   if (!_adminItems.length) {
     dynLoadStart('관리자 데이터 불러오는 중');
     try {
-      const data = await apiAll('/sites/' + siteId + '/lists/BP_Requests/items?$expand=fields&$orderby=Id desc');
-      _adminItems = data.value;
+      const data = await apiAll('/sites/' + siteId + '/lists/BP_Requests/items?$expand=fields');
+      _adminItems = data.value.sort((a,b) => b.id - a.id);
     } catch(e) {
       dynLoadEnd();
       if(tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#a4262c">' + e.message + '</td></tr>';
