@@ -1127,8 +1127,8 @@ async function processApproval(apprId, action, reqId, role, comment='') {
       }
     }
     closeModal();
-    setTimeout(() => loadUnifiedData(), 600);
-    setTimeout(() => loadUnifiedBadge(), 1200);
+    await loadApprovalQueue();
+    await loadUnifiedBadge();
   } catch(e) { alert('오류: ' + e.message); }
   finally { loading(false); }
 }
