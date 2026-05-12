@@ -1050,7 +1050,13 @@ async function loadApprovalQueue() {
     const mine = apprData.value
       .filter(function(i){ return (i.fields.ApproverEmail||'').toLowerCase() === (user.email||user.username||'').toLowerCase() && i.fields.Status === '대기'; })
       .sort(function(a,b){ return b.fields.RequestID - a.fields.RequestID; });
-    if (!mine.length) { dynLoadEnd(); pgSet('appr', [], null, '결재 대기 항목이 없습니다.', 7); return; }
+    if (!mine.length) {
+      dynLoadEnd();
+      pgSet('appr', [], null, '결재 대기 항목이 없습니다.', 7);
+      const badge0 = document.getElementById('appr-badge');
+      if (badge0) { badge0.textContent = ''; badge0.style.display = 'none'; }
+      return;
+    }
     const rows = mine.map(function(item) {
       const f = item.fields;
       const rf = reqMap[String(f.RequestID)] || {};
@@ -1128,6 +1134,8 @@ async function processApproval(apprId, action, reqId, role, comment='') {
       }
     }
     closeModal();
+    // SharePoint 반영 대기 후 재조회
+    await new Promise(r => setTimeout(r, 800));
     await loadApprovalQueue();
     await loadUnifiedBadge();
   } catch(e) { alert('오류: ' + e.message); }
