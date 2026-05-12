@@ -1058,7 +1058,8 @@ async function loadApprovalQueue() {
     });
     dynLoadEnd(); pgSet('appr', rows, function(r){ return r; }, '결재 대기 항목이 없습니다.', 7);
     const badge = document.getElementById('appr-badge');
-    badge.textContent = mine.length; badge.style.display = 'inline';
+    if (mine.length) { badge.textContent = mine.length; badge.style.display = 'inline'; }
+    else { badge.textContent = ''; badge.style.display = 'none'; }
   } catch(e) { dynLoadEnd(); console.error('loadApprovalQueue error:', e); }
 }
 
