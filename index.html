@@ -386,16 +386,16 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
   <div id="tab-admin" style="display:none">
     <div class="card">
       <div class="filter-bar">
-        <select id="admin-filter-status" onchange="loadAdminList()">
+        <select id="admin-filter-status" onchange="_adminItems=[];loadAdminList()">
           <option value="">전체 상태</option>
           <option>대기</option><option>승인완료</option><option>반려</option>
         </select>
-        <select id="admin-filter-type" onchange="loadAdminList()">
+        <select id="admin-filter-type" onchange="_adminItems=[];loadAdminList()">
           <option value="">전체 Type</option>
           <option>Vendor</option><option>Customer</option>
         </select>
-        <input type="text" id="admin-filter-search" oninput="loadAdminList()" placeholder="신청자 검색...">
-        <input type="text" id="admin-filter-bpcode" oninput="loadAdminList()" placeholder="BP Code 검색..." style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;width:160px">
+        <input type="text" id="admin-filter-search" oninput="_adminItems=[];loadAdminList()" placeholder="신청자 검색...">
+        <input type="text" id="admin-filter-bpcode" oninput="_adminItems=[];loadAdminList()" placeholder="BP Code 검색..." style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;width:160px">
         <span id="admin-count" style="font-size:13px;color:#605e5c;margin-left:auto"></span>
       </div>
       <table class="list-table">
@@ -688,7 +688,7 @@ function switchTab(name) {
   });
   if (name === 'list') loadMyList();
   if (name === 'approval') loadApprovalQueue();
-  if (name === 'admin') { allRequestsCache = []; loadAdminList(); }
+  if (name === 'admin') { allRequestsCache = []; _adminItems = []; loadAdminList(); }
 }
 
 // ── Form logic ──
@@ -981,7 +981,10 @@ function closeModal() {
 }
 
 // ── 관리자 목록 ──
-async function loadAdminList() {
+let _adminItems = [], _adminPage = 0;
+const ADMIN_PAGE_SIZE = 20;
+
+async function loadAdminList(page) {
   if (!siteId) return;
   const tbody = document.getElementById('admin-body');
   const countEl = document.getElementById('admin-count');
@@ -990,36 +993,83 @@ async function loadAdminList() {
   const filterSearch = (document.getElementById('admin-filter-search')?.value || '').toLowerCase();
   const filterBpcode = (document.getElementById('admin-filter-bpcode')?.value || '').toLowerCase();
 
-  dynLoadStart('관리자 데이터 불러오는 중');
-  try {
-    const data = await apiAll('/sites/' + siteId + '/lists/BP_Requests/items?$expand=fields&$orderby=Id desc');
-    let items = data.value;
-    if (filterStatus) items = items.filter(i => i.fields.Status === filterStatus);
-    if (filterType)   items = items.filter(i => i.fields.BPType === filterType);
-    if (filterSearch) items = items.filter(i => (i.fields.RequesterEmail||'').toLowerCase().includes(filterSearch));
-    if (filterBpcode) items = items.filter(i => (i.fields.BPCode||'').toLowerCase().includes(filterBpcode));
+  // 필터 변경 시 1페이지로 리셋
+  if (page === undefined) { _adminItems = []; _adminPage = 0; }
+  else { _adminPage = page; }
 
-    if (countEl) countEl.textContent = '총 ' + items.length + '건';
-    if (!items.length) { dynLoadEnd(); pgSet('admin', [], null, '데이터가 없습니다.', 7); return; }
-
-    const sc = {'대기':'badge-대기','승인완료':'badge-승인완료','반려':'badge-반려','처리중':'badge-처리중'};
-    pgSet('admin', items, function(item) {
-      const f = item.fields;
-      return '<tr onclick="showDetail('+item.id+')" style="cursor:pointer">'
-        + '<td style="color:#0078d4;font-weight:600">' + item.id + '</td>'
-        + '<td style="font-size:.78rem">' + (f.RequesterEmail||'') + '</td>'
-        + '<td><span class="badge badge-type">' + (f.BPType||'') + '</span></td>'
-        + '<td>' + (f.SubCategory||'') + '</td>'
-        + '<td><b>' + (f.BPCode||'-') + '</b></td>'
-        + '<td><span class="badge '+(sc[f.Status]||'')+'">' + (f.Status||'') + '</span></td>'
-        + '<td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td>'
-        + '</tr>';
-    }, '데이터가 없습니다.', 7);
+  // 캐시 없으면 새로 로드
+  if (!_adminItems.length) {
+    dynLoadStart('관리자 데이터 불러오는 중');
+    try {
+      const data = await apiAll('/sites/' + siteId + '/lists/BP_Requests/items?$expand=fields&$orderby=Id desc');
+      _adminItems = data.value;
+    } catch(e) {
+      dynLoadEnd();
+      if(tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#a4262c">' + e.message + '</td></tr>';
+      return;
+    }
     dynLoadEnd();
-  } catch(e) {
-    dynLoadEnd();
-    if(tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#a4262c">' + e.message + '</td></tr>';
   }
+
+  // 필터 적용
+  let items = _adminItems;
+  if (filterStatus) items = items.filter(i => i.fields.Status === filterStatus);
+  if (filterType)   items = items.filter(i => i.fields.BPType === filterType);
+  if (filterSearch) items = items.filter(i => (i.fields.RequesterEmail||'').toLowerCase().includes(filterSearch));
+  if (filterBpcode) items = items.filter(i => (i.fields.BPCode||'').toLowerCase().includes(filterBpcode));
+
+  const total = items.length;
+  const totalPages = Math.ceil(total / ADMIN_PAGE_SIZE);
+  if (countEl) countEl.textContent = '총 ' + total + '건';
+
+  if (!total) { pgSet('admin', [], null, '데이터가 없습니다.', 7); renderAdminPagination(0, 0); return; }
+
+  // 페이지 슬라이스
+  const pageItems = items.slice(_adminPage * ADMIN_PAGE_SIZE, (_adminPage + 1) * ADMIN_PAGE_SIZE);
+
+  const sc = {'대기':'badge-대기','승인완료':'badge-승인완료','반려':'badge-반려','처리중':'badge-처리중'};
+  pgSet('admin', pageItems, function(item) {
+    const f = item.fields;
+    return '<tr onclick="showDetail('+item.id+')" style="cursor:pointer">'
+      + '<td style="color:#0078d4;font-weight:600">' + item.id + '</td>'
+      + '<td style="font-size:.78rem">' + (f.RequesterEmail||'') + '</td>'
+      + '<td><span class="badge badge-type">' + (f.BPType||'') + '</span></td>'
+      + '<td>' + (f.SubCategory||'') + '</td>'
+      + '<td><b>' + (f.BPCode||'-') + '</b></td>'
+      + '<td><span class="badge '+(sc[f.Status]||'')+'">' + (f.Status||'') + '</span></td>'
+      + '<td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td>'
+      + '</tr>';
+  }, '데이터가 없습니다.', 7);
+
+  renderAdminPagination(totalPages, _adminPage);
+}
+
+function renderAdminPagination(totalPages, curPage) {
+  let el = document.getElementById('admin-pagination');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'admin-pagination';
+    el.style.cssText = 'display:flex;gap:4px;justify-content:center;margin-top:12px;flex-wrap:wrap';
+    const adminTab = document.getElementById('admin-body');
+    if (adminTab) adminTab.closest('table').after(el);
+  }
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+
+  let html = '';
+  // 이전 버튼
+  html += `<button onclick="loadAdminList(${curPage-1})" ${curPage===0?'disabled':''} style="padding:4px 10px;border:1px solid #d2d0ce;border-radius:4px;background:${curPage===0?'#f3f2f1':'#fff'};cursor:${curPage===0?'default':'pointer'};font-size:12px">‹</button>`;
+  // 페이지 버튼 (최대 7개)
+  let start = Math.max(0, curPage - 3);
+  let end = Math.min(totalPages, start + 7);
+  if (end - start < 7) start = Math.max(0, end - 7);
+  for (let i = start; i < end; i++) {
+    const active = i === curPage;
+    html += `<button onclick="loadAdminList(${i})" style="padding:4px 10px;border:1px solid ${active?'#0078d4':'#d2d0ce'};border-radius:4px;background:${active?'#0078d4':'#fff'};color:${active?'#fff':'#323130'};cursor:pointer;font-size:12px;font-weight:${active?'700':'400'}">${i+1}</button>`;
+  }
+  // 다음 버튼
+  html += `<button onclick="loadAdminList(${curPage+1})" ${curPage===totalPages-1?'disabled':''} style="padding:4px 10px;border:1px solid #d2d0ce;border-radius:4px;background:${curPage===totalPages-1?'#f3f2f1':'#fff'};cursor:${curPage===totalPages-1?'default':'pointer'};font-size:12px">›</button>`;
+
+  el.innerHTML = html;
 }
 
 async function loadMyList() {
