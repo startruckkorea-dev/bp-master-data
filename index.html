@@ -837,6 +837,129 @@ function fmtDate(iso) {
     ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
 }
 
+
+
+// ── 신청 상세 보기 ──
+async function showDetail(reqId) {
+  const modal = document.getElementById('detail-modal');
+  const mc = document.getElementById('modal-content');
+  mc.innerHTML = '<div style="text-align:center;padding:30px;color:#605e5c">불러오는 중...</div>';
+  modal.style.display = 'flex';
+  try {
+    const item = await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId + '?$expand=fields');
+    const f = item.fields;
+    // 결재 이력
+    const apprAll = await apiAll('/sites/' + siteId + '/lists/BP_Approvals/items?$expand=fields');
+    const apprList = apprAll.value
+      .filter(i => Number(i.fields.RequestID) === Number(reqId))
+      .sort((a,b) => a.fields.ApprovalOrder - b.fields.ApprovalOrder);
+
+    const row = (label, val) => val
+      ? '<tr><td style="font-weight:600;color:#605e5c;width:35%;padding:6px 8px;font-size:12px">'
+        + label + '</td><td style="padding:6px 8px;font-size:13px">' + val + '</td></tr>'
+      : '';
+    const sc = {'대기':'#7d5700','승인':'#107c10','반려':'#a4262c','대기(잠김)':'#8a8886','승인완료':'#107c10'};
+
+    let html = '<table style="width:100%;border-collapse:collapse;margin-bottom:16px">'
+      + row('번호', reqId)
+      + row('신청자', f.RequesterEmail)
+      + row('상태', '<span style="color:'+( sc[f.Status]||'#323130')+';font-weight:700">' + (f.Status||'') + '</span>')
+      + row('신청일', f.RequestDate ? fmtDate(f.RequestDate) : '')
+      + '</table>';
+
+    html += '<div style="font-weight:700;font-size:13px;color:#1A3C6E;border-bottom:2px solid #1A3C6E;padding-bottom:4px;margin-bottom:8px">BP 신청 정보</div>';
+    html += '<table style="width:100%;border-collapse:collapse;margin-bottom:16px">'
+      + row('Type', f.BPType)
+      + row('Sub Category', f.SubCategory)
+      + row('BP Code', f.BPCode || '-')
+      + row('회사명', f.CompanyName)
+      + row('국가', f.Country)
+      + row('설명', f.Description)
+      + '</table>';
+
+    if (apprList.length) {
+      html += '<div style="font-weight:700;font-size:13px;color:#1A3C6E;border-bottom:2px solid #1A3C6E;padding-bottom:4px;margin-bottom:8px">결재 이력</div>';
+      apprList.forEach(function(a) {
+        const af = a.fields;
+        const color = sc[af.Status] || '#323130';
+        html += '<div style="border:1px solid #edebe9;border-radius:4px;padding:10px 12px;margin-bottom:8px">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center">'
+          + '<div><span style="font-size:11px;color:#605e5c">' + (af.ApprovalOrder||'') + '차 ' + (af.ApproverRole||'') + '</span><br>'
+          + '<span style="font-size:12px;font-weight:600">' + (af.ApproverName||'') + '</span>'
+          + (af.ApprovalDate ? '<span style="font-size:11px;color:#8a8886;margin-left:8px">' + fmtDate(af.ApprovalDate) + '</span>' : '')
+          + '</div>'
+          + '<span style="color:'+color+';font-weight:700;font-size:12px">' + (af.Status||'') + '</span>'
+          + '</div>'
+          + (af.Comment ? '<div style="margin-top:6px;font-size:12px;color:#605e5c;background:#f3f2f1;padding:6px 8px;border-radius:3px">💬 ' + af.Comment + '</div>' : '')
+          + '</div>';
+      });
+    }
+
+    // 내가 결재해야 할 항목이면 승인/반려 버튼 표시
+    const myEmail = (user.email||user.username||'').toLowerCase();
+    const myPending = apprList.find(a =>
+      (a.fields.ApproverEmail||'').toLowerCase() === myEmail && (a.fields.Status||'').trim() === '대기'
+    );
+    if (myPending) {
+      html += '<div style="display:flex;gap:8px;margin-top:12px">';
+      const mRole = (myPending.fields.ApproverRole||'').replace(/'/g,'');
+      html += '<button class="btn-approve" onclick="showConfirm(' + myPending.id + ',\'승인\',' + reqId + ',\'' + mRole + '\');closeModal()">✅ 승인</button>';
+      html += '<button class="btn-reject" onclick="showConfirm(' + myPending.id + ',\'반려\',' + reqId + ',\'' + mRole + '\');closeModal()">❌ 반려</button>';
+      html += '</div>';
+    }
+
+    mc.innerHTML = html;
+  } catch(e) {
+    mc.innerHTML = '<div style="color:#a4262c;padding:20px">' + e.message + '</div>';
+  }
+}
+function closeModal() {
+  const modal = document.getElementById('detail-modal');
+  if(modal) modal.style.display = 'none';
+}
+
+// ── 관리자 목록 ──
+async function loadAdminList() {
+  if (!siteId) return;
+  const tbody = document.getElementById('admin-body');
+  const countEl = document.getElementById('admin-count');
+  const filterStatus = document.getElementById('admin-filter-status')?.value || '';
+  const filterType   = document.getElementById('admin-filter-type')?.value || '';
+  const filterSearch = (document.getElementById('admin-filter-search')?.value || '').toLowerCase();
+  const filterBpcode = (document.getElementById('admin-filter-bpcode')?.value || '').toLowerCase();
+
+  dynLoadStart('관리자 데이터 불러오는 중');
+  try {
+    const data = await apiAll('/sites/' + siteId + '/lists/BP_Requests/items?$expand=fields&$orderby=Id desc');
+    let items = data.value;
+    if (filterStatus) items = items.filter(i => i.fields.Status === filterStatus);
+    if (filterType)   items = items.filter(i => i.fields.BPType === filterType);
+    if (filterSearch) items = items.filter(i => (i.fields.RequesterEmail||'').toLowerCase().includes(filterSearch));
+    if (filterBpcode) items = items.filter(i => (i.fields.BPCode||'').toLowerCase().includes(filterBpcode));
+
+    if (countEl) countEl.textContent = '총 ' + items.length + '건';
+    if (!items.length) { dynLoadEnd(); pgSet('admin', [], null, '데이터가 없습니다.', 7); return; }
+
+    const sc = {'대기':'badge-대기','승인완료':'badge-승인완료','반려':'badge-반려','처리중':'badge-처리중'};
+    pgSet('admin', items, function(item) {
+      const f = item.fields;
+      return '<tr onclick="showDetail('+item.id+')" style="cursor:pointer">'
+        + '<td style="color:#0078d4;font-weight:600">' + item.id + '</td>'
+        + '<td style="font-size:.78rem">' + (f.RequesterEmail||'') + '</td>'
+        + '<td><span class="badge badge-type">' + (f.BPType||'') + '</span></td>'
+        + '<td>' + (f.SubCategory||'') + '</td>'
+        + '<td><b>' + (f.BPCode||'-') + '</b></td>'
+        + '<td><span class="badge '+(sc[f.Status]||'')+'">' + (f.Status||'') + '</span></td>'
+        + '<td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td>'
+        + '</tr>';
+    }, '데이터가 없습니다.', 7);
+    dynLoadEnd();
+  } catch(e) {
+    dynLoadEnd();
+    if(tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#a4262c">' + e.message + '</td></tr>';
+  }
+}
+
 async function loadMyList() {
   if (!siteId) return;
   const tbody = document.getElementById('list-body');
@@ -930,10 +1053,16 @@ async function processApproval(apprId, action, reqId, role, comment='') {
         await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { Status: '승인완료' } });
       }
     } else if (action === '승인') {
-      let _ap=[],_nu='/sites/'+siteId+'/lists/'+sys.list+'/items?$expand=fields&$top=500';while(_nu){const _p=await api(_nu);_ap=_ap.concat(_p.value);_nu=_p['@odata.nextLink']?_p['@odata.nextLink'].replace('https://graph.microsoft.com/v1.0',''):null;}
-      const next=_ap.filter(i=>Number(i.fields.RequestID)===Number(reqId)&&(i.fields.Status||'').trim()==='대기(잠김)').sort((a,b)=>a.fields.ApprovalOrder-b.fields.ApprovalOrder);
-      if(next.length) await api('/sites/'+siteId+'/lists/'+sys.list+'/items/'+next[0].id,'PATCH',{fields:{Status:'대기'}});
-      else await api('/sites/'+siteId+'/lists/'+lists.req+'/items/'+reqId, 'PATCH', {fields:{Status:'승인완료'}});
+      // 다음 결재자 활성화 (페이지네이션 전체 조회)
+      const allAppr = await apiAll('/sites/'+siteId+'/lists/BP_Approvals/items?$expand=fields');
+      const next = allAppr.value
+        .filter(i => Number(i.fields.RequestID)===Number(reqId) && (i.fields.Status||'').trim()==='대기(잠김)')
+        .sort((a,b) => a.fields.ApprovalOrder - b.fields.ApprovalOrder);
+      if (next.length) {
+        await api('/sites/'+siteId+'/lists/BP_Approvals/items/'+next[0].id, 'PATCH', {fields:{Status:'대기'}});
+      } else {
+        await api('/sites/'+siteId+'/lists/BP_Requests/items/'+reqId, 'PATCH', {fields:{Status:'승인완료'}});
+      }
     }
     closeModal();
     setTimeout(() => loadUnifiedData(), 600);
