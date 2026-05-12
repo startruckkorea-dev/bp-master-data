@@ -400,12 +400,35 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
       </div>
       <table class="list-table">
         <thead><tr>
-          <th>번호</th><th>신청자</th><th>Type</th><th>Sub Category</th><th>BP Code</th><th>상태</th><th>신청일</th>
+          <th>번호</th><th>신청자</th><th>Title</th><th>Type</th><th>Sub Category</th><th>BP Code</th><th>상태</th><th>신청일</th>
         </tr></thead>
         <tbody id="admin-body">
           <tr><td colspan="7" style="text-align:center;padding:32px;color:#605e5c"><div class="dyn-dots" style="justify-content:center"><span></span><span></span><span></span></div></td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── BP Code Input Modal ── -->
+<div id="bp-code-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:700;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;width:420px;box-shadow:0 8px 40px rgba(0,0,0,.18);overflow:hidden">
+    <div style="background:linear-gradient(135deg,#107c10,#0e6b0e);padding:20px 24px">
+      <div style="font-size:22px;margin-bottom:4px">🎉</div>
+      <div style="font-size:16px;font-weight:700;color:#fff">최종 승인 완료!</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:2px">BP Creation이 최종 승인되었습니다</div>
+    </div>
+    <div style="padding:22px 24px">
+      <div style="font-size:13px;color:#323130;font-weight:600;margin-bottom:6px">BP Code 입력</div>
+      <div style="font-size:12px;color:#605e5c;margin-bottom:12px">회계담당자가 발급된 BP Code를 입력해주세요.</div>
+      <input id="bp-code-input" type="text" placeholder="예) KR999999"
+        style="width:100%;border:1.5px solid #0078d4;border-radius:6px;padding:10px 12px;font-size:14px;box-sizing:border-box;outline:none"
+        onkeydown="if(event.key==='Enter')confirmBpCode()">
+      <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+        <button onclick="confirmBpCode(false)" style="padding:8px 20px;border:1px solid #d2d0ce;border-radius:6px;background:#fff;font-size:13px;cursor:pointer;color:#605e5c">나중에 입력</button>
+        <button onclick="confirmBpCode(true)" style="padding:8px 22px;border:none;border-radius:6px;background:#107c10;color:#fff;font-size:13px;font-weight:600;cursor:pointer">✅ 저장</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1022,7 +1045,7 @@ async function loadAdminList(page) {
   const totalPages = Math.ceil(total / ADMIN_PAGE_SIZE);
   if (countEl) countEl.textContent = '총 ' + total + '건';
 
-  if (!total) { pgSet('admin', [], null, '데이터가 없습니다.', 7); renderAdminPagination(0, 0); return; }
+  if (!total) { pgSet('admin', [], null, '데이터가 없습니다.', 8); renderAdminPagination(0, 0); return; }
 
   // 페이지 슬라이스
   const pageItems = items.slice(_adminPage * ADMIN_PAGE_SIZE, (_adminPage + 1) * ADMIN_PAGE_SIZE);
@@ -1033,13 +1056,14 @@ async function loadAdminList(page) {
     return '<tr onclick="showDetail('+item.id+')" style="cursor:pointer">'
       + '<td style="color:#0078d4;font-weight:600">' + item.id + '</td>'
       + '<td style="font-size:.78rem">' + (f.RequesterEmail||'') + '</td>'
+      + '<td style="font-size:.78rem;color:#0078d4">' + (f.Title||'-') + '</td>'
       + '<td><span class="badge badge-type">' + (f.BPType||'') + '</span></td>'
       + '<td>' + (f.SubCategory||'') + '</td>'
       + '<td><b>' + (f.BPCode||'-') + '</b></td>'
       + '<td><span class="badge '+(sc[f.Status]||'')+'">' + (f.Status||'') + '</span></td>'
       + '<td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td>'
       + '</tr>';
-  }, '데이터가 없습니다.', 7);
+  }, '데이터가 없습니다.', 8);
 
   renderAdminPagination(totalPages, _adminPage);
 }
@@ -1081,8 +1105,8 @@ async function loadMyList() {
     const mine = data.value
       .filter(i => (i.fields.RequesterEmail||'').toLowerCase() === user.username.toLowerCase())
       .sort((a,b) => new Date(b.fields.RequestDate) - new Date(a.fields.RequestDate));
-    if (!mine.length) { dynLoadEnd(); pgSet('list', [], null, '신청 내역이 없습니다.', 6); return; }
-    dynLoadEnd(); pgSet('list', mine, item => { const f = item.fields; return '<tr onclick="showDetail(' + item.id + ')"><td>' + item.id + '</td><td><span class="badge badge-type">' + (f.BPType||'') + '</span></td><td>' + (f.SubCategory||'') + '</td><td>' + (f.BPCode||'-') + '</td><td><span class="badge badge-' + f.Status + '">' + f.Status + '</span></td><td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td></tr>'; }, '신청 내역이 없습니다.', 6);
+    if (!mine.length) { dynLoadEnd(); pgSet('list', [], null, '신청 내역이 없습니다.', 8); return; }
+    dynLoadEnd(); pgSet('list', mine, item => { const f = item.fields; return '<tr onclick="showDetail(' + item.id + ')" style="cursor:pointer"><td style="color:#0078d4;font-weight:600">' + item.id + '</td><td style="font-size:.78rem">' + (f.RequesterEmail||'') + '</td><td style="font-size:.78rem;color:#0078d4">' + (f.Title||'-') + '</td><td><span class="badge badge-type">' + (f.BPType||'') + '</span></td><td>' + (f.SubCategory||'') + '</td><td><b>' + (f.BPCode||'-') + '</b></td><td><span class="badge badge-' + (f.Status||'대기') + '">' + (f.Status||'') + '</span></td><td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td></tr>'; }, '신청 내역이 없습니다.', 8);
   } catch(e) { dynLoadEnd(); tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#a4262c">' + e.message + '</td></tr>'; }
 }
 
@@ -1102,7 +1126,7 @@ async function loadApprovalQueue() {
       .sort(function(a,b){ return b.fields.RequestID - a.fields.RequestID; });
     if (!mine.length) {
       dynLoadEnd();
-      pgSet('appr', [], null, '결재 대기 항목이 없습니다.', 7);
+      pgSet('appr', [], null, '결재 대기 항목이 없습니다.', 9);
       const badge0 = document.getElementById('appr-badge');
       if (badge0) { badge0.textContent = ''; badge0.style.display = 'none'; }
       return;
@@ -1110,9 +1134,9 @@ async function loadApprovalQueue() {
     const rows = mine.map(function(item) {
       const f = item.fields;
       const rf = reqMap[String(f.RequestID)] || {};
-      return '<tr><td style="color:#0078d4;cursor:pointer" onclick="showDetail(' + f.RequestID + ')">' + f.RequestID + '</td><td>' + (rf.RequesterEmail||'') + '</td><td><span class="badge badge-type">' + (rf.BPType||'') + '</span></td><td>' + (rf.SubCategory||'') + '</td><td><span class="badge badge-' + (rf.Status||'대기') + '">' + (rf.Status||'') + '</span></td><td>' + (rf.RequestDate?fmtDate(rf.RequestDate):'') + '</td><td onclick="event.stopPropagation()"><button class="btn-approve" onclick="showConfirm(' + item.id + ',\'승인\',' + f.RequestID + ',\'' + (f.ApproverRole||'') + '\')">승인</button> <button class="btn-reject" onclick="showConfirm(' + item.id + ',\'반려\',' + f.RequestID + ',\'' + (f.ApproverRole||'') + '\')">반려</button></td></tr>';
+      return '<tr><td style="color:#0078d4;cursor:pointer;font-weight:600" onclick="showDetail(' + f.RequestID + ')">' + f.RequestID + '</td><td style="font-size:.78rem">' + (rf.RequesterEmail||'') + '</td><td style="font-size:.78rem;color:#0078d4">' + (rf.Title||'-') + '</td><td><span class="badge badge-type">' + (rf.BPType||'') + '</span></td><td>' + (rf.SubCategory||'') + '</td><td><b>' + (rf.BPCode||'-') + '</b></td><td><span class="badge badge-' + (rf.Status||'대기') + '">' + (rf.Status||'') + '</span></td><td>' + (rf.RequestDate?fmtDate(rf.RequestDate):'') + '</td><td onclick="event.stopPropagation()"><button class="btn-approve" onclick="showConfirm(' + item.id + ',\'승인\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">승인</button> <button class="btn-reject" onclick="showConfirm(' + item.id + ',\'반려\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">반려</button></td></tr>';
     });
-    dynLoadEnd(); pgSet('appr', rows, function(r){ return r; }, '결재 대기 항목이 없습니다.', 7);
+    dynLoadEnd(); pgSet('appr', rows, function(r){ return r; }, '결재 대기 항목이 없습니다.', 9);
     const badge = document.getElementById('appr-badge');
     if (mine.length) { badge.textContent = mine.length; badge.style.display = 'inline'; }
     else { badge.textContent = ''; badge.style.display = 'none'; }
@@ -1164,11 +1188,15 @@ async function processApproval(apprId, action, reqId, role, comment='') {
       const reqItem = await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId + '?$expand=fields');
       const subCat = reqItem.fields.SubCategory || '';
       if (subCat === 'BP creation') {
-        const bpCode = prompt('최종 승인되었습니다. BP Code를 입력해주세요:');
-        if (bpCode) await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { Status: '승인완료', BPCode: bpCode } });
-        else await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { Status: '승인완료' } });
+        // 최종 승인완료 먼저 처리 후 BP Code 모달 표시
+        await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { Status: '승인완료' } });
+        showBpCodeModal(reqId, async (bpCode) => {
+          if (bpCode) await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { BPCode: bpCode } });
+          await loadApprovalQueue();
+          await loadUnifiedBadge();
+        });
+        return; // callback에서 처리
       } else {
-        // Information Change / Inactivation / Activation: BP Code 입력 불필요
         await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { Status: '승인완료' } });
       }
     } else if (action === '승인') {
@@ -1216,6 +1244,27 @@ function pgSet(scope, items, renderer, emptyMsg, colSpan) {
   }
   tbody.innerHTML = items.map(item => renderer ? renderer(item) : item).join('');
 }
+
+// ── BP Code 입력 모달 ──
+let _bpCodeReqId = null, _bpCodeCallback = null;
+
+function showBpCodeModal(reqId, callback) {
+  _bpCodeReqId = reqId;
+  _bpCodeCallback = callback;
+  const input = document.getElementById('bp-code-input');
+  if (input) { input.value = ''; }
+  const modal = document.getElementById('bp-code-modal');
+  if (modal) { modal.style.display = 'flex'; setTimeout(()=>input?.focus(), 100); }
+}
+
+async function confirmBpCode(save) {
+  const modal = document.getElementById('bp-code-modal');
+  if (modal) modal.style.display = 'none';
+  const code = save ? (document.getElementById('bp-code-input')?.value.trim() || '') : '';
+  if (_bpCodeCallback) await _bpCodeCallback(code);
+  _bpCodeReqId = null; _bpCodeCallback = null;
+}
+
 // ── 통합결재함 배지 ──
 async function loadUnifiedBadge() {
   if (!siteId || !user) return;
