@@ -18,7 +18,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 #btn-login:disabled { background: #c8c6c4; cursor: not-allowed; }
 
 /* ── App shell ── */
-#app { display: none; max-width: 1280px; margin: 0 auto; padding: 24px 20px; }
+#app { display: none; max-width: 900px; margin: 0 auto; padding: 24px 16px; }
 
 .header { background: #fff; border-radius: 6px; padding: 16px 24px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #edebe9; }
 .header .title { font-size: 18px; font-weight: 600; color: #323130; }
@@ -417,22 +417,14 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 
 <!-- ── BP Code Input Modal ── -->
 <div id="bp-code-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:700;align-items:center;justify-content:center">
-  <div style="background:#fff;border-radius:12px;width:420px;box-shadow:0 8px 40px rgba(0,0,0,.18);overflow:hidden">
-    <div style="background:linear-gradient(135deg,#107c10,#0e6b0e);padding:20px 24px">
-      <div style="font-size:22px;margin-bottom:4px">🎉</div>
-      <div style="font-size:16px;font-weight:700;color:#fff">최종 승인 완료!</div>
-      <div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:2px">BP Creation이 최종 승인되었습니다</div>
-    </div>
-    <div style="padding:22px 24px">
-      <div style="font-size:13px;color:#323130;font-weight:600;margin-bottom:6px">BP Code 입력</div>
-      <div style="font-size:12px;color:#605e5c;margin-bottom:12px">회계담당자가 발급된 BP Code를 입력해주세요.</div>
-      <input id="bp-code-input" type="text" placeholder="예) KR999999"
-        style="width:100%;border:1.5px solid #0078d4;border-radius:6px;padding:10px 12px;font-size:14px;box-sizing:border-box;outline:none"
-        onkeydown="if(event.key==='Enter')confirmBpCode()">
-      <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
-        <button onclick="confirmBpCode(false)" style="padding:8px 20px;border:1px solid #d2d0ce;border-radius:6px;background:#fff;font-size:13px;cursor:pointer;color:#605e5c">나중에 입력</button>
-        <button onclick="confirmBpCode(true)" style="padding:8px 22px;border:none;border-radius:6px;background:#107c10;color:#fff;font-size:13px;font-weight:600;cursor:pointer">✅ 저장</button>
-      </div>
+  <div style="background:#fff;border-radius:8px;width:360px;box-shadow:0 4px 20px rgba(0,0,0,.18);padding:24px">
+    <div style="font-size:14px;font-weight:700;color:#323130;margin-bottom:6px">✅ 최종 승인 완료</div>
+    <div style="font-size:12px;color:#605e5c;margin-bottom:16px">BP Code를 입력해주세요.</div>
+    <input id="bp-code-input" type="text" placeholder="BP Code"
+      style="width:100%;border:1px solid #d2d0ce;border-radius:4px;padding:8px 10px;font-size:13px;box-sizing:border-box;outline:none"
+      onkeydown="if(event.key==='Enter')confirmBpCode(true)">
+    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+      <button onclick="confirmBpCode(true)" style="padding:7px 20px;border:none;border-radius:4px;background:#0078d4;color:#fff;font-size:13px;cursor:pointer">저장</button>
     </div>
   </div>
 </div>
@@ -713,6 +705,9 @@ function switchTab(name) {
     const btn = document.getElementById('tab-' + t + '-btn');
     if (btn) btn.classList.toggle('active', t === name);
   });
+  // 신청서 작성은 기존 너비, 나머지는 넓은 레이아웃
+  const appEl = document.getElementById('app');
+  if (appEl) appEl.style.maxWidth = name === 'form' ? '900px' : '1280px';
   if (name === 'list') loadMyList();
   if (name === 'approval') loadApprovalQueue();
   if (name === 'admin') { allRequestsCache = []; _adminItems = []; loadAdminList(); }
