@@ -18,7 +18,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 #btn-login:disabled { background: #c8c6c4; cursor: not-allowed; }
 
 /* ── App shell ── */
-#app { display: none; max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+#app { display: none; max-width: 1280px; margin: 0 auto; padding: 24px 20px; }
 
 .header { background: #fff; border-radius: 6px; padding: 16px 24px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #edebe9; }
 .header .title { font-size: 18px; font-weight: 600; color: #323130; }
@@ -129,7 +129,9 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 .notice.info { background: #dff6dd; color: #107c10; }
 
 /* ── Tables ── */
-.list-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.list-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
+.list-table th { white-space: nowrap; }
+.list-table td { white-space: nowrap; }
 .list-table th { background: #f3f2f1; padding: 10px 12px; text-align: left; font-weight: 600; color: #323130; border-bottom: 2px solid #edebe9; font-size: 12px; }
 .list-table td { padding: 10px 12px; border-bottom: 1px solid #edebe9; color: #323130; font-size: 13px; }
 .list-table tr:hover td { background: #f0f6ff; cursor: pointer; }
@@ -356,35 +358,37 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 
   <!-- ── 내 신청 목록 ── -->
   <div id="tab-list" style="display:none">
-    <div class="card" style="padding:0;overflow:hidden">
+    <div class="card" style="padding:0;overflow:hidden"><div style="overflow-x:auto">
       <table class="list-table">
         <thead><tr>
-          <th>번호</th><th>Type</th><th>Sub Category</th><th>BP Code</th><th>상태</th><th>신청일</th>
+          <th>번호</th><th>신청자</th><th>Title</th><th>Type</th><th>Sub Category</th><th>BP Code</th><th>상태</th><th>신청일</th>
         </tr></thead>
         <tbody id="list-body">
-          <tr><td colspan="6" style="text-align:center;padding:32px;color:#605e5c"><div class="dyn-dots" style="justify-content:center"><span></span><span></span><span></span></div></td></tr>
+          <tr><td colspan="8" style="text-align:center;padding:32px;color:#605e5c"><div class="dyn-dots" style="justify-content:center"><span></span><span></span><span></span></div></td></tr>
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 
   <!-- ── 결재함 ── -->
   <div id="tab-approval" style="display:none">
-    <div class="card" style="padding:0;overflow:hidden">
+    <div class="card" style="padding:0;overflow:hidden"><div style="overflow-x:auto">
       <table class="list-table">
         <thead><tr>
-          <th>신청번호</th><th>신청자</th><th>Type</th><th>Sub Category</th><th>상태</th><th>신청일</th><th>처리</th>
+          <th>신청번호</th><th>신청자</th><th>Title</th><th>Type</th><th>Sub Category</th><th>BP Code</th><th>상태</th><th>신청일</th><th>처리</th>
         </tr></thead>
         <tbody id="appr-body">
-          <tr><td colspan="7" style="text-align:center;padding:32px;color:#605e5c">결재 대기 항목이 없습니다.</td></tr>
+          <tr><td colspan="9" style="text-align:center;padding:32px;color:#605e5c">결재 대기 항목이 없습니다.</td></tr>
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 
   <!-- ── 관리자 ── -->
   <div id="tab-admin" style="display:none">
-    <div class="card">
+    <div class="card" style="overflow-x:auto">
       <div class="filter-bar">
         <select id="admin-filter-status" onchange="_adminItems=[];loadAdminList()">
           <option value="">전체 상태</option>
@@ -403,7 +407,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
           <th>번호</th><th>신청자</th><th>Title</th><th>Type</th><th>Sub Category</th><th>BP Code</th><th>상태</th><th>신청일</th>
         </tr></thead>
         <tbody id="admin-body">
-          <tr><td colspan="7" style="text-align:center;padding:32px;color:#605e5c"><div class="dyn-dots" style="justify-content:center"><span></span><span></span><span></span></div></td></tr>
+          <tr><td colspan="8" style="text-align:center;padding:32px;color:#605e5c"><div class="dyn-dots" style="justify-content:center"><span></span><span></span><span></span></div></td></tr>
         </tbody>
       </table>
     </div>
