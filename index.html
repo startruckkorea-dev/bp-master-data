@@ -402,6 +402,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
         <input type="text" id="admin-filter-search" oninput="_adminItems=[];loadAdminList()" placeholder="신청자 검색...">
         <input type="text" id="admin-filter-bpcode" oninput="_adminItems=[];loadAdminList()" placeholder="BP Code 검색..." style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;width:160px">
         <span id="admin-count" style="font-size:13px;color:#605e5c;margin-left:auto"></span>
+        <button onclick="exportAdminExcel()" style="padding:6px 14px;background:#107c10;color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;white-space:nowrap">📊 Excel 내보내기</button>
       </div>
       <table class="list-table">
         <thead><tr>
@@ -1010,6 +1011,84 @@ function closeModal() {
 // ── 관리자 목록 ──
 let _adminItems = [], _adminPage = 0;
 const ADMIN_PAGE_SIZE = 20;
+
+
+async function exportAdminExcel() {
+  if (!_adminItems || _adminItems.length === 0) {
+    alert('먼저 관리자 탭을 열어 목록을 불러주세요.'); return;
+  }
+  const filterStatus = document.getElementById('admin-filter-status')?.value || '';
+  const filterType   = document.getElementById('admin-filter-type')?.value || '';
+  const filterSearch = (document.getElementById('admin-filter-search')?.value || '').toLowerCase();
+  const filterBpcode = (document.getElementById('admin-filter-bpcode')?.value || '').toLowerCase();
+  let items = [..._adminItems];
+  if (filterStatus) items = items.filter(i => i.fields.Status === filterStatus);
+  if (filterType)   items = items.filter(i => i.fields.BPType === filterType);
+  if (filterSearch) items = items.filter(i => (i.fields.RequesterEmail||'').toLowerCase().includes(filterSearch));
+  if (filterBpcode) items = items.filter(i => (i.fields.BPCode||'').toLowerCase().includes(filterBpcode));
+  if (!items.length) { alert('내보낼 데이터가 없습니다.'); return; }
+
+  loading(true, 'Excel 생성 중...');
+  try {
+    const apprAll = await apiAll('/sites/' + siteId + '/lists/BP_Approvals/items?$expand=fields');
+    const apprMap = {};
+    (apprAll.value || []).forEach(a => {
+      const rid = String(a.fields.RequestID);
+      if (!apprMap[rid]) apprMap[rid] = [];
+      apprMap[rid].push(a.fields);
+    });
+
+    let maxAppr = 0;
+    items.forEach(item => {
+      const n = (apprMap[String(item.id)] || []).length;
+      if (n > maxAppr) maxAppr = n;
+    });
+
+    const headers = ['번호','신청자','Title','Type','Sub Category','BP Code','상태','신청일'];
+    for (let i = 1; i <= maxAppr; i++) {
+      headers.push(i+'차 역할', i+'차 결재자', i+'차 이메일', i+'차 상태', i+'차 일시', i+'차 Comment');
+    }
+
+    const rows = [headers];
+    items.forEach(item => {
+      const f = item.fields;
+      const aprs = (apprMap[String(item.id)] || []).sort((a,b) => (a.ApprovalOrder||0)-(b.ApprovalOrder||0));
+      const row = [
+        item.id, f.RequesterEmail||'', f.Title||'', f.BPType||'',
+        f.SubCategory||'', f.BPCode||'', f.Status||'',
+        f.RequestDate ? fmtDate(f.RequestDate) : ''
+      ];
+      for (let i = 0; i < maxAppr; i++) {
+        const a = aprs[i];
+        if (a) row.push(a.ApproverRole||'', a.ApproverName||'', a.ApproverEmail||'', a.Status||'', a.ApprovalDate ? fmtDate(a.ApprovalDate) : '', a.Comment||'');
+        else row.push('','','','','','');
+      }
+      rows.push(row);
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const colWidths = [{wch:6},{wch:28},{wch:24},{wch:10},{wch:20},{wch:16},{wch:10},{wch:18}];
+    for (let i = 0; i < maxAppr; i++) colWidths.push({wch:20},{wch:16},{wch:28},{wch:10},{wch:18},{wch:30});
+    ws['!cols'] = colWidths;
+
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      const ca = XLSX.utils.encode_cell({r:0, c:C});
+      if (!ws[ca]) continue;
+      ws[ca].s = { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'1F4E79'}}, alignment:{horizontal:'center',wrapText:true} };
+    }
+
+    XLSX.utils.book_append_sheet(wb, ws, 'BP Master 신청 목록');
+    const now = new Date(new Date().getTime()+9*3600*1000);
+    const ds = now.getUTCFullYear()+String(now.getUTCMonth()+1).padStart(2,'0')+String(now.getUTCDate()).padStart(2,'0')+'_'+String(now.getUTCHours()).padStart(2,'0')+String(now.getUTCMinutes()).padStart(2,'0');
+    XLSX.writeFile(wb, 'BP_Export_'+ds+'.xlsx');
+  } catch(e) {
+    alert('Excel 생성 실패: ' + e.message);
+  } finally {
+    loading(false);
+  }
+}
 
 async function loadAdminList(page) {
   if (!siteId) return;
