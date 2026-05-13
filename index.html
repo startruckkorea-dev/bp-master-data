@@ -157,6 +157,15 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 
 /* ── Loading ── */
 #loading { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); align-items: center; justify-content: center; z-index: 999; }
+/* ── Alert Modal ── */
+#bp-alert-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;align-items:center;justify-content:center}
+#bp-alert-modal.show{display:flex}
+.bp-alert-box{background:#fff;border-radius:12px;padding:28px 32px;max-width:380px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.18);text-align:center}
+.bp-alert-icon{font-size:2rem;margin-bottom:10px}
+.bp-alert-title{font-size:1rem;font-weight:700;color:#1e293b;margin-bottom:6px;line-height:1.6}
+.bp-alert-sub{font-size:.8rem;color:#64748b;margin-bottom:20px;word-break:break-all}
+.bp-alert-btn{background:#0078d4;color:#fff;border:none;border-radius:8px;padding:9px 32px;font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit}
+.bp-alert-btn:hover{background:#0062b1}
 #loading.show { display: flex; }
 .loading-box { background: #fff; border-radius: 6px; padding: 28px 40px; font-size: 15px; color: #323130; display: flex; flex-direction: column; align-items: center; gap: 16px; }
 .spinner { width: 32px; height: 32px; border: 3px solid #edebe9; border-top: 3px solid #0078d4; border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -455,6 +464,15 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 </div>
 
 <!-- 결재 확인 팝업 -->
+<div id="bp-alert-modal">
+  <div class="bp-alert-box">
+    <div class="bp-alert-icon" id="bp-alert-icon">✅</div>
+    <div class="bp-alert-title" id="bp-alert-title"></div>
+    <div class="bp-alert-sub" id="bp-alert-sub"></div>
+    <button class="bp-alert-btn" onclick="document.getElementById('bp-alert-modal').classList.remove('show')">확인</button>
+  </div>
+</div>
+
 <div id="confirm-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:10px;padding:28px 28px 20px;max-width:420px;width:92%;box-shadow:0 4px 24px rgba(0,0,0,.2)">
     <div id="confirm-title" style="font-size:1rem;font-weight:700;color:#323130;margin-bottom:6px"></div>
@@ -864,15 +882,14 @@ async function submitRequest() {
         Status: a.order === 1 ? '대기' : '대기(잠김)'
       }});
     }
-    alert('✅ 상신이 완료되었습니다!\n\n번호: ' + reqId + '\nTitle: BP-' + new Date().toISOString().slice(0,10) + '_ID-' + reqId);
+    const _bpTitle = 'BP-' + new Date().toISOString().slice(0,10) + '_ID-' + reqId;
+    showAlert('상신이 완료되었습니다.', _bpTitle);
     resetForm(); switchTab('list');
     // 결재함 뱃지 갱신
     setTimeout(() => { loadApprovalQueue(); loadUnifiedBadge(); }, 800);
-  } catch(e) { alert('오류: ' + e.message); }
+  } catch(e) { showAlert('오류가 발생했습니다.', e.message, '⚠️'); }
   finally { loading(false); }
 }
-
-// ── Lists ──
 function fmtDate(iso) {
   if (!iso) return '';
   const d = new Date(new Date(iso).getTime() + 9*3600*1000);
@@ -1249,6 +1266,12 @@ function closeConfirm() {
   document.getElementById('confirm-modal').style.display = 'none';
   _pendingApproval = null;
 }
+function showAlert(title, sub='', icon='✅') {
+  document.getElementById('bp-alert-icon').textContent = icon;
+  document.getElementById('bp-alert-title').textContent = title;
+  document.getElementById('bp-alert-sub').textContent = sub;
+  document.getElementById('bp-alert-modal').classList.add('show');
+}
 async function confirmApproval() {
   if (!_pendingApproval) return;
   const { apprId, action, reqId, role } = _pendingApproval;
@@ -1295,11 +1318,12 @@ async function processApproval(apprId, action, reqId, role, comment='') {
       }
     }
     closeModal();
+    showAlert(action + ' 처리되었습니다.', '', action === '반려' ? '❌' : '✅');
     // SharePoint 반영 대기 후 재조회
     await new Promise(r => setTimeout(r, 800));
     await loadApprovalQueue();
     await loadUnifiedBadge();
-  } catch(e) { alert('오류: ' + e.message); }
+  } catch(e) { showAlert('오류가 발생했습니다.', e.message, '⚠️'); }
   finally { loading(false); }
 }
 
