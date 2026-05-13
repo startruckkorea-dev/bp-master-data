@@ -391,16 +391,16 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
   <div id="tab-admin" style="display:none">
     <div class="card" style="overflow-x:auto">
       <div class="filter-bar">
-        <select id="admin-filter-status" onchange="_adminItems=[];loadAdminList()">
+        <select id="admin-filter-status" onchange="loadAdminList()">
           <option value="">전체 상태</option>
           <option>대기</option><option>승인완료</option><option>반려</option>
         </select>
-        <select id="admin-filter-type" onchange="_adminItems=[];loadAdminList()">
+        <select id="admin-filter-type" onchange="loadAdminList()">
           <option value="">전체 Type</option>
           <option>Vendor</option><option>Customer</option>
         </select>
-        <input type="text" id="admin-filter-search" oninput="_adminItems=[];loadAdminList()" placeholder="신청자 검색...">
-        <input type="text" id="admin-filter-bpcode" oninput="_adminItems=[];loadAdminList()" placeholder="BP Code 검색..." style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;width:160px">
+        <input type="text" id="admin-filter-search" oninput="loadAdminList()" placeholder="신청자 검색...">
+        <input type="text" id="admin-filter-bpcode" oninput="loadAdminList()" placeholder="BP Code 검색..." style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;width:160px">
         <span id="admin-count" style="font-size:13px;color:#605e5c;margin-left:auto"></span>
         <button onclick="exportAdminExcel()" style="padding:6px 14px;background:#107c10;color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;white-space:nowrap">📊 Excel 내보내기</button>
       </div>
@@ -1099,11 +1099,11 @@ async function loadAdminList(page) {
   const filterSearch = (document.getElementById('admin-filter-search')?.value || '').toLowerCase();
   const filterBpcode = (document.getElementById('admin-filter-bpcode')?.value || '').toLowerCase();
 
-  // 필터 변경 시 1페이지로 리셋
-  if (page === undefined) { _adminItems = []; _adminPage = 0; }
+  // 페이지 이동이면 해당 페이지로, 필터 변경이면 1페이지로
+  if (page === undefined) { _adminPage = 0; }
   else { _adminPage = page; }
 
-  // 캐시 없으면 새로 로드
+  // 캐시 없으면 새로 로드 (필터 변경 시에는 기존 캐시 재사용)
   if (!_adminItems.length) {
     dynLoadStart('관리자 데이터 불러오는 중');
     try {
