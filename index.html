@@ -268,6 +268,44 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
     <div class="user-info" style="flex-direction:column;align-items:flex-end;gap:8px">
       <div style="display:flex;align-items:center;gap:10px">
         <span id="user-name"></span>
+
+// ── 비활동 자동 로그아웃 (12시간) ──────────────────
+const IDLE_TIMEOUT_MS = 12 * 60 * 60 * 1000; // 12시간
+const IDLE_KEY = 'stk_last_active';
+let _idleTimer = null;
+
+function resetIdleTimer() {
+  sessionStorage.setItem(IDLE_KEY, Date.now().toString());
+  if (_idleTimer) clearTimeout(_idleTimer);
+  _idleTimer = setTimeout(() => {
+    alert('장시간 미사용으로 자동 로그아웃됩니다.');
+    if (typeof msalApp !== 'undefined' && msalApp) {
+      sessionStorage.removeItem(IDLE_KEY);
+      msalApp.logoutRedirect();
+    }
+  }, IDLE_TIMEOUT_MS);
+}
+
+function checkIdleOnLoad() {
+  const last = parseInt(sessionStorage.getItem(IDLE_KEY) || '0');
+  if (last && Date.now() - last > IDLE_TIMEOUT_MS) {
+    sessionStorage.removeItem(IDLE_KEY);
+    if (typeof msalApp !== 'undefined' && msalApp) {
+      msalApp.logoutRedirect();
+    }
+    return false;
+  }
+  return true;
+}
+
+function startIdleWatcher() {
+  resetIdleTimer();
+  ['click', 'keydown', 'mousemove', 'touchstart', 'scroll'].forEach(evt =>
+    document.addEventListener(evt, resetIdleTimer, { passive: true })
+  );
+}
+// ────────────────────────────────────────────────────
+
         <button id="btn-logout" onclick="signOut()">로그아웃</button>
       </div>
       <a href="https://aps.startruckkorea.com/" target="_blank" title="STK 통합 결재함" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px;background:#0078d4;color:#fff;border-radius:6px;padding:7px 14px;font-size:.8rem;font-weight:600;font-family:'Segoe UI',sans-serif;letter-spacing:-.2px;box-shadow:0 1px 4px rgba(0,120,212,.25);transition:background .15s" onmouseover="this.style.background='#106ebe'" onmouseout="this.style.background='#0078d4'"><span style="font-size:1rem;line-height:1">📬</span><span>통합 결재함</span></a>
@@ -608,6 +646,8 @@ function cfgEmails(cfg, keys) {
 }
 
 async function boot(account) {
+  if (!checkIdleOnLoad()) return;
+  startIdleWatcher();
   user = account;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
