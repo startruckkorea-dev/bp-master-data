@@ -1398,10 +1398,10 @@ window.addEventListener('load', async () => {
     const accounts = msalApp.getAllAccounts();
     if (accounts.length) { msalApp.setActiveAccount(accounts[0]); await boot(accounts[0]); return; }
     btn.disabled = false;
-    btn.textContent = 'Microsoft 계정으로 로그인';
+    btn.textContent = 'Hyosung M365 계정으로 로그인';
   } catch(e) {
     btn.disabled = false;
-    btn.textContent = 'Microsoft 계정으로 로그인';
+    btn.textContent = 'Hyosung M365 계정으로 로그인';
     console.error('MSAL init error:', e);
   }
 });
