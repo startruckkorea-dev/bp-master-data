@@ -613,7 +613,7 @@ async function boot(account) {
   user = account;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  document.getElementById('user-name').textContent = account.name || account.username;
+  document.getElementById('user-name').textContent = (account.name || account.username) + ' (' + account.username + ')';
   // /me API로 실제 mail 주소 확보 (ext/guest 계정은 UPN과 mail이 다를 수 있음)
   try {
     const me = await api('/me?$select=mail,userPrincipalName');
