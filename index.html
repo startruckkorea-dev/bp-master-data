@@ -509,6 +509,7 @@ const ADMIN_EMAILS = [
   '',
   ''
 ];
+let _configLoaded = false;
 
 let msalApp = null, user = null, siteId = null;
 let files = [];
@@ -634,6 +635,7 @@ async function boot(account) {
       // 관리자
       const _adminList = cfgEmails(_cfg,['BP_ADMIN_1','BP_ADMIN_2','ADMIN_SP']);
       if(_adminList.length) ADMIN_EMAILS.splice(0,ADMIN_EMAILS.length,..._adminList);
+      _configLoaded = true;
       // 3차 결재자를 config에서 가져올 수 있도록 전역 변수 세팅
       window._bpVendorApprover   = cfgVal(_cfg,'BP_VENDOR_APPROVER',  {name:'',   email:''});
       window._bpCustomerApprover = cfgVal(_cfg,'BP_CUSTOMER_APPROVER',{name:'', email:''});
@@ -722,6 +724,15 @@ async function checkApprover() {
 // ── Tabs ──
 function switchTab(name) {
   if (name === 'admin') {
+    if (!_configLoaded) {
+      const _btn = document.getElementById('tab-admin-btn');
+      if (_btn) { _btn.style.opacity='0.6'; _btn.style.pointerEvents='none'; _btn.title='권한 확인 중...'; }
+      setTimeout(() => {
+        if (_btn) { _btn.style.opacity=''; _btn.style.pointerEvents=''; _btn.title=''; }
+        switchTab('admin');
+      }, 1500);
+      return;
+    }
     const _emails = typeof ADMIN_EMAILS !== 'undefined' ? ADMIN_EMAILS : [];
     const _user = typeof user !== 'undefined' ? user : null;
     const _isAdmin = _user && _emails.map(e=>e.toLowerCase()).some(e =>
