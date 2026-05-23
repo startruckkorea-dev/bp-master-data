@@ -263,8 +263,8 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
     <div>
       <div class="title">BP Master Data Management</div>
       <div style="font-size:11px;color:#605e5c;margin-top:3px">
-        <div id="bp-contact-vendor">Vendor 관련 문의 Email: (로딩중...)</div>
-        <div id="bp-contact-customer">Customer 관련 문의 Email: (로딩중...)</div>
+        <div id="bp-contact-vendor">BU Admin(Vendor 관련) 문의 Email: (로딩중...)</div>
+        <div id="bp-contact-customer">BU Admin(Customer 관련) 문의 Email: (로딩중...)</div>
       </div>
     </div>
     <div class="user-info" style="flex-direction:column;align-items:flex-end;gap:8px">
@@ -630,8 +630,8 @@ async function boot(account) {
       // 문의 이메일 (Vendor/Customer 각각)
       const _vendor  = cfgVal(_cfg,'BP_CONTACT_VENDOR',{name:'',email:''});
       const _customer= cfgVal(_cfg,'BP_CONTACT_CUSTOMER',{name:'',email:''});
-      const _bpV=document.getElementById('bp-contact-vendor');if(_bpV)_bpV.textContent='Vendor 관련 문의 Email: '+_vendor.email;
-      const _bpC=document.getElementById('bp-contact-customer');if(_bpC)_bpC.textContent='Customer 관련 문의 Email: '+_customer.email;
+      const _bpV=document.getElementById('bp-contact-vendor');if(_bpV)_bpV.textContent='BU Admin(Vendor 관련) 문의 Email: '+_vendor.email;
+      const _bpC=document.getElementById('bp-contact-customer');if(_bpC)_bpC.textContent='BU Admin(Customer 관련) 문의 Email: '+_customer.email;
       // 관리자
       const _adminList = cfgEmails(_cfg,['BP_ADMIN_1','BP_ADMIN_2','ADMIN_SP']);
       if(_adminList.length) ADMIN_EMAILS.splice(0,ADMIN_EMAILS.length,..._adminList);
