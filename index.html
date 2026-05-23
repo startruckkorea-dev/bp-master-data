@@ -901,7 +901,7 @@ async function submitRequest() {
     ].filter(a => a.email);
     for (const a of approvers) {
       await api('/sites/' + siteId + '/lists/BP_Approvals/items', 'POST', { fields: {
-        Title: reqId + '-' + a.order, RequestID: parseInt(reqId),
+        Title: 'BP-' + new Date().toISOString().slice(0,10) + '_ID-' + reqId + '-' + a.order, RequestID: parseInt(reqId),
         ApproverEmail: a.email, ApproverName: a.name,
         ApproverRole: a.role, ApprovalOrder: a.order,
         Status: a.order === 1 ? '대기' : '대기(잠김)'
