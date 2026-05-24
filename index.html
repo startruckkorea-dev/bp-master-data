@@ -1248,6 +1248,7 @@ async function loadApprovalQueue() {
     reqData.value.forEach(function(r){ reqMap[r.id] = r.fields; });
     const mine = apprData.value
       .filter(function(i){ return (i.fields.ApproverEmail||'').toLowerCase() === (user.email||user.username||'').toLowerCase() && i.fields.Status === '대기'; })
+      .reduce(function(acc,i){var rid=String(i.fields.RequestID);if(!acc[rid]||i.fields.ApprovalOrder<acc[rid].fields.ApprovalOrder)acc[rid]=i;return acc;},{}), Object.values)
       .sort(function(a,b){ return b.fields.RequestID - a.fields.RequestID; });
     if (!mine.length) {
       dynLoadEnd();
