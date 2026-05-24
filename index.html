@@ -710,9 +710,8 @@ async function checkApprover() {
   if (!siteId) return;
   try {
     const data = await apiAll('/sites/' + siteId + '/lists/BP_Approvals/items?$expand=fields')
-    const mine = data.value.filter(i =>
-      (i.fields.ApproverEmail||'').toLowerCase() === user.username.toLowerCase() && i.fields.Status === '대기'
-    );
+    const _bpE=(user.email||'').toLowerCase(),_bpN=(user.username||'').toLowerCase();
+    const mine = data.value.filter(i => { const e=(i.fields.ApproverEmail||'').toLowerCase(); return (e===_bpE||e===_bpN) && i.fields.Status === '대기'; });
     const badge = document.getElementById('appr-badge');
     if (mine.length) { badge.textContent = mine.length; badge.style.display = 'inline'; }
     else badge.style.display = 'none';
