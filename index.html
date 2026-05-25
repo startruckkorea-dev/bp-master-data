@@ -981,7 +981,7 @@ async function showDetail(reqId) {
       const st = af.Status==='대기' ? 'status-대기' : af.Status==='승인' ? 'status-승인' : af.Status==='반려' ? 'status-반려' : af.Status==='승인완료' ? 'status-승인완료' : 'status-대기잠김';
       return `<div class="appr-item">
         <div>
-          <b>${af.ApprovalOrder}차</b> ${af.ApproverRole||''}
+          ${(()=>{const _r=af.ApproverRole||'',_o=String(af.ApprovalOrder||'');return _r.startsWith(_o+'차')?'<b>'+_o+'차</b> '+_r.slice(_o.length+1):'<b>'+_o+'차</b> '+_r;})()}
           <br><span style="font-size:.72rem;color:#605e5c">${af.ApproverName||''} · ${af.ApproverEmail||''}</span>
           ${af.ApprovalDate ? `<br><span style="font-size:.72rem;color:#a19f9d">${fmtDate(af.ApprovalDate)}</span>` : ''}
           ${af.Comment ? `<br><span style="font-size:.72rem;background:#fff;border:1px solid #edebe9;border-radius:4px;padding:2px 6px;display:inline-block;margin-top:2px">💬 ${af.Comment}</span>` : ''}
