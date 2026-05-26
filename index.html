@@ -374,7 +374,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
       <table class="list-table">
         <thead><tr>
           <th>번호</th><th>신청자</th><th>Title</th><th>Type</th><th>Sub Category</th><th>BP Code</th><th>상태</th><th>신청일</th>
-        </tr></thead>
+        <th></th></tr></thead>
         <tbody id="list-body">
           <tr><td colspan="8" style="text-align:center;padding:32px;color:#605e5c"><div class="dyn-dots" style="justify-content:center"><span></span><span></span><span></span></div></td></tr>
         </tbody>
@@ -1232,9 +1232,9 @@ async function loadMyList() {
     const mine = data.value
       .filter(i => (i.fields.RequesterEmail||'').toLowerCase() === user.username.toLowerCase())
       .sort((a,b) => new Date(b.fields.RequestDate) - new Date(a.fields.RequestDate));
-    if (!mine.length) { dynLoadEnd(); pgSet('list', [], null, '신청 내역이 없습니다.', 8); return; }
+    if (!mine.length) { dynLoadEnd(); pgSet('list', [], null, '신청 내역이 없습니다.', 9); return; }
     dynLoadEnd(); pgSet('list', mine, item => { const f = item.fields; return '<tr onclick="showDetail(' + item.id + ')" style="cursor:pointer"><td style="color:#0078d4;font-weight:600">' + item.id + '</td><td style="font-size:.78rem">' + (f.RequesterEmail||'') + '</td><td style="font-size:.78rem;color:#0078d4">' + (f.Title||'-') + '</td><td><span class="badge badge-type">' + (f.BPType||'') + '</span></td><td>' + (f.SubCategory||'') + '</td><td><b>' + (f.BPCode||'-') + '</b></td><td><span class="badge badge-' + (f.Status||'대기') + '">' + (f.Status||'') + '</span></td><td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td><td style="text-align:center">'+_wdBtn(item.id,'BP_Approvals','BP_Requests',f.Status)+'</td></tr>'; }, '신청 내역이 없습니다.', 8);
-  } catch(e) { dynLoadEnd(); tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#a4262c">' + e.message + '</td></tr>'; }
+  } catch(e) { dynLoadEnd(); tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#a4262c">' + e.message + '</td></tr>'; }
 }
 
 async function loadApprovalQueue() {
