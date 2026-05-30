@@ -131,20 +131,20 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 
 /* ── Tables ── */
 .list-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
-.list-table th { white-space: nowrap; }
-.list-table td { white-space: nowrap; }
+
+
 .list-table th { background: #f3f2f1; padding: 10px 12px; text-align: left; font-weight: 600; color: #323130; border-bottom: 2px solid #edebe9; font-size: 12px; }
 .list-table td { padding: 10px 12px; border-bottom: 1px solid #edebe9; color: #323130; font-size: 13px; }
-.list-table tbody tr[onclick]:hover td { background: #f0f6ff; cursor: pointer; }
-.list-table tr:hover td { background: #f0f6ff; cursor: pointer; ;cursor:pointer}
+
+
 .list-table tr:last-child td { border-bottom: none; }
 
 /* ── Badges ── */
 .badge { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; }
-.badge-대기 { background: #fff4ce; color: #7d5700; }
-.badge-승인완료 { background: #dff6dd; color: #107c10; }
-.badge-반려 { background: #fde7e9; color: #a4262c; }
-.badge-type { background: #e8f4ff; color: #0078d4; }
+
+
+
+
 
 /* ── Modal ── */
 #detail-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 998; align-items: center; justify-content: center; }
@@ -243,6 +243,21 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
 .status-승인완료{color:#107c10;font-weight:600}
 .status-대기잠김{color:#a19f9d}
 .proc-btns{display:flex;gap:6px;margin-top:12px}
+
+/* ── GW 시각 스타일 통일 (너비/레이아웃 변경 없음) ── */
+.tab-btn{padding:8px 18px;border:none;background:#fff;border-radius:4px 4px 0 0;font-size:14px;cursor:pointer;color:#605e5c;border-bottom:3px solid transparent;white-space:nowrap}
+.tab-btn.active{color:#0078d4;border-bottom:3px solid #0078d4;font-weight:500}
+.tabs{display:flex;gap:2px;margin-bottom:16px;flex-wrap:wrap}
+.list-table th{padding:9px 12px;text-align:left;background:#f3f2f1;border-bottom:1px solid #edebe9;font-weight:600;color:#323130;font-size:.75rem}
+.list-table td{padding:9px 12px;border-bottom:1px solid #edebe9;color:#323130}
+.list-table tr:hover td{background:#f9f8f7;cursor:pointer}
+.list-table tbody tr[onclick]:hover td{background:#f0f6ff}
+.badge-type{background:#e1f0ff;color:#0078d4;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
+.badge-대기{background:#fff4ce;color:#7d5700;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
+.badge-승인완료{background:#dff6dd;color:#107c10;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
+.badge-반려{background:#fde7e9;color:#a4262c;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
+.badge-진행중{background:#dbeafe;color:#1d4ed8;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
+.badge-철회{background:#f1f5f9;color:#64748b;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
 </style>
 </head>
 <body>
