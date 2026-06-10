@@ -913,9 +913,20 @@ async function submitRequest() {
     }
 
     // Create approvals
+    const bpType = document.getElementById('sel-type').value;
+    // a3-email이 비어있으면 config에서 fallback 처리
+    let a3name = document.getElementById('a3-name').value;
+    let a3email = document.getElementById('a3-email').value;
+    if (!a3email) {
+      const _fallback = bpType === 'Vendor'
+        ? (window._bpVendorApprover || {name:'',email:''})
+        : (window._bpCustomerApprover || {name:'',email:''});
+      a3name = _fallback.name;
+      a3email = _fallback.email;
+    }
     const approvers = [
       { name: document.getElementById('a1-name').value, email: document.getElementById('a1-email').value, role: '1차결재자(Department Head)', order: 1 },
-      { name: document.getElementById('a3-name').value, email: document.getElementById('a3-email').value, role: '2차결재자(회계담당자)', order: 2 },
+      { name: a3name, email: a3email, role: '2차결재자(회계담당자)', order: 2 },
     ].filter(a => a.email);
     for (const a of approvers) {
       await api('/sites/' + siteId + '/lists/BP_Approvals/items', 'POST', { fields: {
