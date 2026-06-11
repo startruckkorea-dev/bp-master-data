@@ -1259,7 +1259,7 @@ async function loadMyList() {
     const data = await api('/sites/' + siteId + '/lists/BP_Requests/items?$expand=fields&$top=500');
     const mine = data.value
       .filter(i => (i.fields.RequesterEmail||'').toLowerCase() === user.username.toLowerCase())
-      .sort((a,b) => new Date(b.fields.RequestDate) - new Date(a.fields.RequestDate));
+      .sort((a,b) => new Date(a.fields.RequestDate) - new Date(b.fields.RequestDate));
     if (!mine.length) { dynLoadEnd(); pgSet('list', [], null, '신청 내역이 없습니다.', 9); return; }
     dynLoadEnd(); pgSet('list', mine, (item,idx)=>{ const f = item.fields; return '<tr onclick="showDetail(' + item.id + ')" style="cursor:pointer"><td style="color:#0078d4;font-weight:600">' + (idx+1) + '</td><td style="font-size:.78rem">' + (f.RequesterEmail||'') + '</td><td style="font-size:.78rem;color:#0078d4">' + (f.Title||'-') + '</td><td><span class="badge badge-type">' + (f.BPType||'') + '</span></td><td>' + (f.SubCategory||'') + '</td><td><b>' + (f.BPCode||'-') + '</b></td><td><span class="badge badge-' + (f.Status||'대기') + '">' + (f.Status||'') + '</span></td><td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td><td style="text-align:center;vertical-align:middle;padding:6px 8px;">'+_wdBtn(item.id,'BP_Approvals','BP_Requests',f.Status)+'</td></tr>'; }, '신청 내역이 없습니다.', 8);
   } catch(e) { dynLoadEnd(); tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#a4262c">' + e.message + '</td></tr>'; }
@@ -1406,7 +1406,7 @@ function pgSet(scope, items, renderer, emptyMsg, colSpan) {
     tbody.innerHTML = '<tr><td colspan="' + (colSpan||5) + '" style="text-align:center;padding:20px;color:#605e5c">' + (emptyMsg||'데이터가 없습니다.') + '</td></tr>';
     return;
   }
-  tbody.innerHTML = items.map((item,idx) => renderer ? renderer(item, items.length-idx-1) : item).join('');
+  tbody.innerHTML = items.map((item,idx) => renderer ? renderer(item, idx) : item).join('');
 }
 
 // ── BP Code 입력 모달 ──
