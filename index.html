@@ -1205,10 +1205,11 @@ async function loadAdminList(page) {
   const pageItems = items.slice(_adminPage * ADMIN_PAGE_SIZE, (_adminPage + 1) * ADMIN_PAGE_SIZE);
 
   const sc = {'대기':'badge-대기','승인완료':'badge-승인완료','반려':'badge-반려','처리중':'badge-처리중','철회':'badge-철회','철회(잠김)':'badge-철회'};
-  pgSet('admin', pageItems, function(item) {
+  pgSet('admin', pageItems, function(item, idx) {
     const f = item.fields;
+    const rowNum = total - (_adminPage * ADMIN_PAGE_SIZE + idx);
     return '<tr onclick="showDetail('+item.id+')" style="cursor:pointer">'
-      + '<td style="color:#0078d4;font-weight:600">' + (idx+1) + '</td>'
+      + '<td style="color:#0078d4;font-weight:600">' + rowNum + '</td>'
       + '<td style="font-size:.78rem">' + (f.RequesterEmail||'') + '</td>'
       + '<td style="font-size:.78rem;color:#0078d4">' + (f.Title||'-') + '</td>'
       + '<td><span class="badge badge-type">' + (f.BPType||'') + '</span></td>'
