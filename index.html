@@ -1558,18 +1558,24 @@ function selectBpModalItem(code, name, type) {
 async function loadBpModalData() {
   try {
     const t = await token();
-    // STK-NAS에서 BP 마스터 파일 로드 (acc_voucher와 동일한 방식)
-    const nasSiteRes = await fetch('https://graph.microsoft.com/v1.0/sites/startruckkorea.sharepoint.com:/sites/STK-NAS:', {headers:{Authorization:'Bearer '+t}});
+    const GRAPH = 'https://graph.microsoft.com/v1.0';
+    const nasSiteRes = await fetch(GRAPH+'/sites/startruckkorea.sharepoint.com:/sites/STK-NAS:', {headers:{Authorization:'Bearer '+t}});
     const nasSite = await nasSiteRes.json();
-    const drivesRes = await fetch('https://graph.microsoft.com/v1.0/sites/'+nasSite.id+'/drives', {headers:{Authorization:'Bearer '+t}});
+    const drivesRes = await fetch(GRAPH+'/sites/'+nasSite.id+'/drives', {headers:{Authorization:'Bearer '+t}});
     const drives = await drivesRes.json();
-    const docDrive = drives.value.find(d=>d.name==='문서'||d.name==='Documents'||d.name==='Shared Documents')||drives.value[0];
-    // search
-    const sr = await fetch('https://graph.microsoft.com/v1.0/drives/'+docDrive.id+"/root/search(q='Master%20data%20List%202014')", {headers:{Authorization:'Bearer '+t}});
-    const srData = await sr.json();
-    const found = (srData.value||[]).find(i=>(i.name||'').includes('DTK'));
-    if(!found) throw new Error('BP 파일 없음');
-    const fileRes = await fetch('https://graph.microsoft.com/v1.0/drives/'+docDrive.id+'/items/'+found.id+'/content', {headers:{Authorization:'Bearer '+t}});
+    // 모든 드라이브 순회하여 파일 탐색
+    let fileItemId = null, fileDriveId = null;
+    for(const drv of drives.value) {
+      try {
+        const sr = await fetch(GRAPH+'/drives/'+drv.id+"/root/search(q='Master%20data%20List%202014')", {headers:{Authorization:'Bearer '+t}});
+        if(!sr.ok) continue;
+        const srData = await sr.json();
+        const found = (srData.value||[]).find(i=>(i.name||'').includes('DTK'));
+        if(found) { fileItemId=found.id; fileDriveId=drv.id; console.log('[BP Modal] 발견:', drv.name, found.name); break; }
+      } catch(_){}
+    }
+    if(!fileItemId) throw new Error('BP 파일 없음');
+    const fileRes = await fetch(GRAPH+'/drives/'+fileDriveId+'/items/'+fileItemId+'/content', {headers:{Authorization:'Bearer '+t}});
     const buf = await fileRes.arrayBuffer();
     const wb = XLSX.read(buf, {type:'array'});
     const sheetName = wb.SheetNames.find(s=>s==='DTK')||wb.SheetNames[0];
