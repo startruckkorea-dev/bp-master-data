@@ -1635,7 +1635,7 @@ async function loadBpModalData() {
 </style>
 
 <!-- BP Code 검색 모달 (acc_voucher 방식) -->
-<div id="bp-search-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:800;align-items:center;justify-content:center;padding:20px">
+<div id="bp-search-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:800;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeBpSearchModal()">
   <div style="background:#fff;border-radius:8px;box-shadow:0 16px 48px rgba(0,0,0,.22);width:100%;max-width:500px;max-height:75vh;overflow-y:auto">
     <div style="padding:14px 18px;background:#0078d4;color:#fff;display:flex;justify-content:space-between;align-items:center;font-weight:700;border-radius:8px 8px 0 0">
       <span>🔍 BP 검색 (Vendor / Customer)</span>
