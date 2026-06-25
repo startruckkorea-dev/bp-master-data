@@ -1025,7 +1025,7 @@ async function showDetail(reqId) {
 
     document.getElementById('modal-content').innerHTML =
       sec('기본 정보') +
-      row('번호', reqId) +
+      row('Title', f.Title || '-') +
       row('신청자', f.RequesterEmail) +
       row('상태', `<span class="status-${f.Status||'대기'}">${f.Status||'-'}</span>`) +
       row('신청일', f.RequestDate ? fmtDate(f.RequestDate) : '-') +
