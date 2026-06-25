@@ -1544,7 +1544,7 @@ function renderBpModalResults(list) {
       style="padding:9px 12px;border:1px solid #edebe9;border-radius:4px;margin-bottom:5px;cursor:pointer;transition:all .15s"
       onmouseover="this.style.background='#f0f6ff';this.style.borderColor='#0078d4'"
       onmouseout="this.style.background='';this.style.borderColor='#edebe9'">
-      <div style="font-size:11px;color:#a19f9d">${b.code} · ${b.type==='Vendor'||b.type==='S'?'Supplier (S)':'Customer (C)'}</div>
+      <div style="font-size:11px;color:#a19f9d">${b.code} · ${b.type||'-'}</div>
       <div style="font-size:13px;font-weight:600;color:#323130">${b.name}</div>
       ${b.nameKo?`<div style="font-size:11px;color:#605e5c">${b.nameKo}</div>`:''}
     </div>`).join('');
