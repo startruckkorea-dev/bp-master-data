@@ -824,11 +824,13 @@ function onSubCatChange() {
     if(btn) btn.style.display = 'none';
   } else if (sub) {
     bp.disabled = false;
+    bp.placeholder = '검색으로 BP Code 입력';
     lbl.innerHTML = 'BP Code <span class="req">*</span>';
     ntc.style.display = 'block';
     if(btn) { btn.style.display = ''; btn.disabled = false; }
   } else {
     bp.disabled = true; bp.value = '';
+    bp.placeholder = 'BP Code 입력';
     ntc.style.display = 'none';
     if(btn) btn.style.display = 'none';
   }
