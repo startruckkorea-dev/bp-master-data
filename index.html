@@ -328,7 +328,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
           <label id="bpcode-label">BP Code</label>
           <div style="display:flex;gap:6px;align-items:center">
             <input type="text" id="inp-bpcode" placeholder="BP Code 입력" disabled readonly
-              style="flex:1;border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px;background:#f3f2f1">
+              style="flex:1;min-width:0;border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px;background:#f3f2f1">
             <button id="btn-bp-search" onclick="openBpSearchModal()" disabled
               style="padding:7px 14px;border:1px solid #d2d0ce;border-radius:4px;background:#f3f2f1;font-size:13px;cursor:pointer;white-space:nowrap;display:none">🔍 검색</button>
           </div>
@@ -818,7 +818,7 @@ function onSubCatChange() {
   const btn = document.getElementById('btn-bp-search');
   if (sub === 'BP creation') {
     bp.disabled = true; bp.value = '';
-    bp.placeholder = '최종 승인 후 회계담당자가 입력';
+    bp.placeholder = 'creation 시 회계담당자 입력';
     lbl.innerHTML = 'BP Code <span style="font-size:11px;color:#605e5c">(creation 시 공란)</span>';
     ntc.style.display = 'none';
     if(btn) btn.style.display = 'none';
