@@ -1513,7 +1513,7 @@ async function openBpSearchModal() {
   modal.style.display = 'flex';
   document.getElementById('bp-modal-search-input').value = '';
   if(_bpModalData.length === 0) {
-    document.getElementById('bp-modal-results').innerHTML = '<div style="text-align:center;padding:24px;color:#a19f9d">⏳ BP 데이터 로딩 중... 잠시만 기다려주세요</div>';
+    document.getElementById('bp-modal-results').innerHTML = '<div style="text-align:center;padding:24px;color:#a19f9d">데이터 로딩 중...</div>';
     document.getElementById('bp-modal-search-input').disabled = true;
     await loadBpModalData();
     document.getElementById('bp-modal-search-input').disabled = false;
