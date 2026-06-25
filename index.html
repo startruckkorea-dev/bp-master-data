@@ -326,7 +326,12 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
         </div>
         <div class="form-group">
           <label id="bpcode-label">BP Code</label>
-          <input type="text" id="inp-bpcode" placeholder="BP Code 입력" disabled>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="text" id="inp-bpcode" placeholder="BP Code 입력" disabled readonly
+              style="flex:1;border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px;background:#f3f2f1">
+            <button id="btn-bp-search" onclick="openBpSearchModal()" disabled
+              style="padding:7px 14px;border:1px solid #d2d0ce;border-radius:4px;background:#f3f2f1;font-size:13px;cursor:pointer;white-space:nowrap;display:none">🔍 검색</button>
+          </div>
           <div id="bpcode-notice" class="notice warn" style="display:none">BP Code는 필수 입력 항목입니다.</div>
         </div>
       </div>
@@ -810,18 +815,22 @@ function onSubCatChange() {
   const bp  = document.getElementById('inp-bpcode');
   const lbl = document.getElementById('bpcode-label');
   const ntc = document.getElementById('bpcode-notice');
+  const btn = document.getElementById('btn-bp-search');
   if (sub === 'BP creation') {
     bp.disabled = true; bp.value = '';
     bp.placeholder = '최종 승인 후 회계담당자가 입력';
     lbl.innerHTML = 'BP Code <span style="font-size:11px;color:#605e5c">(creation 시 공란)</span>';
     ntc.style.display = 'none';
+    if(btn) btn.style.display = 'none';
   } else if (sub) {
-    bp.disabled = false; bp.placeholder = 'BP Code 입력';
+    bp.disabled = false;
     lbl.innerHTML = 'BP Code <span class="req">*</span>';
     ntc.style.display = 'block';
+    if(btn) { btn.style.display = ''; btn.disabled = false; }
   } else {
     bp.disabled = true; bp.value = '';
     ntc.style.display = 'none';
+    if(btn) btn.style.display = 'none';
   }
 }
 
@@ -1495,6 +1504,93 @@ function _wdBtn(itemId, aprList, reqList, status) {
   return '<button onclick="withdrawRequest(event,' + itemId + ',\'' + aprList + '\',\'' + reqList + '\')" '
        + 'style="background:#ef4444;color:#fff;border:none;border-radius:4px;padding:3px 12px;font-size:.75rem;cursor:pointer;font-family:inherit;white-space:nowrap;">Withdraw</button>';
 }
+
+// ── BP Code 검색 모달 ──
+let _bpModalData = [], _bpModalTimer = null;
+
+async function openBpSearchModal() {
+  const modal = document.getElementById('bp-search-modal');
+  modal.style.display = 'flex';
+  document.getElementById('bp-modal-search-input').value = '';
+  document.getElementById('bp-modal-results').innerHTML = '<div style="text-align:center;padding:24px;color:#a19f9d">로딩 중...</div>';
+  if(_bpModalData.length === 0) await loadBpModalData();
+  renderBpModalResults(_bpModalData.slice(0,10));
+  setTimeout(() => document.getElementById('bp-modal-search-input').focus(), 100);
+}
+function closeBpSearchModal() {
+  document.getElementById('bp-search-modal').style.display = 'none';
+}
+let _bpModalTimer2 = null;
+function onBpModalSearch(q) {
+  clearTimeout(_bpModalTimer2);
+  _bpModalTimer2 = setTimeout(() => {
+    const kw = q.toLowerCase().trim();
+    if(!kw) { renderBpModalResults(_bpModalData.slice(0,10)); return; }
+    const res = [];
+    for(const b of _bpModalData) {
+      if(b.code.toLowerCase().includes(kw) || b.name.toLowerCase().includes(kw) || (b.nameKo&&b.nameKo.includes(q))) {
+        res.push(b); if(res.length >= 50) break;
+      }
+    }
+    renderBpModalResults(res);
+  }, 200);
+}
+function renderBpModalResults(list) {
+  const el = document.getElementById('bp-modal-results');
+  if(!list.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:#a19f9d">검색 결과 없음</div>'; return; }
+  const cap = list.length>=50 ? '<div style="font-size:11px;color:#a19f9d;padding:4px 12px;border-bottom:1px solid #edebe9">상위 50개 표시</div>' : '';
+  el.innerHTML = cap + list.map(b => `
+    <div onclick="selectBpModalItem('${b.code}','${b.name.replace(/'/g,"\'")}','${b.type}')"
+      style="padding:9px 12px;border:1px solid #edebe9;border-radius:4px;margin-bottom:5px;cursor:pointer;transition:all .15s"
+      onmouseover="this.style.background='#f0f6ff';this.style.borderColor='#0078d4'"
+      onmouseout="this.style.background='';this.style.borderColor='#edebe9'">
+      <div style="font-size:11px;color:#a19f9d">${b.code} · ${b.type==='Vendor'||b.type==='S'?'Supplier (S)':'Customer (C)'}</div>
+      <div style="font-size:13px;font-weight:600;color:#323130">${b.name}</div>
+      ${b.nameKo?`<div style="font-size:11px;color:#605e5c">${b.nameKo}</div>`:''}
+    </div>`).join('');
+}
+function selectBpModalItem(code, name, type) {
+  document.getElementById('inp-bpcode').value = code;
+  document.getElementById('bpcode-notice').style.display = 'none';
+  closeBpSearchModal();
+}
+
+async function loadBpModalData() {
+  try {
+    const t = await token();
+    // STK-NAS에서 BP 마스터 파일 로드 (acc_voucher와 동일한 방식)
+    const nasSiteRes = await fetch('https://graph.microsoft.com/v1.0/sites/startruckkorea.sharepoint.com:/sites/STK-NAS:', {headers:{Authorization:'Bearer '+t}});
+    const nasSite = await nasSiteRes.json();
+    const drivesRes = await fetch('https://graph.microsoft.com/v1.0/sites/'+nasSite.id+'/drives', {headers:{Authorization:'Bearer '+t}});
+    const drives = await drivesRes.json();
+    const docDrive = drives.value.find(d=>d.name==='문서'||d.name==='Documents'||d.name==='Shared Documents')||drives.value[0];
+    // search
+    const sr = await fetch('https://graph.microsoft.com/v1.0/drives/'+docDrive.id+"/root/search(q='Master%20data%20List%202014')", {headers:{Authorization:'Bearer '+t}});
+    const srData = await sr.json();
+    const found = (srData.value||[]).find(i=>(i.name||'').includes('DTK'));
+    if(!found) throw new Error('BP 파일 없음');
+    const fileRes = await fetch('https://graph.microsoft.com/v1.0/drives/'+docDrive.id+'/items/'+found.id+'/content', {headers:{Authorization:'Bearer '+t}});
+    const buf = await fileRes.arrayBuffer();
+    const wb = XLSX.read(buf, {type:'array'});
+    const sheetName = wb.SheetNames.find(s=>s==='DTK')||wb.SheetNames[0];
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1});
+    _bpModalData = [];
+    for(let i=1;i<rows.length;i++){
+      const r=rows[i]; if(!r[0]) continue;
+      const code=(r[0]||'').toString().trim();
+      const item=(r[1]||'').toString().trim();
+      const name1=(r[2]||'').toString().trim();
+      const name2=(r[3]||'').toString().trim();
+      if(!code||!name1||code.includes('.')) continue;
+      _bpModalData.push({code,type:item,name:name1,nameKo:name2});
+    }
+    console.log('[BP Modal] Loaded:', _bpModalData.length);
+  } catch(e) {
+    console.warn('[BP Modal] 로드 실패:', e.message);
+    _bpModalData = [];
+  }
+}
+
 </script>
 <!-- FOOTER -->
 <footer style="margin-top:48px;padding:18px 28px;border-top:1px solid #e2e8f0;background:transparent;">
@@ -1531,5 +1627,24 @@ function _wdBtn(itemId, aprList, reqList, status) {
 @keyframes noAuthIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
 #no-auth-modal.show{display:flex!important}
 </style>
+
+<!-- BP Code 검색 모달 (acc_voucher 방식) -->
+<div id="bp-search-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:800;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:8px;box-shadow:0 16px 48px rgba(0,0,0,.22);width:100%;max-width:500px;max-height:75vh;overflow-y:auto">
+    <div style="padding:14px 18px;background:#0078d4;color:#fff;display:flex;justify-content:space-between;align-items:center;font-weight:700;border-radius:8px 8px 0 0">
+      <span>🔍 BP 검색 (Vendor / Customer)</span>
+      <button onclick="closeBpSearchModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div style="padding:16px 18px">
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <input type="text" id="bp-modal-search-input" placeholder="BP 코드 또는 이름 검색..." oninput="onBpModalSearch(this.value)"
+          style="flex:1;border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:13px">
+        <button onclick="onBpModalSearch(document.getElementById('bp-modal-search-input').value)"
+          style="padding:7px 14px;border:none;border-radius:4px;background:#0078d4;color:#fff;font-size:12px;cursor:pointer">검색</button>
+      </div>
+      <div id="bp-modal-results"><div style="text-align:center;padding:24px;color:#a19f9d">검색어를 입력하세요</div></div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
