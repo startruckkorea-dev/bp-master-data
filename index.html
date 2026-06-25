@@ -1512,10 +1512,17 @@ async function openBpSearchModal() {
   const modal = document.getElementById('bp-search-modal');
   modal.style.display = 'flex';
   document.getElementById('bp-modal-search-input').value = '';
-  document.getElementById('bp-modal-results').innerHTML = '<div style="text-align:center;padding:24px;color:#a19f9d">로딩 중...</div>';
-  if(_bpModalData.length === 0) await loadBpModalData();
-  renderBpModalResults(_bpModalData.slice(0,10));
-  setTimeout(() => document.getElementById('bp-modal-search-input').focus(), 100);
+  if(_bpModalData.length === 0) {
+    document.getElementById('bp-modal-results').innerHTML = '<div style="text-align:center;padding:24px;color:#a19f9d">⏳ BP 데이터 로딩 중... 잠시만 기다려주세요</div>';
+    document.getElementById('bp-modal-search-input').disabled = true;
+    await loadBpModalData();
+    document.getElementById('bp-modal-search-input').disabled = false;
+    renderBpModalResults(_bpModalData.slice(0,10));
+    setTimeout(() => document.getElementById('bp-modal-search-input').focus(), 100);
+  } else {
+    renderBpModalResults(_bpModalData.slice(0,10));
+    setTimeout(() => document.getElementById('bp-modal-search-input').focus(), 100);
+  }
 }
 function closeBpSearchModal() {
   document.getElementById('bp-search-modal').style.display = 'none';
