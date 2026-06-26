@@ -1537,7 +1537,7 @@ function onBpModalSearch(q) {
     if(!kw) { renderBpModalResults(_bpModalData.slice(0,10)); return; }
     const res = [];
     for(const b of _bpModalData) {
-      if(b.code.toLowerCase().includes(kw) || b.name.toLowerCase().includes(kw) || (b.nameKo&&b.nameKo.includes(q))) {
+      if(b.code.toLowerCase().includes(kw) || b.name.toLowerCase().includes(kw) || (b.nameKo&&b.nameKo.includes(q)) || (b.bizNo&&b.bizNo.includes(kw))) {
         res.push(b); if(res.length >= 50) break;
       }
     }
