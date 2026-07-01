@@ -1557,6 +1557,7 @@ function renderBpModalResults(list) {
       <div style="font-size:13px;font-weight:600;color:#323130">${b.name}</div>
       ${b.nameKo?`<div style="font-size:11px;color:#605e5c">${b.nameKo}</div>`:''}
       <div style="font-size:11px;color:#605e5c">사업자등록번호: ${b.bizNo||'Master data 미기재'}</div>
+      <div style="font-size:11px;color:#605e5c">Bank Info.: ${b.bank||'Master data 미기재'} &nbsp;|&nbsp; Account No.: ${b.accountNo||'Master data 미기재'}</div>
     </div>`).join('');
 }
 function selectBpModalItem(code, name, type) {
@@ -1599,7 +1600,9 @@ async function loadBpModalData() {
       const name2=(r[3]||'').toString().trim();
       if(!code||!name1||code.includes('.')) continue;
       const bizNo2=(r[4]||'').toString().trim();
-      _bpModalData.push({code,type:item,name:name1,nameKo:name2,bizNo:bizNo2});
+      const bank2=(r[10]||'').toString().trim();
+      const accountNo2=(r[11]||'').toString().trim();
+      _bpModalData.push({code,type:item,name:name1,nameKo:name2,bizNo:bizNo2,bank:bank2,accountNo:accountNo2});
     }
     console.log('[BP Modal] Loaded:', _bpModalData.length);
   } catch(e) {
