@@ -663,10 +663,10 @@ async function boot(account) {
       window._bpVendorApprover   = cfgVal(_cfg,'BP_VENDOR_APPROVER',  {name:'',   email:''});
       window._bpCustomerApprover = cfgVal(_cfg,'BP_CUSTOMER_APPROVER',{name:'', email:''});
     }
+    switchTab('form'); // 느린 백그라운드 작업들보다 먼저 초기 탭을 확정 — 이후엔 탭을 강제로 되돌리지 않음
     await loadEmployees();
     await checkApprover();
     loadUnifiedBadge().catch(()=>{});
-    switchTab('form');
   } catch(e) { alert('SharePoint 연결 오류: ' + e.message); }
 
   // 배지 자동 갱신 (60초마다)
