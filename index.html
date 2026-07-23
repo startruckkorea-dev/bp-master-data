@@ -541,9 +541,7 @@ let employeeData = [];
 async function signIn() {
   try {
     if (window !== window.top) { window.open(window.location.href, '_blank'); return; }
-    const r = await msalApp.loginPopup({ scopes: SCOPES });
-    msalApp.setActiveAccount(r.account);
-    await boot(r.account);
+    await msalApp.loginRedirect({ scopes: SCOPES });
   } catch(e) { showError(e.message); }
 }
 function signOut() { msalApp.logoutRedirect(); }
