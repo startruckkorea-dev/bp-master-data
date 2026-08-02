@@ -798,9 +798,9 @@ function onPersonChange(idx) {
 async function checkApprover() {
   if (!siteId) return;
   try {
-    const data = await apiAll('/sites/' + siteId + '/lists/BP_Approvals/items?$expand=fields')
+    const data = await apiAll('/sites/' + siteId + "/lists/BP_Approvals/items?$expand=fields&$filter=fields/Status eq '대기'")
     const _bpE=(user.email||'').toLowerCase(),_bpN=(user.username||'').toLowerCase();
-    const mine = data.value.filter(i => { const e=(i.fields.ApproverEmail||'').toLowerCase(); return (e===_bpE||e===_bpN) && i.fields.Status === '대기'; });
+    const mine = data.value.filter(i => { const e=(i.fields.ApproverEmail||'').toLowerCase(); return (e===_bpE||e===_bpN); });
     const badge = document.getElementById('appr-badge');
     if (mine.length) { badge.textContent = mine.length; badge.style.display = 'inline'; }
     else badge.style.display = 'none';
@@ -1037,11 +1037,10 @@ async function showDetail(reqId, fromTab) {
   try {
     const [r, apprData] = await Promise.all([
       api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId + '?$expand=fields'),
-      apiAll('/sites/' + siteId + '/lists/BP_Approvals/items?$expand=fields'),
+      apiAll('/sites/' + siteId + '/lists/BP_Approvals/items?$expand=fields&$filter=fields/RequestID eq '+parseInt(reqId)),
     ]);
     const f = r.fields;
     const apprList = apprData.value
-      .filter(i => Number(i.fields.RequestID) === Number(reqId))
       .sort((a,b) => a.fields.ApprovalOrder - b.fields.ApprovalOrder);
 
     const sec = t => `<div class="det-sec">${t}</div>`;
@@ -1433,12 +1432,12 @@ async function loadApprovalQueue() {
   dynLoadStart('결재 정보 확인 중');
   try {
     const [apprData, reqData] = await Promise.all([
-      apiAll('/sites/' + siteId + '/lists/BP_Approvals/items?$expand=fields'),
+      apiAll('/sites/' + siteId + "/lists/BP_Approvals/items?$expand=fields&$filter=fields/Status eq '대기'"),
       apiAll('/sites/' + siteId + '/lists/BP_Requests/items?$expand=fields&$top=500')
     ]);
     const reqMap = {};
     reqData.value.forEach(function(r){ reqMap[r.id] = r.fields; });
-    const _r = apprData.value.filter(function(i){ return (i.fields.ApproverEmail||'').toLowerCase() === (user.email||user.username||'').toLowerCase() && i.fields.Status === '대기'; }); const _dm = _r.reduce(function(acc,i){var rid=String(i.fields.RequestID);if(!acc[rid]||i.fields.ApprovalOrder<acc[rid].fields.ApprovalOrder)acc[rid]=i;return acc;},{}); const mine = Object.values(_dm)
+    const _r = apprData.value.filter(function(i){ return (i.fields.ApproverEmail||'').toLowerCase() === (user.email||user.username||'').toLowerCase(); }); const _dm = _r.reduce(function(acc,i){var rid=String(i.fields.RequestID);if(!acc[rid]||i.fields.ApprovalOrder<acc[rid].fields.ApprovalOrder)acc[rid]=i;return acc;},{}); const mine = Object.values(_dm)
       
       .sort(function(a,b){ return b.fields.RequestID - a.fields.RequestID; });
     if (!mine.length) {
@@ -1526,9 +1525,8 @@ await api('/sites/' + siteId + '/lists/BP_Approvals/items/' + apprId, 'PATCH', {
       }
     } else if (action === '승인') {
       // 다음 결재자 활성화 (페이지네이션 전체 조회)
-      const allAppr = await apiAll('/sites/'+siteId+'/lists/BP_Approvals/items?$expand=fields');
+      const allAppr = await apiAll('/sites/'+siteId+"/lists/BP_Approvals/items?$expand=fields&$filter=fields/RequestID eq "+parseInt(reqId)+" and fields/Status eq '대기(잠김)'");
       const next = allAppr.value
-        .filter(i => Number(i.fields.RequestID)===Number(reqId) && (i.fields.Status||'').trim()==='대기(잠김)')
         .sort((a,b) => a.fields.ApprovalOrder - b.fields.ApprovalOrder);
       if (next.length) {
         await api('/sites/'+siteId+'/lists/BP_Approvals/items/'+next[0].id, 'PATCH', {fields:{Status:'대기'}});
@@ -1630,8 +1628,8 @@ async function withdrawRequest(e, reqId, aprList, reqList) {
   e.stopPropagation();
   if(!confirm('신청을 철회하시겠습니까?\n철회 후에는 되돌릴 수 없습니다.')) return;
   try {
-    const aprData = await apiAll('/sites/'+siteId+'/lists/'+aprList+'/items?$expand=fields&$top=500');
-    const myAprs = aprData.value.filter(i => Number(i.fields.RequestID) === Number(reqId));
+    const aprData = await apiAll('/sites/'+siteId+'/lists/'+aprList+'/items?$expand=fields&$top=500&$filter=fields/RequestID eq '+parseInt(reqId));
+    const myAprs = aprData.value;
     const sorted = myAprs.sort((a,b)=>(a.fields.ApprovalOrder||0)-(b.fields.ApprovalOrder||0));
     const firstSt = (sorted[0]?.fields?.Status?.Value || sorted[0]?.fields?.Status || '').trim();
     if(firstSt !== '대기') {
