@@ -961,7 +961,7 @@ async function submitRequest() {
       }
     });
     const reqId = item.id;
-    await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { Title: 'BP-' + new Date().toISOString().slice(0,10) + '_ID-' + reqId } });
+    await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { Title: 'BP-' + new Date(new Date().getTime()+9*3600*1000).toISOString().slice(0,10) + '_ID-' + reqId } });
 
     // Upload files → Graph API 다운로드 경로 저장 (SharePoint 사이트 권한 불필요)
     const fileLinks = [];
@@ -1006,13 +1006,13 @@ async function submitRequest() {
     ].filter(a => a.email);
     for (const a of approvers) {
       await api('/sites/' + siteId + '/lists/BP_Approvals/items', 'POST', { fields: {
-        Title: 'BP-' + new Date().toISOString().slice(0,10) + '_ID-' + reqId + '-' + a.order, RequestID: parseInt(reqId),
+        Title: 'BP-' + new Date(new Date().getTime()+9*3600*1000).toISOString().slice(0,10) + '_ID-' + reqId + '-' + a.order, RequestID: parseInt(reqId),
         ApproverEmail: a.email, ApproverName: a.name,
         ApproverRole: a.role, ApprovalOrder: a.order,
         Status: a.order === 1 ? '대기' : '대기(잠김)'
       }});
     }
-    const _bpTitle = 'BP-' + new Date().toISOString().slice(0,10) + '_ID-' + reqId;
+    const _bpTitle = 'BP-' + new Date(new Date().getTime()+9*3600*1000).toISOString().slice(0,10) + '_ID-' + reqId;
     showAlert('상신이 완료되었습니다.', _bpTitle);
     resetForm(); switchTab('list');
     // 결재함 뱃지 갱신
