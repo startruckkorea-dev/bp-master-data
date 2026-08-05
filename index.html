@@ -1413,10 +1413,10 @@ function renderAdminPagination(totalPages, curPage) {
 }
 
 async function loadMyList() {
-  if (!siteId) { const s = await api('/sites/'+SITE_PATH); siteId = s.id; }
   const tbody = document.getElementById('list-body');
   dynLoadStart('BP 데이터 불러오는 중');
   try {
+    if(!siteId){ const s = await api('/sites/'+SITE_PATH); siteId = s.id; }
     const data = await apiAll('/sites/' + siteId + '/lists/BP_Requests/items?$expand=fields&$top=500');
     const mine = data.value
       .filter(i => (i.fields.RequesterEmail||'').toLowerCase() === user.username.toLowerCase())
@@ -1427,10 +1427,10 @@ async function loadMyList() {
 }
 
 async function loadApprovalQueue() {
-  if (!siteId) { const s = await api('/sites/'+SITE_PATH); siteId = s.id; }
   const tbody = document.getElementById('appr-body');
   dynLoadStart('결재 정보 확인 중');
   try {
+    if(!siteId){ const s = await api('/sites/'+SITE_PATH); siteId = s.id; }
     const [apprData, reqData] = await Promise.all([
       apiAll('/sites/' + siteId + "/lists/BP_Approvals/items?$expand=fields&$filter=fields/Status eq '대기'"),
       apiAll('/sites/' + siteId + '/lists/BP_Requests/items?$expand=fields&$top=500')
