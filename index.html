@@ -1413,7 +1413,7 @@ function renderAdminPagination(totalPages, curPage) {
 }
 
 async function loadMyList() {
-  if (!siteId) return;
+  if (!siteId) { const s = await api('/sites/'+SITE_PATH); siteId = s.id; }
   const tbody = document.getElementById('list-body');
   dynLoadStart('BP 데이터 불러오는 중');
   try {
@@ -1427,7 +1427,7 @@ async function loadMyList() {
 }
 
 async function loadApprovalQueue() {
-  if (!siteId) return;
+  if (!siteId) { const s = await api('/sites/'+SITE_PATH); siteId = s.id; }
   const tbody = document.getElementById('appr-body');
   dynLoadStart('결재 정보 확인 중');
   try {
