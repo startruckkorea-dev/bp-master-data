@@ -734,6 +734,10 @@ async function boot(account) {
 
   // 배지 자동 갱신 (60초마다)
   setInterval(function(){ try{checkApprover();}catch(e){} }, 60000);
+
+  // URL로 특정 요청 상세를 바로 열기 (다른 시스템에서 연동 링크로 진입할 때)
+  const _openId = new URLSearchParams(location.search).get('openId');
+  if (_openId) { showDetail(_openId); history.replaceState(null, '', location.pathname); }
 }
 
 // ── Employees ──
