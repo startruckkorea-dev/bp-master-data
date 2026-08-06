@@ -11,6 +11,9 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100vh; }
+/* ?openId= 딥링크로 진입한 단독 상세보기 모드 — 뒤에 깔린 작성 폼/헤더/탭은 볼 일이 없으므로
+   통째로 숨기고 배경색만 남긴다. 모달은 #app 바깥에 있어 영향받지 않음. */
+body.standalone-detail #app { display: none !important; }
 
 /* ── Login ── */
 
@@ -738,10 +741,9 @@ async function boot(account) {
   // URL로 특정 요청 상세를 바로 열기 (다른 시스템에서 연동 링크로 진입할 때)
   const _openId = new URLSearchParams(location.search).get('openId');
   if (_openId) {
-    const _backLink = document.getElementById('bp-back-link');
-    const _tabs = document.getElementById('bp-tabs');
-    if (_backLink) _backLink.style.display = 'none';
-    if (_tabs) _tabs.style.display = 'none';
+    // 단독 상세보기 모드: 작성 폼·헤더·탭은 필요 없으므로 배경색만 남기고 전부 숨김
+    _standaloneDetail = true;
+    document.body.classList.add('standalone-detail');
     showDetail(_openId);
     history.replaceState(null, '', location.pathname);
   }
@@ -1245,7 +1247,11 @@ function renderBpCodeChangeLog(logJson) {
   if (listEl) listEl.scrollTop = listEl.scrollHeight;
 }
 
+// ?openId= 딥링크로 진입한 단독 상세보기 모드 여부 (다른 시스템에서 연동 링크로 들어온 경우)
+let _standaloneDetail = false;
 function closeModal() {
+  // 단독 모드에서 모달만 닫으면 텅 빈 배경만 남으므로 탭 자체를 닫고, 브라우저가 막으면 모달을 유지
+  if(_standaloneDetail){ window.close(); return; }
   const modal = document.getElementById('detail-modal');
   if (modal) modal.style.display = 'none';
 }
