@@ -1282,6 +1282,24 @@ function renderBpCodeChangeLog(logJson) {
 }
 
 
+
+// 단독 모드에서 상세를 닫을 때: 탭 닫기를 시도하되, 브라우저가 막으면(링크에 rel="noopener"가 붙어
+// 열린 탭은 스크립트로 닫을 수 없다) 빈 회색 화면에 갇히지 않도록 안내 화면으로 전환한다.
+function closeStandaloneDetail(hideModalFn) {
+  window.close();
+  setTimeout(() => {
+    if (window.closed) return;
+    if (typeof hideModalFn === 'function') { try { hideModalFn(); } catch(e){} }
+    const el = document.getElementById('standalone-loader');
+    if (el) {
+      el.innerHTML = '<div style="font-size:1.6rem">✅</div>'
+        + '<div class="sl-text">확인이 끝났습니다</div>'
+        + '<div class="sl-sub">이 탭은 닫으셔도 됩니다</div>'
+        + '<button onclick="location.href=location.pathname" style="margin-top:6px;background:#0078d4;color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit">전체 시스템 열기</button>';
+      document.documentElement.classList.remove('detail-ready');
+    }
+  }, 250);
+}
 // 단독 상세보기 모드의 로딩 오버레이 제거 — 상세 팝업이 실제로 뜨는 시점에 호출
 function markDetailReady() {
   document.documentElement.classList.add('detail-ready');
@@ -1301,7 +1319,7 @@ function armStandaloneLoaderTimeout() {
 let _standaloneDetail = false;
 function closeModal() {
   // 단독 모드에서 모달만 닫으면 텅 빈 배경만 남으므로 탭 자체를 닫고, 브라우저가 막으면 모달을 유지
-  if(_standaloneDetail){ window.close(); return; }
+  if(_standaloneDetail){ closeStandaloneDetail(()=>{const m=document.getElementById('detail-modal'); if(m) m.style.display='none';}); return; }
   const modal = document.getElementById('detail-modal');
   if (modal) modal.style.display = 'none';
 }
