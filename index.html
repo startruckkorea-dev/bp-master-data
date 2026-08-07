@@ -16,6 +16,23 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
    클래스는 <head>의 인라인 스크립트가 파싱 시점에 <html>에 즉시 붙인다(아래 참고).
    body에 붙이면 body 파싱 전까지 폼이 잠깐 보였다 사라지는 깜빡임이 생김. */
 html.standalone-detail #app { display: none !important; }
+/* 단독 상세보기 진입 시, 상세 팝업이 뜨기 전까지 보여줄 로딩 오버레이.
+   #app을 숨겨 화면이 통째로 비어 있는 상태라 안내가 없으면 사용자가 멈춘 줄 안다.
+   CSS만으로 표시되므로 JS 실행 전 첫 페인트부터 보인다. */
+#standalone-loader { display: none; }
+html.standalone-detail #standalone-loader {
+  display: flex; position: fixed; inset: 0; z-index: 500;
+  flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  font-family: 'Segoe UI', sans-serif; color: #605e5c;
+}
+html.standalone-detail.detail-ready #standalone-loader { display: none; }
+#standalone-loader .sl-spin {
+  width: 34px; height: 34px; border: 3px solid #e1dfdd; border-top-color: #0078d4;
+  border-radius: 50%; animation: sl-rotate .8s linear infinite;
+}
+#standalone-loader .sl-text { font-size: .82rem; font-weight: 600; }
+#standalone-loader .sl-sub { font-size: .72rem; color: #a19f9d; margin-top: -8px; }
+@keyframes sl-rotate { to { transform: rotate(360deg); } }
 
 /* ── Login ── */
 
@@ -275,6 +292,11 @@ if (new URLSearchParams(location.search).get('openId')) {
 </script>
 </head>
 <body>
+<div id="standalone-loader">
+  <div class="sl-spin"></div>
+  <div class="sl-text">상세 내용을 불러오는 중입니다</div>
+  <div class="sl-sub">잠시만 기다려 주세요</div>
+</div>
 
 <div id="login-screen">
   <div class="login-card">
@@ -753,6 +775,7 @@ async function boot(account) {
   if (_openId) {
     // 단독 상세보기 모드: 작성 폼·헤더·탭은 필요 없으므로 배경색만 남기고 전부 숨김
     _standaloneDetail = true;
+    armStandaloneLoaderTimeout();
     showDetail(_openId);
     history.replaceState(null, '', location.pathname);
   }
@@ -1135,6 +1158,7 @@ async function showDetail(reqId, fromTab) {
       '<div id="bp-code-change-log"></div>'
     ) : '';
 
+    markDetailReady();  // 내용이 채워지는 시점에 로딩 오버레이 해제
     document.getElementById('modal-content').innerHTML =
       sec('기본 정보') +
       row('Title', f.Title || '-') +
@@ -1187,6 +1211,7 @@ async function showDetail(reqId, fromTab) {
       });
     });
   } catch(e) {
+    markDetailReady();  // 실패해도 로더에 갇히지 않도록 해제(오류 문구는 모달에 표시됨)
     document.getElementById('modal-content').innerHTML = '<p style="color:#a4262c">오류: ' + e.message + '</p>';
   }
 }
@@ -1256,6 +1281,22 @@ function renderBpCodeChangeLog(logJson) {
   if (listEl) listEl.scrollTop = listEl.scrollHeight;
 }
 
+
+// 단독 상세보기 모드의 로딩 오버레이 제거 — 상세 팝업이 실제로 뜨는 시점에 호출
+function markDetailReady() {
+  document.documentElement.classList.add('detail-ready');
+}
+// 안전장치: 어떤 이유로든 상세가 끝내 안 뜨면 30초 뒤 안내 문구로 바꿔 사용자가 무한 대기하지 않게 한다
+function armStandaloneLoaderTimeout() {
+  setTimeout(() => {
+    if (document.documentElement.classList.contains('detail-ready')) return;
+    const el = document.getElementById('standalone-loader');
+    if (!el) return;
+    el.innerHTML = '<div style="font-size:1.6rem">⚠️</div>'
+      + '<div class="sl-text">상세 내용을 불러오지 못했습니다</div>'
+      + '<div class="sl-sub">네트워크 상태를 확인한 뒤 새로고침해 주세요</div>';
+  }, 30000);
+}
 // ?openId= 딥링크로 진입한 단독 상세보기 모드 여부 (다른 시스템에서 연동 링크로 들어온 경우)
 let _standaloneDetail = false;
 function closeModal() {
