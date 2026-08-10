@@ -20,12 +20,15 @@ html.standalone-detail #app { display: none !important; }
    #app을 숨겨 화면이 통째로 비어 있는 상태라 안내가 없으면 사용자가 멈춘 줄 안다.
    CSS만으로 표시되므로 JS 실행 전 첫 페인트부터 보인다. */
 #standalone-loader { display: none; }
-html.standalone-detail #standalone-loader {
+/* 로더는 '인증이 끝나고 상세를 부르는 동안'에만 띄운다.
+   로그인 화면(#login-screen)은 #app 바깥이라 단독 모드에서도 그대로 보이는데,
+   그 위에 로더가 겹쳐 그려지면 글자가 포개져 읽을 수 없다. */
+html.standalone-detail.detail-loading #standalone-loader {
   display: flex; position: fixed; inset: 0; z-index: 400;  /* 상세 모달(500~998)보다 반드시 아래 */
   flex-direction: column; align-items: center; justify-content: center; gap: 14px;
   font-family: 'Segoe UI', sans-serif; color: #605e5c;
 }
-html.standalone-detail.detail-ready #standalone-loader { display: none; }
+html.standalone-detail.detail-ready #standalone-loader { display: none !important; }
 #standalone-loader .sl-spin {
   width: 34px; height: 34px; border: 3px solid #e1dfdd; border-top-color: #0078d4;
   border-radius: 50%; animation: sl-rotate .8s linear infinite;
@@ -775,6 +778,7 @@ async function boot(account) {
   if (_openId) {
     // 단독 상세보기 모드: 작성 폼·헤더·탭은 필요 없으므로 배경색만 남기고 전부 숨김
     _standaloneDetail = true;
+    document.documentElement.classList.add('detail-loading'); // 인증 완료 후부터 로더 노출
     armStandaloneLoaderTimeout();
     showDetail(_openId);
     history.replaceState(null, '', location.pathname);
