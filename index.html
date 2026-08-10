@@ -16,6 +16,9 @@ body { font-family: 'Segoe UI', sans-serif; background: #f3f2f1; min-height: 100
    클래스는 <head>의 인라인 스크립트가 파싱 시점에 <html>에 즉시 붙인다(아래 참고).
    body에 붙이면 body 파싱 전까지 폼이 잠깐 보였다 사라지는 깜빡임이 생김. */
 html.standalone-detail #app { display: none !important; }
+/* 단독 모드에선 화면이 상세 팝업 하나뿐이라, 어두운 배경의 범용 로딩 오버레이(#loading)가
+   전용 로더 위에 겹쳐 지저분해진다. 이 모드에서만 억제한다. */
+html.standalone-detail #loading { display: none !important; }
 /* 단독 상세보기 진입 시, 상세 팝업이 뜨기 전까지 보여줄 로딩 오버레이.
    #app을 숨겨 화면이 통째로 비어 있는 상태라 안내가 없으면 사용자가 멈춘 줄 안다.
    CSS만으로 표시되므로 JS 실행 전 첫 페인트부터 보인다. */
@@ -738,6 +741,13 @@ async function boot(account) {
   user = account;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
+  // ?openId= 단독 모드: 인증이 끝나는 즉시 로더를 띄운다.
+  // 마스터 데이터 로딩(직원/CCTR/BP 등)이 끝나야 상세를 부를 수 있는데, 그때 로더를 켜면
+  // 그 사이 몇 초 동안 아무것도 없는 회색 화면만 보인다.
+  if (document.documentElement.classList.contains('standalone-detail')) {
+    document.documentElement.classList.add('detail-loading');
+  }
+
   document.getElementById('user-name').textContent = (account.name || account.username) + ' (' + account.username + ')';
   // /me API로 실제 mail 주소 확보 (ext/guest 계정은 UPN과 mail이 다를 수 있음)
   try {
@@ -778,7 +788,6 @@ async function boot(account) {
   if (_openId) {
     // 단독 상세보기 모드: 작성 폼·헤더·탭은 필요 없으므로 배경색만 남기고 전부 숨김
     _standaloneDetail = true;
-    document.documentElement.classList.add('detail-loading'); // 인증 완료 후부터 로더 노출
     armStandaloneLoaderTimeout();
     showDetail(_openId);
     history.replaceState(null, '', location.pathname);
