@@ -19,6 +19,11 @@ html.standalone-detail #app { display: none !important; }
 /* 단독 모드에선 화면이 상세 팝업 하나뿐이라, 어두운 배경의 범용 로딩 오버레이(#loading)가
    전용 로더 위에 겹쳐 지저분해진다. 이 모드에서만 억제한다. */
 html.standalone-detail #loading { display: none !important; }
+/* 푸터는 #app 바깥이라 단독 모드에서도 그대로 남아 배경에 저작권 문구가 떠 있었다. */
+html.standalone-detail footer { display: none !important; }
+/* 상세 모달을 내용 채우기 전에 먼저 띄우는 구조라, 단독 모드에선 빈 모달의 닫기(×) 버튼만
+   덩그러니 보였다. 내용이 준비될 때까지(detail-ready) 모달 자체를 감춘다. */
+html.standalone-detail:not(.detail-ready) #detail-modal { display: none !important; }
 /* 단독 상세보기 진입 시, 상세 팝업이 뜨기 전까지 보여줄 로딩 오버레이.
    #app을 숨겨 화면이 통째로 비어 있는 상태라 안내가 없으면 사용자가 멈춘 줄 안다.
    CSS만으로 표시되므로 JS 실행 전 첫 페인트부터 보인다. */
