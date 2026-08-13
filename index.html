@@ -420,7 +420,7 @@ if (new URLSearchParams(location.search).get('openId')) {
           <input type="email" id="a3-email" readonly placeholder="Type 선택 후 자동 설정" style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;background:#f3f2f1;color:#605e5c">
         </div>
       </div>
-      <div class="notice info" style="margin-top:4px">최종 승인 후 회계담당자가 BP Code를 입력합니다.</div>
+      <div id="bpcode-entry-notice" class="notice info" style="margin-top:4px;display:none">최종 승인 후 회계담당자가 BP Code를 입력합니다.</div>
 
       <div class="section-title">5. 첨부파일</div>
       <div class="file-area" onclick="document.getElementById('file-input').click()">
@@ -916,6 +916,9 @@ function onTypeChange() {
   document.getElementById('inp-bpcode').disabled = true;
   document.getElementById('inp-bpcode').value = '';
   document.getElementById('bpcode-notice').style.display = 'none';
+  // Type을 바꾸면 Sub Category가 초기화되므로, 이전 선택으로 떠 있던 안내도 함께 내린다.
+  const _entryNtc = document.getElementById('bpcode-entry-notice');
+  if (_entryNtc) _entryNtc.style.display = 'none';
   const docs = {
     Vendor:   '1. Vendor Registration Form\n2. 통장사본\n3. 사업자등록증\n4. Sanction Check\n5. 개인정보동의서',
     Customer: '1. Customer Registration Form\n2. 통장사본(환불)\n3. 사업자등록증\n4. Sanction Check(해외업체의 경우)'
@@ -941,6 +944,10 @@ function onSubCatChange() {
   const lbl = document.getElementById('bpcode-label');
   const ntc = document.getElementById('bpcode-notice');
   const btn = document.getElementById('btn-bp-search');
+  // BP Code를 사후에 부여하는 경우는 신규 생성뿐이다.
+  // 나머지 Sub Category는 신청자가 기존 코드를 직접 입력하므로 안내가 나오면 안 된다.
+  const entryNtc = document.getElementById('bpcode-entry-notice');
+  if (entryNtc) entryNtc.style.display = (sub === 'BP creation') ? 'block' : 'none';
   if (sub === 'BP creation') {
     bp.disabled = true; bp.value = '';
     bp.placeholder = 'creation 시 회계담당자 입력';
@@ -992,6 +999,7 @@ function resetForm() {
   files = []; renderFiles();
   document.getElementById('docs-box').textContent = 'Type을 먼저 선택해주세요.';
   document.getElementById('bpcode-notice').style.display = 'none';
+  const _en = document.getElementById('bpcode-entry-notice'); if(_en) _en.style.display = 'none';
   document.getElementById('file-notice').style.display = 'none';
 }
 
