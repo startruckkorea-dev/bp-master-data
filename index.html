@@ -587,6 +587,31 @@ async function signIn() {
     await msalApp.loginRedirect({ scopes: SCOPES });
   } catch(e) { showError(e.message); }
 }
+// 결재 의견 등 사용자 자유 입력은 화면에 넣기 전에 반드시 이스케이프한다.
+// SharePoint 다중 텍스트는 <div class="ExternalClass…"> 래퍼가 붙어 저장되므로
+// 래퍼를 걷어낸 뒤(spText) 이스케이프한다. mc 에서 검증된 구현을 그대로 사용.
+function escHtml(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function spText(s){
+  return String(s == null ? '' : s)
+    .replace(/<\s*br\s*\/?>/gi, '\n')
+    .replace(/<\/\s*(div|p|li|tr)\s*>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (m, d) => { const n = parseInt(d, 10); return (n>=32 && n<=1114111) ? String.fromCodePoint(n) : m; })
+    .replace(/&#x([0-9a-fA-F]+);/g, (m, x) => { const n = parseInt(x, 16); return (n>=32 && n<=1114111) ? String.fromCodePoint(n) : m; })
+    .replace(/&amp;/g, '&')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+// 화면 출력용 — 래퍼 제거 후 이스케이프
+function safeText(s){ return escHtml(spText(s)); }
+
 function signOut() { msalApp.logoutRedirect(); }
 async function token() {
   try {
@@ -1167,7 +1192,7 @@ async function showDetail(reqId, fromTab) {
           ${(()=>{const _r=af.ApproverRole||'',_o=String(af.ApprovalOrder||'');const _n=_r.startsWith(_o+'차')?_r.slice(_o.length+1).trim():_r;const _p=_n.replace(/^결재자\s*/,'');const _q=_p.startsWith('(')?_p:(_p?'('+_p+')':'');return '<b>'+_o+'차</b> 결재자'+_q;})()}
           <br><span style="font-size:.72rem;color:#605e5c">${af.ApproverName||''} · ${af.ApproverEmail||''}</span>
           ${af.ApprovalDate ? `<br><span style="font-size:.72rem;color:#a19f9d">${fmtDate(af.ApprovalDate)}</span>` : ''}
-          ${af.Comment ? `<br><span style="font-size:.72rem;background:#fff;border:1px solid #edebe9;border-radius:4px;padding:2px 6px;display:inline-block;margin-top:2px">💬 ${af.Comment}</span>` : ''}
+          ${af.Comment ? `<br><span style="font-size:.72rem;background:#fff;border:1px solid #edebe9;border-radius:4px;padding:2px 6px;display:inline-block;margin-top:2px">💬 ${safeText(af.Comment)}</span>` : ''}
         </div>
         <span class="${st}">${af.Status}</span>
       </div>`;
