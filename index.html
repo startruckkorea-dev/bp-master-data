@@ -270,7 +270,11 @@ html.standalone-detail.detail-ready #standalone-loader { display: none !importan
 .det-row:last-child{border-bottom:none}
 .det-lbl{color:#605e5c;width:180px;flex-shrink:0}
 .det-val{color:#323130;font-weight:500;flex:1}
-.appr-item{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-bottom:1px solid #edebe9;font-size:.8rem}
+.status-대기{color:#7d5700;font-weight:600}
+    .status-대기잠김{color:#a19f9d;font-weight:600}
+    .status-승인{color:#107c10;font-weight:600}
+    .status-반려{color:#a4262c;font-weight:600}
+    .appr-item{display:flex;justify-content:space-between;align-items:flex-start;padding:9px 10px;border-bottom:1px solid #edebe9;font-size:.8rem;gap:10px}
 .appr-item:last-child{border-bottom:none}
 .proc-btns{display:flex;gap:6px;margin-top:12px}
 
@@ -611,6 +615,12 @@ function safeText(s){ return escHtml(spText(s)); }
 // 괄호가 들어간 값(철회(잠김))은 CSS 클래스명으로 쓸 수 없어 철회로 정규화하고,
 // 승인은 승인완료로 매핑한다. 정의되지 않은 값은 대기로 처리해 평문 노출을 막는다.
 const _BP_ST_CLS = ['대기','승인완료','반려','진행중','철회'];
+// 결재 이력 전용 — ACC Voucher 와 동일한 색 글씨 표기
+const _BP_APPR_CLS = {
+  '대기':'status-대기', '대기(잠김)':'status-대기잠김',
+  '승인':'status-승인', '승인완료':'status-승인',
+  '반려':'status-반려', '철회':'status-반려', '철회(잠김)':'status-대기잠김'
+};
 function _bpStCls(s){
   const v = String(s == null ? '' : s).trim();
   if (!v) return 'badge-대기';
@@ -1194,7 +1204,9 @@ async function showDetail(reqId, fromTab) {
     // 결재 이력
     const apprHtml = apprList.map(a => {
       const af = a.fields;
-      const st = 'badge ' + _bpStCls(af.Status);   // 목록·상세와 같은 배지 규칙
+      // 결재 이력은 ACC Voucher 와 같이 색 글씨로 표시한다.
+      // 한 줄에 배지가 여러 개 쌓이면 오히려 산만해져, 이력에서는 배지를 쓰지 않는다.
+      const st = _BP_APPR_CLS[af.Status] || 'status-대기잠김';
       return `<div class="appr-item">
         <div>
           ${(()=>{const _r=af.ApproverRole||'',_o=String(af.ApprovalOrder||'');const _n=_r.startsWith(_o+'차')?_r.slice(_o.length+1).trim():_r;const _p=_n.replace(/^결재자\s*/,'');const _q=_p.startsWith('(')?_p:(_p?'('+_p+')':'');return '<b>'+_o+'차</b> 결재자'+_q;})()}
