@@ -489,7 +489,7 @@ if (new URLSearchParams(location.search).get('openId')) {
           <option value="">전체 Type</option>
           <option>Vendor</option><option>Customer</option>
         </select>
-        <input type="text" id="list-filter-bpcode" oninput="renderMyList()" placeholder="BP Code 검색...">
+        <input type="text" id="list-filter-bpcode" oninput="renderMyList()" placeholder="Title / BP Code 검색..." style="width:220px">
         <span id="list-count" style="font-size:13px;color:#605e5c;margin-left:auto"></span>
       </div>
       <table class="list-table">
@@ -1868,12 +1868,21 @@ function renderMyList() {
   const fStatus = (document.getElementById('list-filter-status')||{}).value || '';
   const fType   = (document.getElementById('list-filter-type')||{}).value || '';
   const fCode   = ((document.getElementById('list-filter-bpcode')||{}).value || '').toLowerCase().trim();
+  // Title 은 BP-2026-08-18_ID-235 처럼 구분자가 섞인 값이라, 사람이 옮겨 적을 때
+  // - 와 _ 를 바꿔 쓰기 쉽다. 영숫자만 남겨 비교하는 판을 하나 더 둬서
+  // BP-2026-08-18_ID-235 / BP-2026-08-18_ID_235 / bp20260818id235 가 모두 걸리게 한다.
+  const _norm  = (v) => String(v == null ? '' : v).toLowerCase().replace(/[^a-z0-9가-힣]/g, '');
+  const fCodeN = _norm(fCode);
   const mine = _myListRaw.filter(i => {
     const f = i.fields;
     // 철회(잠김) 같은 파생 상태도 「철회」로 묶어서 걸린다.
     if (fStatus && !String(f.Status||'').startsWith(fStatus)) return false;
     if (fType   && String(f.BPType||'') !== fType) return false;
-    if (fCode   && !String(f.BPCode||'').toLowerCase().includes(fCode)) return false;
+    if (fCode) {
+      const hay  = (String(f.BPCode||'') + ' ' + String(f.Title||'')).toLowerCase();
+      const hayN = _norm(f.BPCode) + ' ' + _norm(f.Title);
+      if (!hay.includes(fCode) && !(fCodeN && hayN.includes(fCodeN))) return false;
+    }
     return true;
   });
   const cntEl = document.getElementById('list-count');
