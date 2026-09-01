@@ -1820,7 +1820,7 @@ async function loadAdminList(page) {
     const f = item.fields;
     const rowNum = total - (_adminPage * ADMIN_PAGE_SIZE + idx);
     return '<tr onclick="showDetail('+item.id+',\'admin\')" style="cursor:pointer">'
-      + '<td style="color:#a19f9d">' + rowNum + '</td>'
+      + '<td style="color:#a19f9d;font-size:.66rem">' + rowNum + '</td>'
       + '<td class="c-mail" style="font-size:.78rem" title="' + escHtml(f.RequesterEmail||'') + '">' + escHtml(f.RequesterEmail||'') + '</td>'
       + '<td style="font-size:.78rem;color:#0078d4">' + escHtml(f.Title||'-') + '</td>'
       + '<td><span class="badge badge-type">' + (f.BPType||'') + '</span></td>'
@@ -1910,7 +1910,7 @@ function renderMyList() {
     pgSet('list', [], null, (fStatus||fType||fCode) ? '조회 결과가 없습니다.' : '신청 내역이 없습니다.', 9);
     return;
   }
-  pgSet('list', mine, (item,idx)=>{ const f = item.fields; const rowNum = mine.length - idx; return '<tr onclick="showDetail(' + item.id + ',\'list\')" style="cursor:pointer"><td style="color:#a19f9d">' + rowNum + '</td><td style="font-size:.78rem;color:#0078d4">' + (f.Title||'-') + '</td>' + _bpDescCell(f) + '<td><span class="badge badge-type">' + (f.BPType||'') + '</span></td><td>' + (f.SubCategory||'') + '</td><td><b>' + (f.BPCode||'-') + '</b></td><td><span class="badge badge-' + (f.Status||'대기') + '">' + (f.Status||'') + '</span></td><td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td><td style="text-align:center;vertical-align:middle;padding:6px 8px;">'+_wdBtn(item.id,'BP_Approvals','BP_Requests',f.Status)+'</td></tr>'; }, '신청 내역이 없습니다.', 9);
+  pgSet('list', mine, (item,idx)=>{ const f = item.fields; const rowNum = mine.length - idx; return '<tr onclick="showDetail(' + item.id + ',\'list\')" style="cursor:pointer"><td style="color:#a19f9d;font-size:.66rem">' + rowNum + '</td><td style="font-size:.78rem;color:#0078d4">' + (f.Title||'-') + '</td>' + _bpDescCell(f) + '<td><span class="badge badge-type">' + (f.BPType||'') + '</span></td><td>' + (f.SubCategory||'') + '</td><td><b>' + (f.BPCode||'-') + '</b></td><td><span class="badge badge-' + (f.Status||'대기') + '">' + (f.Status||'') + '</span></td><td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td><td style="text-align:center;vertical-align:middle;padding:6px 8px;">'+_wdBtn(item.id,'BP_Approvals','BP_Requests',f.Status)+'</td></tr>'; }, '신청 내역이 없습니다.', 9);
 }
 
 async function loadApprovalQueue() {
@@ -1939,7 +1939,7 @@ async function loadApprovalQueue() {
       const rf = reqMap[String(f.RequestID)] || {};
       // 첫 열은 행 번호다. 예전에는 헤더가 「신청번호」인데 RequestID 를 그려
       // 목록의 번호와 값이 서로 달랐다. IT-Ticket 결재함과 같은 규칙으로 맞춘다.
-      return '<tr onclick="showDetail(' + f.RequestID + ',\'appr\')" style="cursor:pointer"><td style="color:#a19f9d">' + (idx + 1) + '</td><td style="font-size:.78rem">' + (rf.RequesterEmail||'') + '</td><td style="font-size:.78rem;color:#0078d4">' + (rf.Title||'-') + '</td><td><span class="badge badge-type">' + (rf.BPType||'') + '</span></td><td>' + (rf.SubCategory||'') + '</td>' + _bpDescCell(rf) + '<td><b>' + (rf.BPCode||'-') + '</b></td><td><span class="badge badge-' + (rf.Status||'대기') + '">' + (rf.Status||'') + '</span></td><td>' + (rf.RequestDate?fmtDate(rf.RequestDate):'') + '</td><td onclick="event.stopPropagation()"><button class="btn-approve" onclick="showConfirm(' + item.id + ',\'승인\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">승인</button> <button class="btn-reject" onclick="showConfirm(' + item.id + ',\'반려\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">반려</button></td></tr>';
+      return '<tr onclick="showDetail(' + f.RequestID + ',\'appr\')" style="cursor:pointer"><td style="color:#a19f9d;font-size:.66rem">' + (idx + 1) + '</td><td style="font-size:.78rem">' + (rf.RequesterEmail||'') + '</td><td style="font-size:.78rem;color:#0078d4">' + (rf.Title||'-') + '</td><td><span class="badge badge-type">' + (rf.BPType||'') + '</span></td><td>' + (rf.SubCategory||'') + '</td>' + _bpDescCell(rf) + '<td><b>' + (rf.BPCode||'-') + '</b></td><td><span class="badge badge-' + (rf.Status||'대기') + '">' + (rf.Status||'') + '</span></td><td>' + (rf.RequestDate?fmtDate(rf.RequestDate):'') + '</td><td onclick="event.stopPropagation()"><button class="btn-approve" onclick="showConfirm(' + item.id + ',\'승인\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">승인</button> <button class="btn-reject" onclick="showConfirm(' + item.id + ',\'반려\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">반려</button></td></tr>';
     });
     dynLoadEnd(); pgSet('appr', rows, function(r){ return r; }, '결재 대기 항목이 없습니다.', 10);
     const badge = document.getElementById('appr-badge');
