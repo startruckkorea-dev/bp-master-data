@@ -315,6 +315,10 @@ html.standalone-detail.detail-ready #standalone-loader { display: none !importan
 .list-table td.c-desc{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#605e5c;font-size:.78rem}
 /* 내 신청 목록은 신청자 열이 없다(전부 본인 건). 그만큼 Description 을 넓게 쓴다. */
 #tab-list .list-table td.c-desc{max-width:420px}
+/* 관리자 탭은 신청자·Description 이 둘 다 길다. 신청자는 도메인이 모두 같아
+   앞부분만 봐도 구분되므로 접고(전체는 title), 그만큼을 Description 에 준다. */
+#tab-admin .list-table td.c-mail{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#tab-admin .list-table td.c-desc{max-width:520px}
 /* 결재함의 마지막 열은 승인·반려 버튼이다. 줄바꿈되거나 잘리면 누를 수 없다.
    폭(132px)은 버튼 2개 + 사이 공백 + 셀 여백 기준으로 잡았다. */
 #tab-approval .list-table td:last-child{white-space:nowrap;overflow:visible;text-overflow:clip}
@@ -1804,8 +1808,8 @@ async function loadAdminList(page) {
     const rowNum = total - (_adminPage * ADMIN_PAGE_SIZE + idx);
     return '<tr onclick="showDetail('+item.id+',\'admin\')" style="cursor:pointer">'
       + '<td style="color:#0078d4;font-weight:600">' + rowNum + '</td>'
-      + '<td style="font-size:.78rem">' + (f.RequesterEmail||'') + '</td>'
-      + '<td style="font-size:.78rem;color:#0078d4">' + (f.Title||'-') + '</td>'
+      + '<td class="c-mail" style="font-size:.78rem" title="' + escHtml(f.RequesterEmail||'') + '">' + escHtml(f.RequesterEmail||'') + '</td>'
+      + '<td style="font-size:.78rem;color:#0078d4">' + escHtml(f.Title||'-') + '</td>'
       + '<td><span class="badge badge-type">' + (f.BPType||'') + '</span></td>'
       + '<td>' + (f.SubCategory||'') + '</td>'
       + _bpDescCell(f)
