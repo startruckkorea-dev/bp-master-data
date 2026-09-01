@@ -315,6 +315,10 @@ html.standalone-detail.detail-ready #standalone-loader { display: none !importan
 .list-table td.c-desc{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#605e5c;font-size:.78rem}
 /* 내 신청 목록은 신청자 열이 없다(전부 본인 건). 그만큼 Description 을 넓게 쓴다. */
 #tab-list .list-table td.c-desc{max-width:420px}
+/* 결재함의 마지막 열은 승인·반려 버튼이다. 줄바꿈되거나 잘리면 누를 수 없다.
+   폭(132px)은 버튼 2개 + 사이 공백 + 셀 여백 기준으로 잡았다. */
+#tab-approval .list-table td:last-child{white-space:nowrap;overflow:visible;text-overflow:clip}
+#tab-approval .list-table td:last-child button{white-space:nowrap}
 .badge-type{background:#e1f0ff;color:#0078d4;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
 .badge-대기{background:#fff4ce;color:#7d5700;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
 .badge-승인완료{background:#dff6dd;color:#107c10;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
@@ -504,7 +508,7 @@ if (new URLSearchParams(location.search).get('openId')) {
     <div class="card" style="padding:0;overflow:hidden"><div style="overflow-x:auto">
       <table class="list-table">
         <thead><tr>
-          <th>신청번호</th><th>신청자</th><th>Title</th><th>Type</th><th>Sub Category</th><th>Description</th><th>BP Code</th><th>상태</th><th>신청일</th><th>처리</th>
+          <th style="width:46px">번호</th><th>신청자</th><th>Title</th><th>Type</th><th>Sub Category</th><th>Description</th><th>BP Code</th><th>상태</th><th>신청일</th><th style="width:132px;white-space:nowrap">처리</th>
         </tr></thead>
         <tbody id="appr-body">
           <tr><td colspan="10" style="text-align:center;padding:32px;color:#605e5c">결재 대기 항목이 없습니다.</td></tr>
@@ -1904,10 +1908,12 @@ async function loadApprovalQueue() {
       if (badge0) { badge0.textContent = ''; badge0.style.display = 'none'; }
       return;
     }
-    const rows = mine.map(function(item) {
+    const rows = mine.map(function(item, idx) {
       const f = item.fields;
       const rf = reqMap[String(f.RequestID)] || {};
-      return '<tr onclick="showDetail(' + f.RequestID + ',\'appr\')" style="cursor:pointer"><td style="color:#0078d4;font-weight:600">' + f.RequestID + '</td><td style="font-size:.78rem">' + (rf.RequesterEmail||'') + '</td><td style="font-size:.78rem;color:#0078d4">' + (rf.Title||'-') + '</td><td><span class="badge badge-type">' + (rf.BPType||'') + '</span></td><td>' + (rf.SubCategory||'') + '</td>' + _bpDescCell(rf) + '<td><b>' + (rf.BPCode||'-') + '</b></td><td><span class="badge badge-' + (rf.Status||'대기') + '">' + (rf.Status||'') + '</span></td><td>' + (rf.RequestDate?fmtDate(rf.RequestDate):'') + '</td><td onclick="event.stopPropagation()"><button class="btn-approve" onclick="showConfirm(' + item.id + ',\'승인\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">승인</button> <button class="btn-reject" onclick="showConfirm(' + item.id + ',\'반려\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">반려</button></td></tr>';
+      // 첫 열은 행 번호다. 예전에는 헤더가 「신청번호」인데 RequestID 를 그려
+      // 목록의 번호와 값이 서로 달랐다. IT-Ticket 결재함과 같은 규칙으로 맞춘다.
+      return '<tr onclick="showDetail(' + f.RequestID + ',\'appr\')" style="cursor:pointer"><td style="color:#0078d4;font-weight:600">' + (idx + 1) + '</td><td style="font-size:.78rem">' + (rf.RequesterEmail||'') + '</td><td style="font-size:.78rem;color:#0078d4">' + (rf.Title||'-') + '</td><td><span class="badge badge-type">' + (rf.BPType||'') + '</span></td><td>' + (rf.SubCategory||'') + '</td>' + _bpDescCell(rf) + '<td><b>' + (rf.BPCode||'-') + '</b></td><td><span class="badge badge-' + (rf.Status||'대기') + '">' + (rf.Status||'') + '</span></td><td>' + (rf.RequestDate?fmtDate(rf.RequestDate):'') + '</td><td onclick="event.stopPropagation()"><button class="btn-approve" onclick="showConfirm(' + item.id + ',\'승인\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">승인</button> <button class="btn-reject" onclick="showConfirm(' + item.id + ',\'반려\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">반려</button></td></tr>';
     });
     dynLoadEnd(); pgSet('appr', rows, function(r){ return r; }, '결재 대기 항목이 없습니다.', 10);
     const badge = document.getElementById('appr-badge');
