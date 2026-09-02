@@ -186,6 +186,11 @@ html.standalone-detail.detail-ready #standalone-loader { display: none !importan
 .notice.warn { background: #fff4ce; color: #7d5700; }
 .notice.error { background: #fde7e9; color: #a4262c; }
 .notice.info { background: #dff6dd; color: #107c10; }
+/* 필수 입력 안내. 배너로 칠하면 덩어리가 커져 입력란과 떨어져 보이고,
+   경고(노랑)와 필수(빨강)의 뜻도 섞인다. 배경 없이 빨간 글씨로만 붙인다. */
+.req-hint { display: none; font-size: 11.5px; font-weight: 600; color: #a4262c;
+            margin-top: 3px; line-height: 1.4; }
+.req-hint::before { content: '*'; margin-right: 3px; }
 
 /* ── Tables ── */
 .list-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
@@ -438,7 +443,7 @@ if (new URLSearchParams(location.search).get('openId')) {
             <button id="btn-bp-search" onclick="openBpSearchModal()" disabled
               style="padding:7px 14px;border:1px solid #d2d0ce;border-radius:4px;background:#f3f2f1;font-size:13px;cursor:pointer;white-space:nowrap;display:none">🔍 검색</button>
           </div>
-          <div id="bpcode-notice" class="notice warn" style="display:none">BP Code는 필수 입력 항목입니다.</div>
+          <div id="bpcode-notice" class="req-hint">BP Code는 필수 입력 항목입니다.</div>
         </div>
       </div>
       <!-- 고른 BP 의 마스터 정보. 새 목록을 만들지 않고 검색에 쓰는 마스터 파일을 그대로 보여 준다.
