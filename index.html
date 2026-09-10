@@ -1759,12 +1759,13 @@ async function exportAdminExcel() {
     }
 
     const rows = [headers];
-    let _xlNo = 0;   // 번호는 목록 ID 가 아니라 내보낸 순서(09-10)
+    // 번호 = 신청 순서(가장 오래된 건이 1). 내보내는 행 순서와 무관하게 목록 ID 오름차순으로 매긴다(09-10).
+    const _xlRank = (() => { const m = new Map(); items.map(x => Number(x.id)).sort((a,b) => a-b).forEach((id,i) => m.set(String(id), i+1)); return id => m.get(String(id)) || ''; })();
     items.forEach(item => {
       const f = item.fields;
       const aprs = (apprMap[String(item.id)] || []).sort((a,b) => (a.ApprovalOrder||0)-(b.ApprovalOrder||0));
       const row = [
-        ++_xlNo, f.RequesterEmail||'', f.Title||'', f.BPType||'',
+        _xlRank(item.id), f.RequesterEmail||'', f.Title||'', f.BPType||'',
         f.SubCategory||'', f.BPCode||'', f.Status||'',
         f.RequestDate ? fmtDate(f.RequestDate) : ''
       ];
