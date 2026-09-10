@@ -1753,25 +1753,32 @@ async function exportAdminExcel() {
       if (n > maxAppr) maxAppr = n;
     });
 
-    const headers = ['번호','신청자','Title','Type','Sub Category','BP Code','상태','신청일'];
+    const headers = ['번호','신청자','Title','Type','Sub Category','BP Code','BP Code 변경 횟수','BP Code 변경 이력','상태','신청일'];
     for (let i = 1; i <= maxAppr; i++) {
       headers.push(i+'차 역할', i+'차 결재자', i+'차 이메일', i+'차 상태', i+'차 일시', i+'차 Comment');
     }
 
     const rows = [headers];
+    const logRows = [['번호','Title','신청자','Type','회차','변경일시','변경자','이전 BP Code','이후 BP Code','사유']];
     // 번호 = 신청 순서(가장 오래된 건이 1). 내보내는 행 순서와 무관하게 목록 ID 오름차순으로 매긴다(09-10).
     const _xlRank = (() => { const m = new Map(); items.map(x => Number(x.id)).sort((a,b) => a-b).forEach((id,i) => m.set(String(id), i+1)); return id => m.get(String(id)) || ''; })();
     items.forEach(item => {
       const f = item.fields;
       const aprs = (apprMap[String(item.id)] || []).sort((a,b) => (a.ApprovalOrder||0)-(b.ApprovalOrder||0));
+      // BP Code 변경 이력(JSON) — 목록 시트에는 한 셀에 줄바꿈으로 요약, 별도 시트에는 한 건씩
+      let _logs = [];
+      if (f.BPCodeChangeLog) { try { _logs = JSON.parse(f.BPCodeChangeLog) || []; } catch(e) { _logs = []; } }
+      const _logText = _logs.map(l => (l.changedAt||'') + ' · ' + (l.changedBy||'') + ' · ' + (l.fromCode||'-') + ' → ' + (l.toCode||'-') + (l.reason ? ' · ' + l.reason : '')).join('\n');
+      _logs.forEach((l, k) => logRows.push([_xlRank(item.id), f.Title||'', f.RequesterEmail||'', f.BPType||'', k+1, l.changedAt||'', l.changedBy||'', l.fromCode||'-', l.toCode||'-', l.reason||'']));
       const row = [
         _xlRank(item.id), f.RequesterEmail||'', f.Title||'', f.BPType||'',
-        f.SubCategory||'', f.BPCode||'', f.Status||'',
+        f.SubCategory||'', f.BPCode||'', _logs.length, _logText, f.Status||'',
         f.RequestDate ? fmtDate(f.RequestDate) : ''
       ];
       for (let i = 0; i < maxAppr; i++) {
         const a = aprs[i];
-        if (a) row.push(a.ApproverRole||'', a.ApproverName||'', a.ApproverEmail||'', a.Status||'', a.ApprovalDate ? fmtDate(a.ApprovalDate) : '', a.Comment||'');
+        // Comment 는 SharePoint 여러 줄 열이라 ExternalClass 래퍼가 붙어 온다 — 글자만 남긴다
+        if (a) row.push(a.ApproverRole||'', a.ApproverName||'', a.ApproverEmail||'', a.Status||'', a.ApprovalDate ? fmtDate(a.ApprovalDate) : '', spText(a.Comment||''));
         else row.push('','','','','','');
       }
       rows.push(row);
@@ -1779,7 +1786,7 @@ async function exportAdminExcel() {
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(rows);
-    const colWidths = [{wch:6},{wch:28},{wch:24},{wch:10},{wch:20},{wch:16},{wch:10},{wch:18}];
+    const colWidths = [{wch:6},{wch:28},{wch:24},{wch:10},{wch:20},{wch:16},{wch:9},{wch:48},{wch:10},{wch:18}];
     for (let i = 0; i < maxAppr; i++) colWidths.push({wch:20},{wch:16},{wch:28},{wch:10},{wch:18},{wch:30});
     ws['!cols'] = colWidths;
 
@@ -1790,7 +1797,16 @@ async function exportAdminExcel() {
       ws[ca].s = { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'1F4E79'}}, alignment:{horizontal:'center',wrapText:true} };
     }
 
+    // 「BP Code 변경 이력」 열은 줄바꿈으로 여러 건이 들어가므로 셀을 줄바꿈 표시로
+    const _hc = headers.indexOf('BP Code 변경 이력');
+    for (let R = 1; R <= range.e.r; R++) { const ca = XLSX.utils.encode_cell({r:R, c:_hc}); if (ws[ca]) ws[ca].s = { alignment:{wrapText:true, vertical:'top'} }; }
     XLSX.utils.book_append_sheet(wb, ws, 'BP Master 신청 목록');
+
+    // ── 두 번째 시트: BP Code 변경 이력 (변경 1건 = 1행). 변경이 없으면 안내 한 줄 ──
+    const ws2 = XLSX.utils.aoa_to_sheet(logRows.length > 1 ? logRows : [...logRows, ['', '내보낸 범위에 BP Code 변경 이력이 없습니다.']]);
+    ws2['!cols'] = [{wch:6},{wch:24},{wch:28},{wch:10},{wch:6},{wch:18},{wch:28},{wch:16},{wch:16},{wch:40}];
+    for (let C = 0; C < logRows[0].length; C++) { const ca = XLSX.utils.encode_cell({r:0, c:C}); if (ws2[ca]) ws2[ca].s = { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'1F4E79'}}, alignment:{horizontal:'center',wrapText:true} }; }
+    XLSX.utils.book_append_sheet(wb, ws2, 'BP Code 변경 이력');
     const now = new Date(new Date().getTime()+9*3600*1000);
     const ds = now.getUTCFullYear()+String(now.getUTCMonth()+1).padStart(2,'0')+String(now.getUTCDate()).padStart(2,'0')+'_'+String(now.getUTCHours()).padStart(2,'0')+String(now.getUTCMinutes()).padStart(2,'0');
     XLSX.writeFile(wb, 'BP_Export_'+ds+'.xlsx');
