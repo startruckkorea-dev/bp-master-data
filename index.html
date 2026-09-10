@@ -1759,11 +1759,12 @@ async function exportAdminExcel() {
     }
 
     const rows = [headers];
+    let _xlNo = 0;   // 번호는 목록 ID 가 아니라 내보낸 순서(09-10)
     items.forEach(item => {
       const f = item.fields;
       const aprs = (apprMap[String(item.id)] || []).sort((a,b) => (a.ApprovalOrder||0)-(b.ApprovalOrder||0));
       const row = [
-        item.id, f.RequesterEmail||'', f.Title||'', f.BPType||'',
+        ++_xlNo, f.RequesterEmail||'', f.Title||'', f.BPType||'',
         f.SubCategory||'', f.BPCode||'', f.Status||'',
         f.RequestDate ? fmtDate(f.RequestDate) : ''
       ];
