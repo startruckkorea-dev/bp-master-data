@@ -347,18 +347,19 @@ html.standalone-detail.detail-ready #standalone-loader { display: none !importan
 /* 처리중 — 관리자가 처리 이력을 남기기 시작한 건. 결재가 끝난 것은 아니므로 APS 의 「진행중」과 같은 파랑 */
 .badge-처리중{background:#dbeafe;color:#1d4ed8;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
 /* 처리 이력 (관리자 입력 · 신청자·결재자 열람) */
-.plog-list{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;max-height:240px;overflow-y:auto}
-.plog-item{padding:8px 12px;border-bottom:1px solid #e2e8f0}
-.plog-item:last-child{border-bottom:none}
-.plog-meta{display:flex;justify-content:space-between;gap:8px;font-size:.68rem;color:#a19f9d}
-.plog-by{color:#1d4ed8;font-weight:600}
-.plog-text{font-size:.78rem;color:#323130;white-space:pre-wrap;word-break:break-word;margin-top:3px}
-.plog-empty{padding:12px;text-align:center;color:#a19f9d;font-size:.78rem}
-.plog-input{display:flex;gap:8px;align-items:flex-end;margin-top:8px}
-.plog-input textarea{flex:1;border:1px solid #d2d0ce;border-radius:4px;padding:8px 10px;font-size:.78rem;font-family:inherit;resize:vertical;min-height:54px}
-.plog-input button{padding:7px 16px;background:#0078d4;color:#fff;border:none;border-radius:4px;font-size:.78rem;cursor:pointer;white-space:nowrap;height:34px;font-family:inherit}
+.plog-list{margin-bottom:10px;max-height:200px;overflow-y:auto}
+.plog-item{background:#f0f6ff;border:1px solid #c7e0f4;border-radius:6px;padding:8px 12px;margin-bottom:8px}
+.plog-date{font-size:.68rem;color:#a19f9d;margin-bottom:3px}
+.plog-by{font-size:.74rem;color:#605e5c;margin-bottom:3px}
+.plog-by b{font-weight:600;color:#0078d4}
+.plog-lbl{font-size:.74rem;color:#605e5c;margin-bottom:2px}
+.plog-text{font-size:.8rem;color:#323130;white-space:pre-wrap;word-break:break-word;padding-left:8px}
+.plog-empty{font-size:.74rem;color:#a19f9d;padding:6px 0}
+.plog-input{display:flex;gap:8px;align-items:flex-end}
+.plog-input textarea{flex:1;border:1px solid #d2d0ce;border-radius:4px;padding:8px 10px;font-size:.8rem;font-family:inherit;resize:vertical}
+.plog-input button{padding:7px 16px;background:#0078d4;color:#fff;border:none;border-radius:4px;font-size:.8rem;cursor:pointer;white-space:nowrap;height:fit-content;font-family:inherit}
 .plog-input button:disabled{background:#c8c6c4;cursor:default}
-.plog-note{font-size:.7rem;color:#a19f9d;margin-top:6px}
+.plog-note{font-size:.74rem;color:#a19f9d;padding:8px 0}
 .badge-철회{background:#f1f5f9;color:#64748b;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
 </style>
 <script>
@@ -1563,18 +1564,18 @@ async function showDetail(reqId, fromTab) {
     const _plogClosed = _PLOG_CLOSED.some(c => String(f.Status||'').trim().indexOf(c) === 0);
     const _plogCanWrite = userIsAdmin && fromTab === 'admin' && !_plogClosed;
     const processLogHtml =
-      sec('처리 이력 <span style="font-size:.7rem;font-weight:400;color:#a19f9d">(관리자 입력 · 신청자·결재자 열람)</span>') +
+      // 모양은 SSC 「업무 처리 의견」과 같다(날짜 · 작성자 · 내용 카드, 빈 상태는 한 줄 글자, 입력칸 + 등록 버튼).
+      sec('처리 이력 <span style="font-size:.7rem;font-weight:400;color:#a19f9d">(관리자만 입력 가능 · 결재 진행 중인 건에 한함)</span>') +
       '<div class="plog-list" id="plog-list">' + renderProcessLogItems(_plogs) + '</div>' +
       (_plogCanWrite
         ? '<div class="pdf-exclude"><div class="plog-input">' +
-            '<textarea id="plog-text" maxlength="' + PLOG_MAX + '" placeholder="처리 내용을 입력해 주세요 (예: 사업자등록증 확인 완료, SAP 등록 진행 중)"></textarea>' +
+            '<textarea id="plog-text" rows="2" maxlength="' + PLOG_MAX + '" placeholder="' +
+              (String(f.Status||'').trim() === '대기' ? '처리 관련 내용을 입력해주세요... (첫 등록 시 「처리중」 전환)' : '처리 관련 내용을 입력해주세요...') +
+            '"></textarea>' +
             '<button id="plog-save-btn" onclick="submitProcessLog(' + reqId + ')">등록</button>' +
-          '</div>' +
-          '<div class="plog-note">' + (String(f.Status||'').trim() === '대기'
-            ? '처음 등록하면 상태가 「처리중」으로 바뀌고, 등록 시각과 내용이 이력으로 남습니다.'
-            : '등록 시각과 내용이 이력으로 남으며, 등록한 이력은 수정·삭제할 수 없습니다.') + '</div></div>'
+          '</div></div>'
         : (userIsAdmin && fromTab === 'admin' && _plogClosed
-            ? '<div class="plog-note pdf-exclude">결재가 끝난 신청은 처리 이력을 추가할 수 없습니다.</div>' : ''));
+            ? '<div class="plog-note pdf-exclude">이미 결재가 끝난 신청은 처리 이력을 입력할 수 없습니다.</div>' : ''));
 
     markDetailReady();  // 내용이 채워지는 시점에 로딩 오버레이 해제
     document.getElementById('modal-content').innerHTML =
@@ -1664,11 +1665,14 @@ function parseProcessLog(raw) {
 }
 function renderProcessLogItems(logs) {
   if (!logs || !logs.length) return '<div class="plog-empty">등록된 처리 이력이 없습니다.</div>';
+  // SSC 업무 처리 의견 카드와 같은 구성: 날짜 / 작성자: 메일 (관리자) / 내용:
   return logs.map(l =>
-    '<div class="plog-item"><div class="plog-meta"><span class="plog-by">' + escHtml(l.name || l.email || '') +
-      (l.name && l.email ? ' <span style="color:#a19f9d;font-weight:400">' + escHtml(l.email) + '</span>' : '') +
-    '</span><span>' + escHtml(l.at || '') + '</span></div>' +
-    '<div class="plog-text">' + escHtml(l.text || '') + '</div></div>'
+    '<div class="plog-item">' +
+      '<div class="plog-date">' + escHtml(l.at || '') + '</div>' +
+      '<div class="plog-by">작성자: <b>' + escHtml(l.email || l.name || '') + ' (관리자)</b></div>' +
+      '<div class="plog-lbl">내용:</div>' +
+      '<div class="plog-text">' + escHtml(l.text || '') + '</div>' +
+    '</div>'
   ).join('');
 }
 function _plogNowKst() {
