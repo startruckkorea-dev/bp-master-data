@@ -350,7 +350,7 @@ html.standalone-detail.detail-ready #standalone-loader { display: none !importan
 /* 접수됨 — 관리자가 첫 처리 이력을 남긴 건(SSC 「접수됨」과 같은 이름·색). 결재는 아직 진행 중이다.
    예전 값 「처리중」(09-17 d5cce8b ~ 이번 변경 전)으로 저장된 건도 같은 모양으로 보이게 둔다. */
 .badge-접수됨,.badge-처리중{background:#e0e7ff;color:#4338ca;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
-/* 처리 이력 (관리자 입력 · 신청자·결재자 열람) */
+/* 업무 처리 의견(저장 열 ProcessLog) — 관리자 입력 · 신청자·결재자 열람. 화면 이름은 SSC 와 같게 */
 .plog-list{margin-bottom:10px;max-height:200px;overflow-y:auto}
 .plog-item{background:#f0f6ff;border:1px solid #c7e0f4;border-radius:6px;padding:8px 12px;margin-bottom:8px}
 .plog-date{font-size:.68rem;color:#a19f9d;margin-bottom:3px}
@@ -1580,17 +1580,17 @@ async function showDetail(reqId, fromTab) {
     const _plogCanWrite = userIsAdmin && fromTab === 'admin' && !_plogClosed;
     const processLogHtml =
       // 모양은 SSC 「업무 처리 의견」과 같다(날짜 · 작성자 · 내용 카드, 빈 상태는 한 줄 글자, 입력칸 + 등록 버튼).
-      sec('처리 이력 <span style="font-size:.7rem;font-weight:400;color:#a19f9d">(관리자만 입력 가능 · 결재 진행 중인 건에 한함)</span>') +
+      sec('업무 처리 의견 <span style="font-size:.7rem;font-weight:400;color:#a19f9d">(관리자만 입력 가능 · 결재 진행 중인 건에 한함)</span>') +
       '<div class="plog-list" id="plog-list">' + renderProcessLogItems(_plogs) + '</div>' +
       (_plogCanWrite
         ? '<div class="pdf-exclude"><div class="plog-input">' +
             '<textarea id="plog-text" rows="2" maxlength="' + PLOG_MAX + '" placeholder="' +
-              (String(f.Status||'').trim() === '대기' ? '처리 관련 내용을 입력해주세요... (첫 등록 시 「접수됨」 전환)' : '처리 관련 내용을 입력해주세요...') +
+              (String(f.Status||'').trim() === '대기' ? '처리 관련 의견을 입력해주세요... (첫 등록 시 「접수됨」 전환)' : '처리 관련 의견을 입력해주세요...') +
             '"></textarea>' +
             '<button id="plog-save-btn" onclick="submitProcessLog(' + reqId + ')">등록</button>' +
           '</div></div>'
         : (userIsAdmin && fromTab === 'admin' && _plogClosed
-            ? '<div class="plog-note pdf-exclude">이미 결재가 끝난 신청은 처리 이력을 입력할 수 없습니다.</div>' : ''));
+            ? '<div class="plog-note pdf-exclude">이미 결재가 끝난 신청은 의견을 입력할 수 없습니다.</div>' : ''));
 
     markDetailReady();  // 내용이 채워지는 시점에 로딩 오버레이 해제
     document.getElementById('modal-content').innerHTML =
@@ -1680,7 +1680,7 @@ function parseProcessLog(raw) {
   return tryParse(raw) || tryParse(spText(raw)) || [];
 }
 function renderProcessLogItems(logs) {
-  if (!logs || !logs.length) return '<div class="plog-empty">등록된 처리 이력이 없습니다.</div>';
+  if (!logs || !logs.length) return '<div class="plog-empty">등록된 의견이 없습니다.</div>';
   // SSC 업무 처리 의견 카드와 같은 구성: 날짜 / 작성자: 메일 (관리자) / 내용:
   return logs.map(l =>
     '<div class="plog-item">' +
@@ -1709,7 +1709,7 @@ async function ensureProcessLogColumn() {
     }
     _plogColEnsured = true;
     return true;
-  } catch (e) { console.warn('[처리 이력] ProcessLog 열 확인/생성 실패:', e.message); return false; }
+  } catch (e) { console.warn('[업무 처리 의견] ProcessLog 열 확인/생성 실패:', e.message); return false; }
 }
 async function submitProcessLog(reqId) {
   const textEl = document.getElementById('plog-text');
@@ -1718,7 +1718,7 @@ async function submitProcessLog(reqId) {
   if (text.length > PLOG_MAX) { alert('처리 내용은 ' + PLOG_MAX + '자까지 입력할 수 있습니다.'); return; }
   // 화면에서 입력칸을 숨겨도 콘솔 호출은 막지 못하므로 쓰기 직전에 다시 본다
   const me = (user.email || user.username || '').toLowerCase();
-  if (!ADMIN_EMAILS.map(e => e.toLowerCase()).includes(me)) { alert('처리 이력은 관리자만 등록할 수 있습니다.'); return; }
+  if (!ADMIN_EMAILS.map(e => e.toLowerCase()).includes(me)) { alert('업무 처리 의견은 관리자만 등록할 수 있습니다.'); return; }
   const btn = document.getElementById('plog-save-btn');
   if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
   try {
@@ -1726,7 +1726,7 @@ async function submitProcessLog(reqId) {
     const cur = await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId + '/fields');
     const st = String(cur.Status || '').trim();
     if (_PLOG_CLOSED.some(c => st.indexOf(c) === 0)) {
-      showAlert('처리 이력을 추가할 수 없습니다', '이미 결재가 끝난 신청입니다 (' + st + ').', '⚠️');
+      showAlert('의견을 추가할 수 없습니다', '이미 결재가 끝난 신청입니다 (' + st + ').', '⚠️');
       await showDetail(reqId, 'admin');
       return;
     }
@@ -1749,16 +1749,16 @@ async function submitProcessLog(reqId) {
       } else if (toProcessing) {
         // 상태 값(선택 열 등) 때문에 실패했을 수 있다 — 이력만이라도 남기고 알린다
         await api(path, 'PATCH', { [PLOG_COL]: fields[PLOG_COL] });
-        statusNote = '처리 이력은 저장했지만 상태를 「접수됨」으로 바꾸지 못했습니다(' + e1.message + '). IT 팀에 알려 주세요.';
+        statusNote = '의견은 저장했지만 상태를 「접수됨」으로 바꾸지 못했습니다(' + e1.message + '). IT 팀에 알려 주세요.';
       } else { throw e1; }
     }
-    logAction('BP Master Data', '처리 이력 등록', { 신청: cur.Title || ('ID-' + reqId), 상태전환: toProcessing && !statusNote ? '대기→접수됨' : '없음', 글자수: text.length });
+    logAction('BP Master Data', '업무 처리 의견 등록', { 신청: cur.Title || ('ID-' + reqId), 상태전환: toProcessing && !statusNote ? '대기→접수됨' : '없음', 글자수: text.length });
     _adminItems = []; allRequestsCache = [];
     await showDetail(reqId, 'admin');
     loadAdminList(_adminPage);
     if (statusNote) showAlert('일부만 저장되었습니다', statusNote, '⚠️');
   } catch (e) {
-    alert('처리 이력 저장 실패: ' + e.message);
+    alert('의견 저장 실패: ' + e.message);
   } finally {
     const b = document.getElementById('plog-save-btn');
     if (b) { b.disabled = false; b.textContent = '등록'; }
@@ -2081,14 +2081,14 @@ async function exportAdminExcel() {
     });
 
     // 처리 이력(ProcessLog)은 신청일 뒤에 둔다 — 상태·신청일과 나란히 보이고, 뒤따르는 결재 열 묶음은 그대로다
-    const headers = ['번호','신청자','Title','Type','Sub Category','BP Code','BP Code 변경 횟수','BP Code 변경 이력','상태','신청일','처리 이력 건수','처리 이력'];
+    const headers = ['번호','신청자','Title','Type','Sub Category','BP Code','BP Code 변경 횟수','BP Code 변경 이력','상태','신청일','업무 처리 의견 건수','업무 처리 의견'];
     for (let i = 1; i <= maxAppr; i++) {
       headers.push(i+'차 역할', i+'차 결재자', i+'차 이메일', i+'차 상태', i+'차 일시', i+'차 Comment');
     }
 
     const rows = [headers];
     const logRows = [['번호','Title','신청자','Type','회차','변경일시','변경자','이전 BP Code','이후 BP Code','사유']];
-    const plogRows = [['번호','Title','신청자','Type','현재 상태','회차','등록일시','등록자','등록자 이메일','처리 내용']];
+    const plogRows = [['번호','Title','신청자','Type','현재 상태','회차','등록일시','등록자','등록자 이메일','의견 내용']];
     const XL_CELL_MAX = 32000;   // Excel 한 셀 한도(32,767자) 안쪽
     // 번호 = 신청 순서(가장 오래된 건이 1). 내보내는 행 순서와 무관하게 목록 ID 오름차순으로 매긴다(09-10).
     const _xlRank = (() => { const m = new Map(); items.map(x => Number(x.id)).sort((a,b) => a-b).forEach((id,i) => m.set(String(id), i+1)); return id => m.get(String(id)) || ''; })();
@@ -2103,7 +2103,7 @@ async function exportAdminExcel() {
       // 처리 이력(JSON) — 목록 시트에는 한 셀에 줄바꿈으로 요약, 별도 시트에는 한 건씩(BP Code 변경 이력과 같은 방식)
       const _plogs = parseProcessLog(f.ProcessLog);
       let _plogText = _plogs.map(l => (l.at||'') + ' · ' + (l.name||l.email||'') + ' · ' + (l.text||'')).join('\n');
-      if (_plogText.length > XL_CELL_MAX) _plogText = _plogText.slice(0, XL_CELL_MAX) + '\n… (이하 「처리 이력」 시트 참고)';
+      if (_plogText.length > XL_CELL_MAX) _plogText = _plogText.slice(0, XL_CELL_MAX) + '\n… (이하 「업무 처리 의견」 시트 참고)';
       _plogs.forEach((l, k) => plogRows.push([_xlRank(item.id), f.Title||'', f.RequesterEmail||'', f.BPType||'', f.Status||'', k+1, l.at||'', l.name||'', l.email||'', l.text||'']));
       const row = [
         _xlRank(item.id), f.RequesterEmail||'', f.Title||'', f.BPType||'',
@@ -2135,7 +2135,7 @@ async function exportAdminExcel() {
     // 「BP Code 변경 이력」 열은 줄바꿈으로 여러 건이 들어가므로 셀을 줄바꿈 표시로
     const _hc = headers.indexOf('BP Code 변경 이력');
     for (let R = 1; R <= range.e.r; R++) { const ca = XLSX.utils.encode_cell({r:R, c:_hc}); if (ws[ca]) ws[ca].s = { alignment:{wrapText:true, vertical:'top'} }; }
-    const _pc = headers.indexOf('처리 이력');
+    const _pc = headers.indexOf('업무 처리 의견');
     for (let R = 1; R <= range.e.r; R++) { const ca = XLSX.utils.encode_cell({r:R, c:_pc}); if (ws[ca]) ws[ca].s = { alignment:{wrapText:true, vertical:'top'} }; }
     XLSX.utils.book_append_sheet(wb, ws, 'BP Master 신청 목록');
 
@@ -2146,10 +2146,10 @@ async function exportAdminExcel() {
     XLSX.utils.book_append_sheet(wb, ws2, 'BP Code 변경 이력');
 
     // ── 세 번째 시트: 처리 이력 (등록 1건 = 1행). 없으면 안내 한 줄 ──
-    const ws3 = XLSX.utils.aoa_to_sheet(plogRows.length > 1 ? plogRows : [...plogRows, ['', '내보낸 범위에 처리 이력이 없습니다.']]);
+    const ws3 = XLSX.utils.aoa_to_sheet(plogRows.length > 1 ? plogRows : [...plogRows, ['', '내보낸 범위에 업무 처리 의견이 없습니다.']]);
     ws3['!cols'] = [{wch:6},{wch:24},{wch:28},{wch:10},{wch:10},{wch:6},{wch:18},{wch:14},{wch:28},{wch:60}];
     for (let C = 0; C < plogRows[0].length; C++) { const ca = XLSX.utils.encode_cell({r:0, c:C}); if (ws3[ca]) ws3[ca].s = { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'1F4E79'}}, alignment:{horizontal:'center',wrapText:true} }; }
-    XLSX.utils.book_append_sheet(wb, ws3, '처리 이력');
+    XLSX.utils.book_append_sheet(wb, ws3, '업무 처리 의견');
     const now = new Date(new Date().getTime()+9*3600*1000);
     const ds = now.getUTCFullYear()+String(now.getUTCMonth()+1).padStart(2,'0')+String(now.getUTCDate()).padStart(2,'0')+'_'+String(now.getUTCHours()).padStart(2,'0')+String(now.getUTCMinutes()).padStart(2,'0');
     XLSX.writeFile(wb, 'BP_Export_'+ds+'.xlsx');
