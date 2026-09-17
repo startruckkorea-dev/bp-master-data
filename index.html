@@ -344,8 +344,9 @@ html.standalone-detail.detail-ready #standalone-loader { display: none !importan
 .badge-승인완료{background:#dff6dd;color:#107c10;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
 .badge-반려{background:#fde7e9;color:#a4262c;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
 .badge-진행중{background:#dbeafe;color:#1d4ed8;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
-/* 처리중 — 관리자가 처리 이력을 남기기 시작한 건. 결재가 끝난 것은 아니므로 APS 의 「진행중」과 같은 파랑 */
-.badge-처리중{background:#dbeafe;color:#1d4ed8;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
+/* 접수됨 — 관리자가 첫 처리 이력을 남긴 건(SSC 「접수됨」과 같은 이름·색). 결재는 아직 진행 중이다.
+   예전 값 「처리중」(09-17 d5cce8b ~ 이번 변경 전)으로 저장된 건도 같은 모양으로 보이게 둔다. */
+.badge-접수됨,.badge-처리중{background:#e0e7ff;color:#4338ca;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
 /* 처리 이력 (관리자 입력 · 신청자·결재자 열람) */
 .plog-list{margin-bottom:10px;max-height:200px;overflow-y:auto}
 .plog-item{background:#f0f6ff;border:1px solid #c7e0f4;border-radius:6px;padding:8px 12px;margin-bottom:8px}
@@ -528,7 +529,7 @@ if (new URLSearchParams(location.search).get('openId')) {
       <div class="filter-bar">
         <select id="list-filter-status" onchange="renderMyList()">
           <option value="">전체 상태</option>
-          <option>대기</option><option>처리중</option><option>승인완료</option><option>반려</option><option>철회</option>
+          <option>대기</option><option>접수됨</option><option>승인완료</option><option>반려</option><option>철회</option>
         </select>
         <select id="list-filter-type" onchange="renderMyList()">
           <option value="">전체 Type</option>
@@ -569,7 +570,7 @@ if (new URLSearchParams(location.search).get('openId')) {
       <div class="filter-bar">
         <select id="admin-filter-status" onchange="loadAdminList()">
           <option value="">전체 상태</option>
-          <option>대기</option><option>처리중</option><option>승인완료</option><option>반려</option>
+          <option>대기</option><option>접수됨</option><option>승인완료</option><option>반려</option>
         </select>
         <select id="admin-filter-type" onchange="loadAdminList()">
           <option value="">전체 Type</option>
@@ -869,7 +870,7 @@ function _bpDescCell(f){
 // 상태 → 배지 클래스. 목록과 상세보기가 같은 규칙을 쓰도록 한 곳에 모은다.
 // 괄호가 들어간 값(철회(잠김))은 CSS 클래스명으로 쓸 수 없어 철회로 정규화하고,
 // 승인은 승인완료로 매핑한다. 정의되지 않은 값은 대기로 처리해 평문 노출을 막는다.
-const _BP_ST_CLS = ['대기','처리중','승인완료','반려','진행중','철회'];
+const _BP_ST_CLS = ['대기','접수됨','승인완료','반려','진행중','철회'];
 // 결재 이력 전용 — ACC Voucher 와 동일한 색 글씨 표기
 const _BP_APPR_CLS = {
   '대기':'status-대기', '대기(잠김)':'status-대기잠김',
@@ -881,6 +882,7 @@ function _bpStCls(s){
   if (!v) return 'badge-대기';
   if (v.indexOf('철회') === 0) return 'badge-철회';
   if (v === '승인') return 'badge-승인완료';
+  if (v === '처리중') return 'badge-접수됨';   // 예전 값 — 접수됨과 같은 뜻
   return _BP_ST_CLS.includes(v) ? 'badge-' + v : 'badge-대기';
 }
 
@@ -1570,7 +1572,7 @@ async function showDetail(reqId, fromTab) {
       (_plogCanWrite
         ? '<div class="pdf-exclude"><div class="plog-input">' +
             '<textarea id="plog-text" rows="2" maxlength="' + PLOG_MAX + '" placeholder="' +
-              (String(f.Status||'').trim() === '대기' ? '처리 관련 내용을 입력해주세요... (첫 등록 시 「처리중」 전환)' : '처리 관련 내용을 입력해주세요...') +
+              (String(f.Status||'').trim() === '대기' ? '처리 관련 내용을 입력해주세요... (첫 등록 시 「접수됨」 전환)' : '처리 관련 내용을 입력해주세요...') +
             '"></textarea>' +
             '<button id="plog-save-btn" onclick="submitProcessLog(' + reqId + ')">등록</button>' +
           '</div></div>'
@@ -1650,9 +1652,10 @@ async function showDetail(reqId, fromTab) {
 // ══ 처리 이력 (ProcessLog) ═══════════════════════════════════════════
 // SSC 의 업무 처리 의견(AdminComments)과 같은 방식: 요청 항목 한 칸에 JSON 배열로 쌓는다.
 //   [{ at:'YYYY-MM-DD HH:MM'(KST), name, email, text }]
-// 관리자 탭에서 첫 이력을 남기는 순간 신청 상태를 대기 → 처리중 으로 바꾼다.
-// 결재 흐름은 신청 상태가 아니라 결재행(BP_Approvals)으로 움직이므로 처리중이어도
-// 승인·반려·다음 결재자 해제·최종 승인완료는 그대로 진행되고, 최종 결과가 처리중을 덮어쓴다.
+// 관리자 탭에서 첫 이력을 남기는 순간 신청 상태를 대기 → 접수됨 으로 바꾼다(SSC 처리함 의견 등록과 같은 이름).
+// 결재 흐름은 신청 상태가 아니라 결재행(BP_Approvals)으로 움직이므로 접수됨이어도
+// 승인·반려·다음 결재자 해제·최종 승인완료는 그대로 진행되고, 최종 결과가 접수됨을 덮어쓴다.
+// (09-17 처음 배포 때는 「처리중」 이라는 값을 썼다. 그 값은 읽을 때 접수됨과 같게 취급한다)
 // 결재가 끝난 건(승인완료·반려·철회)에는 추가할 수 없다.
 const PLOG_COL = 'ProcessLog';
 const PLOG_MAX = 1000;
@@ -1718,7 +1721,7 @@ async function submitProcessLog(reqId) {
     logs.push({ at: _plogNowKst(), name: user.name || '', email: user.email || user.username || '', text });
     const toProcessing = (st === '대기' || st === '');
     const fields = { [PLOG_COL]: JSON.stringify(logs) };
-    if (toProcessing) fields.Status = '처리중';
+    if (toProcessing) fields.Status = '접수됨';
     const path = '/sites/' + siteId + '/lists/BP_Requests/items/' + reqId + '/fields';
     let statusNote = '';
     try {
@@ -1733,10 +1736,10 @@ async function submitProcessLog(reqId) {
       } else if (toProcessing) {
         // 상태 값(선택 열 등) 때문에 실패했을 수 있다 — 이력만이라도 남기고 알린다
         await api(path, 'PATCH', { [PLOG_COL]: fields[PLOG_COL] });
-        statusNote = '처리 이력은 저장했지만 상태를 「처리중」으로 바꾸지 못했습니다(' + e1.message + '). IT 팀에 알려 주세요.';
+        statusNote = '처리 이력은 저장했지만 상태를 「접수됨」으로 바꾸지 못했습니다(' + e1.message + '). IT 팀에 알려 주세요.';
       } else { throw e1; }
     }
-    logAction('BP Master Data', '처리 이력 등록', { 신청: cur.Title || ('ID-' + reqId), 상태전환: toProcessing && !statusNote ? '대기→처리중' : '없음', 글자수: text.length });
+    logAction('BP Master Data', '처리 이력 등록', { 신청: cur.Title || ('ID-' + reqId), 상태전환: toProcessing && !statusNote ? '대기→접수됨' : '없음', 글자수: text.length });
     _adminItems = []; allRequestsCache = [];
     await showDetail(reqId, 'admin');
     loadAdminList(_adminPage);
@@ -2536,7 +2539,7 @@ async function withdrawRequest(e, reqId, aprList, reqList) {
 
 function _wdBtn(itemId, aprList, reqList, status) {
   const st = (status && status.Value ? status.Value : status || '').trim();
-  if (st !== '대기' && st !== '처리중') return '';
+  if (st !== '대기' && st !== '접수됨' && st !== '처리중') return '';
   return '<button onclick="withdrawRequest(event,' + itemId + ',\'' + aprList + '\',\'' + reqList + '\')" '
        + 'style="background:#ef4444;color:#fff;border:none;border-radius:4px;padding:2px 12px;font-size:.75rem;line-height:16px;cursor:pointer;font-family:inherit;white-space:nowrap;">Withdraw</button>';
 }
