@@ -328,6 +328,8 @@ html.standalone-detail.detail-ready #standalone-loader { display: none !importan
 /* BP Code — 옆 칸과 같은 크기·보통 굵기(진한 글자색으로만 구분), 숫자 폭 고정 */
 .list-table td.c-code{font-size:.76rem;font-weight:500;color:#201f1e;letter-spacing:.3px;font-variant-numeric:tabular-nums}
 .list-table td.c-code.empty{font-weight:400;color:#c8c6c4}
+/* 결재함에서 배지 옆에 덧붙이는 신청 상태 */
+.c-substat{font-size:.68rem;color:#8a8886;white-space:nowrap}
 /* 글자를 한 단계 줄이고 행 간격도 좁힌다. 한 화면에 더 많은 행이 들어온다. */
 #tab-list .list-table,#tab-approval .list-table,#tab-admin .list-table{font-size:.72rem}
 #tab-list .list-table th,#tab-approval .list-table th,#tab-admin .list-table th{font-size:.68rem;padding:7px 8px}
@@ -868,6 +870,17 @@ function _bpDescCell(f){
   const v = spText((f && f.Description) || '');
   return '<td class="c-desc" title="' + escHtml(v) + '">'
        + (v ? escHtml(v) : '<span style="color:#c8c6c4">-</span>') + '</td>';
+}
+
+// 결재함(내 차례) 화면의 상태 한 칸.
+// 결재자에게는 「신청 전체 상태」보다 「내 단계 상태」가 먼저다. 신청이 접수됨(관리자가 업무 처리 의견을
+// 남겨 처리를 시작한 상태)이어도 1차 결재자는 아직 자기 차례라, 신청 상태만 보여 주면 이미 끝난 것으로 오해한다.
+// 그래서 결재함에서는 내 단계 상태를 배지로 쓰고, 신청 상태는 뜻이 다를 때만 회색 글씨로 덧붙인다.
+function _apprStatusCell(myStatus, reqStatus) {
+  const mine = String(myStatus || '대기').trim();
+  const req  = String(reqStatus || '').trim();
+  const extra = (req && req !== mine && req !== '승인완료') ? ' <span class="c-substat">· ' + escHtml(req) + '</span>' : '';
+  return '<td><span class="badge ' + _bpStCls(mine) + '">' + escHtml(mine) + '</span>' + extra + '</td>';
 }
 
 // 목록의 BP Code 한 칸. 세 표(내 신청 목록·결재함·관리자)가 같은 규칙을 쓴다.
@@ -1597,7 +1610,12 @@ async function showDetail(reqId, fromTab) {
       sec('기본 정보') +
       row('Title', f.Title || '-') +
       row('신청자', f.RequesterEmail) +
-      row('상태', `<span class="badge ${_bpStCls(f.Status)}">${f.Status||'대기'}</span>`) +
+      // 결재함에서 열면 내 단계 상태를 먼저 보여 준다(신청 상태는 뜻이 다를 때만 회색으로 덧붙임).
+      row('상태', (fromTab === 'appr' && myPending)
+        ? `<span class="badge ${_bpStCls(myPending.fields.Status||'대기')}">${escHtml(myPending.fields.Status||'대기')}</span>`
+          + ((f.Status||'').trim() && (f.Status||'').trim() !== (myPending.fields.Status||'대기').trim() && (f.Status||'').trim() !== '승인완료'
+              ? ` <span class="c-substat">· ${escHtml(f.Status)}</span>` : '')
+        : `<span class="badge ${_bpStCls(f.Status)}">${f.Status||'대기'}</span>`) +
       row('신청일', f.RequestDate ? fmtDate(f.RequestDate) : '-') +
       sec('BP 신청 정보') +
       row('Type', f.BPType) +
@@ -2339,7 +2357,7 @@ async function loadApprovalQueue() {
       const rf = reqMap[String(f.RequestID)] || {};
       // 첫 열은 행 번호다. 예전에는 헤더가 「신청번호」인데 RequestID 를 그려
       // 목록의 번호와 값이 서로 달랐다. IT-Ticket 결재함과 같은 규칙으로 맞춘다.
-      return '<tr onclick="showDetail(' + f.RequestID + ',\'appr\')" style="cursor:pointer"><td style="color:#a19f9d;font-size:.66rem">' + (idx + 1) + '</td><td style="font-size:.78rem">' + (rf.RequesterEmail||'') + '</td><td style="font-size:.78rem;color:#0078d4">' + (rf.Title||'-') + '</td><td><span class="' + _bpTypeCls(rf.BPType) + '">' + escHtml(rf.BPType||'') + '</span></td><td>' + (rf.SubCategory||'') + '</td>' + _bpDescCell(rf) + '' + _bpCodeCell(rf.BPCode) + '<td><span class="badge badge-' + (rf.Status||'대기') + '">' + (rf.Status||'') + '</span></td><td>' + (rf.RequestDate?fmtDate(rf.RequestDate):'') + '</td><td onclick="event.stopPropagation()"><button class="btn-approve" onclick="showConfirm(' + item.id + ',\'승인\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">승인</button> <button class="btn-reject" onclick="showConfirm(' + item.id + ',\'반려\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">반려</button></td></tr>';
+      return '<tr onclick="showDetail(' + f.RequestID + ',\'appr\')" style="cursor:pointer"><td style="color:#a19f9d;font-size:.66rem">' + (idx + 1) + '</td><td style="font-size:.78rem">' + (rf.RequesterEmail||'') + '</td><td style="font-size:.78rem;color:#0078d4">' + (rf.Title||'-') + '</td><td><span class="' + _bpTypeCls(rf.BPType) + '">' + escHtml(rf.BPType||'') + '</span></td><td>' + (rf.SubCategory||'') + '</td>' + _bpDescCell(rf) + '' + _bpCodeCell(rf.BPCode) + _apprStatusCell(f.Status, rf.Status) + '<td>' + (rf.RequestDate?fmtDate(rf.RequestDate):'') + '</td><td onclick="event.stopPropagation()"><button class="btn-approve" onclick="showConfirm(' + item.id + ',\'승인\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">승인</button> <button class="btn-reject" onclick="showConfirm(' + item.id + ',\'반려\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">반려</button></td></tr>';
     });
     dynLoadEnd(); pgSet('appr', rows, function(r){ return r; }, '결재 대기 항목이 없습니다.', 10);
     const badge = document.getElementById('appr-badge');
