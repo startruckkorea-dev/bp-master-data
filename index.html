@@ -315,21 +315,23 @@ html.standalone-detail.detail-ready #standalone-loader { display: none !importan
 .list-table tbody tr[onclick]:hover td{background:#f0f6ff}
 /* Description 은 길이 제한이 없는 자유 입력이라 그대로 두면 표가 옆으로 늘어난다.
    한 줄로 접고 넘치면 말줄임한다. 전체 내용은 마우스를 올리면 title 로 보인다. */
-.list-table td.c-desc{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#605e5c;font-size:.78rem}
+.list-table td.c-cust{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#323130;font-size:.78rem}
+#tab-list .list-table td.c-cust{max-width:180px}
+#tab-admin .list-table td.c-cust{max-width:170px}
+.list-table td.c-cust.empty{color:#c8c6c4}
+.list-table td.c-desc{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#605e5c;font-size:.78rem}
 /* 내 신청 목록은 신청자 열이 없다(전부 본인 건). 그만큼 Description 을 넓게 쓴다. */
-#tab-list .list-table td.c-desc{max-width:420px}
+#tab-list .list-table td.c-desc{max-width:240px}
 /* 관리자 탭은 신청자·Description 이 둘 다 길다. 신청자는 도메인이 모두 같아
    앞부분만 봐도 구분되므로 접고(전체는 title), 그만큼을 Description 에 준다. */
 #tab-admin .list-table td.c-mail{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* 한 화면에 다 들어오도록 Description 폭을 실측에 맞춘다.
    1280 − 앱여백 32 − 카드여백 48 − 테두리 2 = 1198px 이 쓸 수 있는 폭이고,
    나머지 여덟 열에 828px 이 필요하다. 남는 370px 을 Description 이 가져간다. */
-#tab-admin .list-table td.c-desc{max-width:370px}
+#tab-admin .list-table td.c-desc{max-width:230px}
 /* BP Code — 옆 칸과 같은 크기·보통 굵기(진한 글자색으로만 구분), 숫자 폭 고정 */
 .list-table td.c-code{font-size:.76rem;font-weight:500;color:#201f1e;letter-spacing:.3px;font-variant-numeric:tabular-nums}
 .list-table td.c-code.empty{font-weight:400;color:#c8c6c4}
-/* 결재함에서 배지 옆에 덧붙이는 신청 상태 */
-.c-substat{font-size:.68rem;color:#8a8886;white-space:nowrap}
 /* 글자를 한 단계 줄이고 행 간격도 좁힌다. 한 화면에 더 많은 행이 들어온다. */
 #tab-list .list-table,#tab-approval .list-table,#tab-admin .list-table{font-size:.72rem}
 #tab-list .list-table th,#tab-approval .list-table th,#tab-admin .list-table th{font-size:.68rem;padding:7px 8px}
@@ -486,6 +488,12 @@ if (new URLSearchParams(location.search).get('openId')) {
       <div class="section-title">3. 요청사항</div>
       <div class="form-row full">
         <div class="form-group">
+          <label>업체이름 (고객이름)</label>
+          <input type="text" id="inp-custname" maxlength="255" placeholder="Vendor 는 업체명, Customer 는 고객명을 입력해주세요. (예: HD Hyundai Oilbank / Song, Yu-hee 송유희)">
+        </div>
+      </div>
+      <div class="form-row full">
+        <div class="form-group">
           <label>요청사항 <span class="req">*</span></label>
           <textarea id="inp-desc" placeholder="요청사항을 자세히 기입해주시기 바랍니다.&#10;Ex. 통장 계좌 추가 등록, 신규 Vendor Code 생성 등"></textarea>
         </div>
@@ -540,12 +548,12 @@ if (new URLSearchParams(location.search).get('openId')) {
           <option value="">전체 Type</option>
           <option>Vendor</option><option>Customer</option>
         </select>
-        <input type="text" id="list-filter-bpcode" oninput="renderMyList()" placeholder="Title / BP Code 검색..." style="width:220px">
+        <input type="text" id="list-filter-bpcode" oninput="renderMyList()" placeholder="Title / BP Code / 업체이름 / 요청사항 검색..." style="width:280px">
         <span id="list-count" style="font-size:13px;color:#605e5c;margin-left:auto"></span>
       </div>
       <table class="list-table">
         <thead><tr>
-          <th>번호</th><th>Title</th><th>Description</th><th>Type</th><th>Sub Category</th><th>BP Code</th><th>상태</th><th>신청일</th>
+          <th>번호</th><th>Title</th><th>업체이름(고객이름)</th><th>Description</th><th>Type</th><th>Sub Category</th><th>BP Code</th><th>상태</th><th>신청일</th>
         <th style="width:90px;text-align:center;white-space:nowrap;">Withdraw</th></tr></thead>
         <tbody id="list-body">
           <tr><td colspan="9" style="text-align:center;padding:32px;color:#605e5c"><div class="dyn-dots" style="justify-content:center"><span></span><span></span><span></span></div></td></tr>
@@ -559,7 +567,7 @@ if (new URLSearchParams(location.search).get('openId')) {
     <div class="card" style="padding:0;overflow:hidden"><div style="overflow-x:auto">
       <table class="list-table">
         <thead><tr>
-          <th style="width:46px">번호</th><th>신청자</th><th>Title</th><th>Type</th><th>Sub Category</th><th>Description</th><th>BP Code</th><th>상태</th><th>신청일</th><th style="width:132px;white-space:nowrap">처리</th>
+          <th style="width:46px">번호</th><th>신청자</th><th>Title</th><th>Type</th><th>Sub Category</th><th>업체이름(고객이름)</th><th>Description</th><th>BP Code</th><th>상태</th><th>신청일</th><th style="width:132px;white-space:nowrap">처리</th>
         </tr></thead>
         <tbody id="appr-body">
           <tr><td colspan="10" style="text-align:center;padding:32px;color:#605e5c">결재 대기 항목이 없습니다.</td></tr>
@@ -582,13 +590,14 @@ if (new URLSearchParams(location.search).get('openId')) {
           <option>Vendor</option><option>Customer</option>
         </select>
         <input type="text" id="admin-filter-search" oninput="loadAdminList()" placeholder="신청자 검색...">
+        <input type="text" id="admin-filter-cust" oninput="loadAdminList()" placeholder="업체이름(고객이름) / 요청사항 검색..." style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;width:230px">
         <input type="text" id="admin-filter-bpcode" oninput="loadAdminList()" placeholder="BP Code 검색..." style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;width:160px">
         <span id="admin-count" style="font-size:13px;color:#605e5c;margin-left:auto"></span>
         <button onclick="exportAdminExcel()" style="padding:6px 14px;background:#107c10;color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;white-space:nowrap">📊 Excel 내보내기</button>
       </div>
       <table class="list-table">
         <thead><tr>
-          <th>번호</th><th>신청자</th><th>Title</th><th>Type</th><th>Sub Category</th><th>Description</th><th>BP Code</th><th>상태</th><th>신청일</th>
+          <th>번호</th><th>신청자</th><th>Title</th><th>Type</th><th>Sub Category</th><th>업체이름(고객이름)</th><th>Description</th><th>BP Code</th><th>상태</th><th>신청일</th>
         </tr></thead>
         <tbody id="admin-body">
           <tr><td colspan="9" style="text-align:center;padding:32px;color:#605e5c"><div class="dyn-dots" style="justify-content:center"><span></span><span></span><span></span></div></td></tr>
@@ -866,6 +875,12 @@ function _bpTypeCls(t){
   return /customer/i.test(String(t || '')) ? 'badge badge-type-customer' : 'badge badge-type';
 }
 
+// 업체이름(고객이름) 한 칸 — Description 왼쪽. 값은 신청자 입력이라 이스케이프한다.
+function _bpCustCell(v){
+  const t = String(v == null ? '' : v).trim();
+  return t ? '<td class="c-cust" title="' + escHtml(t) + '">' + escHtml(t) + '</td>'
+           : '<td class="c-cust empty">-</td>';
+}
 function _bpDescCell(f){
   const v = spText((f && f.Description) || '');
   return '<td class="c-desc" title="' + escHtml(v) + '">'
@@ -877,10 +892,9 @@ function _bpDescCell(f){
 // 남겨 처리를 시작한 상태)이어도 1차 결재자는 아직 자기 차례라, 신청 상태만 보여 주면 이미 끝난 것으로 오해한다.
 // 그래서 결재함에서는 내 단계 상태를 배지로 쓰고, 신청 상태는 뜻이 다를 때만 회색 글씨로 덧붙인다.
 function _apprStatusCell(myStatus, reqStatus) {
+  // 09-18: 신청 상태(접수됨)를 덧붙이면 결재자가 오히려 헷갈린다는 의견에 따라 내 단계만 보여 준다.
   const mine = String(myStatus || '대기').trim();
-  const req  = String(reqStatus || '').trim();
-  const extra = (req && req !== mine && req !== '승인완료') ? ' <span class="c-substat">· ' + escHtml(req) + '</span>' : '';
-  return '<td><span class="badge ' + _bpStCls(mine) + '">' + escHtml(mine) + '</span>' + extra + '</td>';
+  return '<td><span class="badge ' + _bpStCls(mine) + '">' + escHtml(mine) + '</span></td>';
 }
 
 // 목록의 BP Code 한 칸. 세 표(내 신청 목록·결재함·관리자)가 같은 규칙을 쓴다.
@@ -1411,6 +1425,7 @@ async function submitRequest() {
   const subcat = document.getElementById('sel-subcat').value;
   const bpcode = document.getElementById('inp-bpcode').value.trim();
   const desc   = document.getElementById('inp-desc').value.trim();
+  const custNm = (document.getElementById('inp-custname')?.value || '').trim();
   if (!type)   return alert('Type을 선택해주세요.');
   if (!subcat) return alert('Sub Category를 선택해주세요.');
   if (subcat !== 'BP creation' && !bpcode) return alert('BP Code를 입력해주세요.');
@@ -1425,6 +1440,7 @@ async function submitRequest() {
         Title: 'BP-tmp',
         BPType: type, SubCategory: subcat,
         BPCode: subcat === 'BP creation' ? '' : bpcode,
+        CustomerName: custNm,
         Description: desc, Status: '대기',
         RequesterEmail: user.username,
         RequestDate: new Date().toISOString()
@@ -1613,14 +1629,13 @@ async function showDetail(reqId, fromTab) {
       // 결재함에서 열면 내 단계 상태를 먼저 보여 준다(신청 상태는 뜻이 다를 때만 회색으로 덧붙임).
       row('상태', (fromTab === 'appr' && myPending)
         ? `<span class="badge ${_bpStCls(myPending.fields.Status||'대기')}">${escHtml(myPending.fields.Status||'대기')}</span>`
-          + ((f.Status||'').trim() && (f.Status||'').trim() !== (myPending.fields.Status||'대기').trim() && (f.Status||'').trim() !== '승인완료'
-              ? ` <span class="c-substat">· ${escHtml(f.Status)}</span>` : '')
         : `<span class="badge ${_bpStCls(f.Status)}">${f.Status||'대기'}</span>`) +
       row('신청일', f.RequestDate ? fmtDate(f.RequestDate) : '-') +
       sec('BP 신청 정보') +
       row('Type', f.BPType) +
       row('Sub Category', f.SubCategory) +
       row('BP Code', f.BPCode || '-') +
+      row('업체이름(고객이름)', escHtml(String(f.CustomerName||'').trim()) || '-') +
       (f.Description ? row('Description', '<span style="white-space:pre-wrap">' + safeText(f.Description) + '</span>') : '') +
       sec('첨부파일') + filesHtml +
       processLogHtml +
@@ -2074,11 +2089,17 @@ async function exportAdminExcel() {
   const filterType   = document.getElementById('admin-filter-type')?.value || '';
   const filterSearch = (document.getElementById('admin-filter-search')?.value || '').toLowerCase();
   const filterBpcode = (document.getElementById('admin-filter-bpcode')?.value || '').toLowerCase();
+  const filterCust   = (document.getElementById('admin-filter-cust')?.value || '').toLowerCase();
   let items = [..._adminItems];
   if (filterStatus) items = items.filter(i => i.fields.Status === filterStatus);
   if (filterType)   items = items.filter(i => i.fields.BPType === filterType);
   if (filterSearch) items = items.filter(i => (i.fields.RequesterEmail||'').toLowerCase().includes(filterSearch));
   if (filterBpcode) items = items.filter(i => (i.fields.BPCode||'').toLowerCase().includes(filterBpcode));
+  if (filterCust)   items = items.filter(i => {
+    const _f = i.fields;
+    const hay = (String(_f.CustomerName||'') + ' ' + String(_f.Description||'').replace(/<[^>]*>/g, ' ')).toLowerCase();
+    return hay.includes(filterCust);
+  });
   if (!items.length) { alert('내보낼 데이터가 없습니다.'); return; }
   logAction('BP Master Data', 'Excel 내보내기', { 건수: items.length, 필터: { 상태: filterStatus||'전체', 유형: filterType||'전체', 검색어: filterSearch||'', BP코드: filterBpcode||'' } });
 
@@ -2099,7 +2120,7 @@ async function exportAdminExcel() {
     });
 
     // 처리 이력(ProcessLog)은 신청일 뒤에 둔다 — 상태·신청일과 나란히 보이고, 뒤따르는 결재 열 묶음은 그대로다
-    const headers = ['번호','신청자','Title','Type','Sub Category','BP Code','BP Code 변경 횟수','BP Code 변경 이력','상태','신청일','업무 처리 의견 건수','업무 처리 의견'];
+    const headers = ['번호','신청자','Title','Type','Sub Category','업체이름(고객이름)','BP Code','BP Code 변경 횟수','BP Code 변경 이력','상태','신청일','업무 처리 의견 건수','업무 처리 의견'];
     for (let i = 1; i <= maxAppr; i++) {
       headers.push(i+'차 역할', i+'차 결재자', i+'차 이메일', i+'차 상태', i+'차 일시', i+'차 Comment');
     }
@@ -2125,7 +2146,7 @@ async function exportAdminExcel() {
       _plogs.forEach((l, k) => plogRows.push([_xlRank(item.id), f.Title||'', f.RequesterEmail||'', f.BPType||'', f.Status||'', k+1, l.at||'', l.name||'', l.email||'', l.text||'']));
       const row = [
         _xlRank(item.id), f.RequesterEmail||'', f.Title||'', f.BPType||'',
-        f.SubCategory||'', f.BPCode||'', _logs.length, _logText, f.Status||'',
+        f.SubCategory||'', f.CustomerName||'', f.BPCode||'', _logs.length, _logText, f.Status||'',
         f.RequestDate ? fmtDate(f.RequestDate) : '', _plogs.length, _plogText
       ];
       for (let i = 0; i < maxAppr; i++) {
@@ -2139,7 +2160,7 @@ async function exportAdminExcel() {
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(rows);
-    const colWidths = [{wch:6},{wch:28},{wch:24},{wch:10},{wch:20},{wch:16},{wch:9},{wch:48},{wch:10},{wch:18},{wch:9},{wch:60}];
+    const colWidths = [{wch:6},{wch:28},{wch:24},{wch:10},{wch:20},{wch:24},{wch:16},{wch:9},{wch:48},{wch:10},{wch:18},{wch:9},{wch:60}];
     for (let i = 0; i < maxAppr; i++) colWidths.push({wch:20},{wch:16},{wch:28},{wch:10},{wch:18},{wch:30});
     ws['!cols'] = colWidths;
 
@@ -2186,6 +2207,7 @@ async function loadAdminList(page) {
   const filterType   = document.getElementById('admin-filter-type')?.value || '';
   const filterSearch = (document.getElementById('admin-filter-search')?.value || '').toLowerCase();
   const filterBpcode = (document.getElementById('admin-filter-bpcode')?.value || '').toLowerCase();
+  const filterCust   = (document.getElementById('admin-filter-cust')?.value || '').toLowerCase();
 
   // 페이지 이동이면 해당 페이지로, 필터 변경이면 1페이지로
   if (page === undefined) { _adminPage = 0; }
@@ -2211,12 +2233,17 @@ async function loadAdminList(page) {
   if (filterType)   items = items.filter(i => i.fields.BPType === filterType);
   if (filterSearch) items = items.filter(i => (i.fields.RequesterEmail||'').toLowerCase().includes(filterSearch));
   if (filterBpcode) items = items.filter(i => (i.fields.BPCode||'').toLowerCase().includes(filterBpcode));
+  if (filterCust)   items = items.filter(i => {
+    const _f = i.fields;
+    const hay = (String(_f.CustomerName||'') + ' ' + String(_f.Description||'').replace(/<[^>]*>/g, ' ')).toLowerCase();
+    return hay.includes(filterCust);
+  });
 
   const total = items.length;
   const totalPages = Math.ceil(total / ADMIN_PAGE_SIZE);
   if (countEl) countEl.textContent = '총 ' + total + '건';
 
-  if (!total) { pgSet('admin', [], null, '데이터가 없습니다.', 9); renderAdminPagination(0, 0); return; }
+  if (!total) { pgSet('admin', [], null, '데이터가 없습니다.', 10); renderAdminPagination(0, 0); return; }
 
   // 페이지 슬라이스
   const pageItems = items.slice(_adminPage * ADMIN_PAGE_SIZE, (_adminPage + 1) * ADMIN_PAGE_SIZE);
@@ -2230,12 +2257,13 @@ async function loadAdminList(page) {
       + '<td style="font-size:.78rem;color:#0078d4">' + escHtml(f.Title||'-') + '</td>'
       + '<td><span class="' + _bpTypeCls(f.BPType) + '">' + escHtml(f.BPType||'') + '</span></td>'
       + '<td>' + (f.SubCategory||'') + '</td>'
+      + _bpCustCell(f.CustomerName)
       + _bpDescCell(f)
       + _bpCodeCell(f.BPCode)
       + '<td><span class="badge '+_bpStCls(f.Status)+'">' + (f.Status||'대기') + '</span></td>'
       + '<td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td>'
       + '</tr>';
-  }, '데이터가 없습니다.', 8);
+  }, '데이터가 없습니다.', 9);
 
   renderAdminPagination(totalPages, _adminPage);
 }
@@ -2314,8 +2342,10 @@ function renderMyList() {
     if (fStatus && !String(f.Status||'').startsWith(fStatus)) return false;
     if (fType   && String(f.BPType||'') !== fType) return false;
     if (fCode) {
-      const hay  = (String(f.BPCode||'') + ' ' + String(f.Title||'')).toLowerCase();
-      const hayN = _norm(f.BPCode) + ' ' + _norm(f.Title);
+      // 업체이름(고객이름)과 요청사항까지 함께 찾는다. Description 은 여러 줄 텍스트라 태그를 걷어낸 글자로 본다.
+      const _desc = String(f.Description||'').replace(/<[^>]*>/g, ' ');
+      const hay  = (String(f.BPCode||'') + ' ' + String(f.Title||'') + ' ' + String(f.CustomerName||'') + ' ' + _desc).toLowerCase();
+      const hayN = _norm(f.BPCode) + ' ' + _norm(f.Title) + ' ' + _norm(f.CustomerName) + ' ' + _norm(_desc);
       if (!hay.includes(fCode) && !(fCodeN && hayN.includes(fCodeN))) return false;
     }
     return true;
@@ -2325,10 +2355,10 @@ function renderMyList() {
     ? '필터 ' + mine.length + '건 / 전체 ' + _myListRaw.length + '건'
     : '총 ' + _myListRaw.length + '건';
   if (!mine.length) {
-    pgSet('list', [], null, (fStatus||fType||fCode) ? '조회 결과가 없습니다.' : '신청 내역이 없습니다.', 9);
+    pgSet('list', [], null, (fStatus||fType||fCode) ? '조회 결과가 없습니다.' : '신청 내역이 없습니다.', 10);
     return;
   }
-  pgSet('list', mine, (item,idx)=>{ const f = item.fields; const rowNum = mine.length - idx; return '<tr onclick="showDetail(' + item.id + ',\'list\')" style="cursor:pointer"><td style="color:#a19f9d;font-size:.66rem">' + rowNum + '</td><td style="font-size:.78rem;color:#0078d4">' + (f.Title||'-') + '</td>' + _bpDescCell(f) + '<td><span class="' + _bpTypeCls(f.BPType) + '">' + escHtml(f.BPType||'') + '</span></td><td>' + (f.SubCategory||'') + '</td>' + _bpCodeCell(f.BPCode) + '<td><span class="badge badge-' + (f.Status||'대기') + '">' + (f.Status||'') + '</span></td><td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td><td style="text-align:center;vertical-align:middle;padding:6px 8px;">'+_wdBtn(item.id,'BP_Approvals','BP_Requests',f.Status)+'</td></tr>'; }, '신청 내역이 없습니다.', 9);
+  pgSet('list', mine, (item,idx)=>{ const f = item.fields; const rowNum = mine.length - idx; return '<tr onclick="showDetail(' + item.id + ',\'list\')" style="cursor:pointer"><td style="color:#a19f9d;font-size:.66rem">' + rowNum + '</td><td style="font-size:.78rem;color:#0078d4">' + (f.Title||'-') + '</td>' + _bpCustCell(f.CustomerName) + _bpDescCell(f) + '<td><span class="' + _bpTypeCls(f.BPType) + '">' + escHtml(f.BPType||'') + '</span></td><td>' + (f.SubCategory||'') + '</td>' + _bpCodeCell(f.BPCode) + '<td><span class="badge badge-' + (f.Status||'대기') + '">' + (f.Status||'') + '</span></td><td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td><td style="text-align:center;vertical-align:middle;padding:6px 8px;">'+_wdBtn(item.id,'BP_Approvals','BP_Requests',f.Status)+'</td></tr>'; }, '신청 내역이 없습니다.', 10);
 }
 
 async function loadApprovalQueue() {
@@ -2347,7 +2377,7 @@ async function loadApprovalQueue() {
       .sort(function(a,b){ return b.fields.RequestID - a.fields.RequestID; });
     if (!mine.length) {
       dynLoadEnd();
-      pgSet('appr', [], null, '결재 대기 항목이 없습니다.', 10);
+      pgSet('appr', [], null, '결재 대기 항목이 없습니다.', 11);
       const badge0 = document.getElementById('appr-badge');
       if (badge0) { badge0.textContent = ''; badge0.style.display = 'none'; }
       return;
@@ -2357,9 +2387,9 @@ async function loadApprovalQueue() {
       const rf = reqMap[String(f.RequestID)] || {};
       // 첫 열은 행 번호다. 예전에는 헤더가 「신청번호」인데 RequestID 를 그려
       // 목록의 번호와 값이 서로 달랐다. IT-Ticket 결재함과 같은 규칙으로 맞춘다.
-      return '<tr onclick="showDetail(' + f.RequestID + ',\'appr\')" style="cursor:pointer"><td style="color:#a19f9d;font-size:.66rem">' + (idx + 1) + '</td><td style="font-size:.78rem">' + (rf.RequesterEmail||'') + '</td><td style="font-size:.78rem;color:#0078d4">' + (rf.Title||'-') + '</td><td><span class="' + _bpTypeCls(rf.BPType) + '">' + escHtml(rf.BPType||'') + '</span></td><td>' + (rf.SubCategory||'') + '</td>' + _bpDescCell(rf) + '' + _bpCodeCell(rf.BPCode) + _apprStatusCell(f.Status, rf.Status) + '<td>' + (rf.RequestDate?fmtDate(rf.RequestDate):'') + '</td><td onclick="event.stopPropagation()"><button class="btn-approve" onclick="showConfirm(' + item.id + ',\'승인\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">승인</button> <button class="btn-reject" onclick="showConfirm(' + item.id + ',\'반려\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">반려</button></td></tr>';
+      return '<tr onclick="showDetail(' + f.RequestID + ',\'appr\')" style="cursor:pointer"><td style="color:#a19f9d;font-size:.66rem">' + (idx + 1) + '</td><td style="font-size:.78rem">' + (rf.RequesterEmail||'') + '</td><td style="font-size:.78rem;color:#0078d4">' + (rf.Title||'-') + '</td><td><span class="' + _bpTypeCls(rf.BPType) + '">' + escHtml(rf.BPType||'') + '</span></td><td>' + (rf.SubCategory||'') + '</td>' + _bpCustCell(rf.CustomerName) + _bpDescCell(rf) + _bpCodeCell(rf.BPCode) + _apprStatusCell(f.Status, rf.Status) + '<td>' + (rf.RequestDate?fmtDate(rf.RequestDate):'') + '</td><td onclick="event.stopPropagation()"><button class="btn-approve" onclick="showConfirm(' + item.id + ',\'승인\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">승인</button> <button class="btn-reject" onclick="showConfirm(' + item.id + ',\'반려\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">반려</button></td></tr>';
     });
-    dynLoadEnd(); pgSet('appr', rows, function(r){ return r; }, '결재 대기 항목이 없습니다.', 10);
+    dynLoadEnd(); pgSet('appr', rows, function(r){ return r; }, '결재 대기 항목이 없습니다.', 11);
     const badge = document.getElementById('appr-badge');
     if (mine.length) { badge.textContent = mine.length; badge.style.display = 'inline'; }
     else { badge.textContent = ''; badge.style.display = 'none'; }
