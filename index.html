@@ -379,8 +379,13 @@ html.standalone-detail.detail-ready #standalone-loader { display: none !importan
 (function () {
   var oid = new URLSearchParams(location.search).get('openId');
   try {
-    if (oid) sessionStorage.setItem('bp_openid', oid);
-    else oid = sessionStorage.getItem('bp_openid');
+    if (oid) sessionStorage.setItem('bp_openid', JSON.stringify({ id: oid, at: Date.now() }));
+    else {
+      // 10분이 지난 보관 값은 쓰지 않고 지운다(오래된 건이 갑자기 단독으로 열리지 않게).
+      var saved = JSON.parse(sessionStorage.getItem('bp_openid') || 'null');
+      if (saved && saved.id && Date.now() - (saved.at || 0) < 10 * 60 * 1000) oid = saved.id;
+      else sessionStorage.removeItem('bp_openid');
+    }
   } catch (e) { /* 저장소를 못 쓰면 주소 값만 쓴다 */ }
   if (oid) document.documentElement.classList.add('standalone-detail');
 })();
@@ -1199,7 +1204,13 @@ async function boot(account) {
   // URL로 특정 요청 상세를 바로 열기 (다른 시스템에서 연동 링크로 진입할 때)
   // 로그인 왕복으로 주소가 비었으면 <head> 에서 보관해 둔 값을 쓴다. 한 번 쓰면 지운다.
   let _openId = new URLSearchParams(location.search).get('openId');
-  try { if (!_openId) _openId = sessionStorage.getItem('bp_openid'); sessionStorage.removeItem('bp_openid'); } catch (e) {}
+  try {
+    if (!_openId) {
+      const _s = JSON.parse(sessionStorage.getItem('bp_openid') || 'null');
+      if (_s && _s.id && Date.now() - (_s.at || 0) < DEEPLINK_TTL_MS) _openId = _s.id;
+    }
+    sessionStorage.removeItem('bp_openid');
+  } catch (e) {}
   if (_openId) {
     // 단독 상세보기 모드: 작성 폼·헤더·탭은 필요 없으므로 배경색만 남기고 전부 숨김
     _standaloneDetail = true;
@@ -2570,12 +2581,15 @@ async function loadUnifiedBadge() {
 // 탭이 닫혀 결재 흐름에 맞지 않는다.
 // 로그인 왕복에서 쿼리가 사라지므로 먼저 탭 저장소에 옮겨 두고 주소창에서는 지운다. 한 번 쓰면 지운다.
 const DEEPLINK_KEY = 'bp_deeplink';
+/* 보관 값은 10분만 유효하다. 로그인 화면에서 멈춘 채 같은 탭에서 다른 주소로 갔다가 나중에 이 시스템을
+   열면, 한참 전의 건이 갑자기 열리는 일을 막는다(2026-09-21 재리뷰). */
+const DEEPLINK_TTL_MS = 10 * 60 * 1000;
 (function captureDeepLink() {
   try {
     const q = new URLSearchParams(window.location.search);
     const tab = q.get('tab'), id = q.get('id');
     if (tab || id) {
-      sessionStorage.setItem(DEEPLINK_KEY, JSON.stringify({ tab: tab || '', id: id || '' }));
+      sessionStorage.setItem(DEEPLINK_KEY, JSON.stringify({ tab: tab || '', id: id || '', at: Date.now() }));
       q.delete('tab'); q.delete('id');
       const rest = q.toString();
       history.replaceState(null, '', window.location.pathname + (rest ? '?' + rest : '') + window.location.hash);
@@ -2588,9 +2602,16 @@ function deepLinkIsAdmin() {
   const mine = [user && user.email, user && user.username].map((x) => String(x || '').toLowerCase()).filter(Boolean);
   return ADMIN_EMAILS.map((e) => String(e || '').toLowerCase()).some((e) => e && mine.includes(e));
 }
+/* 돌려주는 값: true(허용) · 'notfound'(없는 건) · false(권한 없음 · 확인 실패) */
 async function deepLinkAllowed(id) {
+  let r;
   try {
-    const r = await api('/sites/' + siteId + '/lists/BP_Requests/items/' + id + '?$expand=fields($select=RequesterEmail)');
+    r = await api('/sites/' + siteId + '/lists/BP_Requests/items/' + id + '?$expand=fields($select=RequesterEmail)');
+  } catch (e) {
+    console.warn('[딥링크] 건 조회 실패:', e.message);
+    return /not\s*found|404/i.test(String(e.message)) ? 'notfound' : false;
+  }
+  try {
     const mine = [user && user.email, user && user.username].map((x) => String(x || '').toLowerCase()).filter(Boolean);
     if (mine.includes(String(r.fields && r.fields.RequesterEmail || '').toLowerCase())) return true;
     if (deepLinkIsAdmin()) return true;
@@ -2606,13 +2627,18 @@ async function consumeDeepLink() {
   try { d = JSON.parse(sessionStorage.getItem(DEEPLINK_KEY) || 'null'); sessionStorage.removeItem(DEEPLINK_KEY); }
   catch (e) { d = null; }
   if (!d) return;
+  if (!d.at || Date.now() - d.at > DEEPLINK_TTL_MS) return;   // 오래된 값은 버린다
   const id = parseInt(d.id, 10);
   // 관리자 탭은 기존 권한 검사를 거치게 두고, 알 수 없는 값은 무시한다. id 만 오면 결재함으로 연다.
   const tab = ['form', 'list', 'approval', 'admin'].includes(d.tab) ? d.tab : (id > 0 ? 'approval' : '');
   if (tab) switchTab(tab);
   if (!(id > 0)) return;
-  if (!(await deepLinkAllowed(id))) {
-    alert('이 신청 건을 볼 수 있는 권한이 없습니다.\n결재함에서 내 결재 건을 확인해 주세요.');
+  /* 없는 번호(삭제된 건 등)를 「권한 없음」 으로 안내하면 원인을 잘못 짚게 된다 — 따로 알린다. */
+  const _allow = await deepLinkAllowed(id);
+  if (_allow !== true) {
+    alert(_allow === 'notfound'
+      ? '해당 신청 건을 찾을 수 없습니다. 삭제되었거나 번호가 잘못되었습니다.\n결재함에서 내 결재 건을 확인해 주세요.'
+      : '이 신청 건을 볼 수 있는 권한이 없습니다.\n결재함에서 내 결재 건을 확인해 주세요.');
     return;
   }
   try { await showDetail(id, 'appr'); } catch (e) { console.warn('[딥링크] 상세 열기 실패:', e.message); return; }
