@@ -390,8 +390,47 @@ html.standalone-detail.detail-ready #standalone-loader { display: none !importan
   if (oid) document.documentElement.classList.add('standalone-detail');
 })();
 </script>
+<style>
+/* 결재 딥링크(?tab=approval&id=)로 들어오면 작성 화면이 1~2초 보였다가 상세 팝업이 떴다(2026-09-21 지적).
+   SSC → BP · FA · ACC 연동 링크의 단독 보기처럼, 화면을 숨기고 로더만 보이다가 상세 팝업을 드러낸다.
+   단독 보기와 달리 팝업을 닫으면 결재함 화면이 그대로 남는다(결재 흐름을 이어 가야 하므로). */
+html.deeplink-open #app, html.deeplink-open footer { visibility: hidden !important; }
+html.deeplink-open #loading, html.deeplink-open #dyn-loading { display: none !important; }
+html.deeplink-open #detail-modal { display: none !important; }
+#deeplink-loader { display: none; }
+/* 로더는 인증이 끝난 뒤(deeplink-busy)에만 — 로그인 화면 위에 겹치면 글자가 포개진다. */
+html.deeplink-open.deeplink-busy #deeplink-loader {
+  display: flex; position: fixed; inset: 0; z-index: 400; background: #f3f2f1;
+  flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  font-family: 'Segoe UI', sans-serif; color: #605e5c;
+}
+#deeplink-loader .dl-spin { width: 34px; height: 34px; border: 3px solid #e1dfdd; border-top-color: #0078d4; border-radius: 50%; animation: dl-rotate .8s linear infinite; }
+#deeplink-loader .dl-text { font-size: .82rem; font-weight: 600; }
+#deeplink-loader .dl-sub { font-size: .72rem; color: #a19f9d; margin-top: -8px; }
+@keyframes dl-rotate { to { transform: rotate(360deg); } }
+</style>
+<script>
+// 주소에 신청 번호가 있거나(첫 진입), 로그인 왕복 뒤 보관해 둔 유효한 값이 있으면(돌아온 직후) 화면을 숨긴다.
+// ?openId= 단독 보기는 자기 방식이 따로 있어 건드리지 않는다.
+(function () {
+  try {
+    var q = new URLSearchParams(location.search);
+    var has = !!q.get('id') && !q.get('openId');
+    if (!has && !q.get('openId')) {
+      var d = JSON.parse(sessionStorage.getItem('bp_deeplink') || 'null');
+      has = !!(d && d.id && Date.now() - (d.at || 0) < 10 * 60 * 1000);
+    }
+    if (has) document.documentElement.classList.add('deeplink-open');
+  } catch (e) { /* 판별이 안 되면 평소대로 연다 */ }
+})();
+</script>
 </head>
 <body>
+<div id="deeplink-loader">
+  <div class="dl-spin"></div>
+  <div class="dl-text">상세 내용을 불러오는 중입니다</div>
+  <div class="dl-sub">잠시만 기다려 주세요</div>
+</div>
 <div id="standalone-loader">
   <div class="sl-spin"></div>
   <div class="sl-text">상세 내용을 불러오는 중입니다</div>
@@ -1158,6 +1197,12 @@ async function boot(account) {
   user = account;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
+  // 결재 딥링크로 들어왔으면 인증이 끝난 지금부터 로더를 띄운다(마스터 데이터 로딩 동안에도 보이게).
+  if (document.documentElement.classList.contains('deeplink-open')) {
+    document.documentElement.classList.add('deeplink-busy');
+    // 어떤 이유로든 끝을 알리지 못하면 30초 뒤 화면을 되돌린다 — 로더에 갇히지 않게.
+    setTimeout(deepLinkFinish, 30000);
+  }
   // ?openId= 단독 모드: 인증이 끝나는 즉시 로더를 띄운다.
   // 마스터 데이터 로딩(직원/CCTR/BP 등)이 끝나야 상세를 부를 수 있는데, 그때 로더를 켜면
   // 그 사이 몇 초 동안 아무것도 없는 회색 화면만 보인다.
@@ -2622,7 +2667,14 @@ async function deepLinkAllowed(id) {
     return false;
   }
 }
+/* 딥링크 처리를 마쳤다 — 숨겼던 화면과 상세 팝업을 드러낸다. 여러 번 불러도 된다. */
+function deepLinkFinish() {
+  document.documentElement.classList.remove('deeplink-open', 'deeplink-busy');
+}
 async function consumeDeepLink() {
+  try { await _consumeDeepLink(); } finally { deepLinkFinish(); }
+}
+async function _consumeDeepLink() {
   let d = null;
   try { d = JSON.parse(sessionStorage.getItem(DEEPLINK_KEY) || 'null'); sessionStorage.removeItem(DEEPLINK_KEY); }
   catch (e) { d = null; }
@@ -2636,6 +2688,7 @@ async function consumeDeepLink() {
   /* 없는 번호(삭제된 건 등)를 「권한 없음」 으로 안내하면 원인을 잘못 짚게 된다 — 따로 알린다. */
   const _allow = await deepLinkAllowed(id);
   if (_allow !== true) {
+    deepLinkFinish();
     alert(_allow === 'notfound'
       ? '해당 신청 건을 찾을 수 없습니다. 삭제되었거나 번호가 잘못되었습니다.\n결재함에서 내 결재 건을 확인해 주세요.'
       : '이 신청 건을 볼 수 있는 권한이 없습니다.\n결재함에서 내 결재 건을 확인해 주세요.');
