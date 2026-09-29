@@ -347,6 +347,8 @@ html.standalone-detail.detail-ready #standalone-loader { display: none !importan
    Customer 만 노랑으로 바꾼다. 노랑은 「대기」 배지와 같은 값을 써서
    이 화면에서 쓰는 색 수를 늘리지 않는다. (Goodwill-Approval 54bd5d5 와 같은 방식) */
 .badge-type-customer{background:#fff4ce;color:#7d5700;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
+/* Employee(09-29 추가) 는 초록 — 「승인완료」 배지와 같은 값을 써서 색 수를 늘리지 않는다. */
+.badge-type-employee{background:#dff6dd;color:#107c10;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
 .badge-대기{background:#fff4ce;color:#7d5700;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
 .badge-승인완료{background:#dff6dd;color:#107c10;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
 .badge-반려{background:#fde7e9;color:#a4262c;border-radius:10px;padding:2px 8px;font-size:.68rem;font-weight:600}
@@ -500,6 +502,7 @@ html.deeplink-open.deeplink-busy #deeplink-loader {
             <option value="">-- Type 선택 --</option>
             <option value="Vendor">Vendor</option>
             <option value="Customer">Customer</option>
+            <option value="Employee">Employee</option>
           </select>
         </div>
         <div class="form-group">
@@ -539,8 +542,8 @@ html.deeplink-open.deeplink-busy #deeplink-loader {
       <div class="section-title">3. 요청사항</div>
       <div class="form-row full">
         <div class="form-group">
-          <label>업체이름 (고객이름)</label>
-          <input type="text" id="inp-custname" maxlength="255" placeholder="Vendor 는 업체명, Customer 는 고객명을 입력해주세요. (예: STK Motors / Hong, Gil-dong 홍길동)">
+          <label id="custname-label">업체이름 (고객이름 · 직원이름)</label>
+          <input type="text" id="inp-custname" maxlength="255" placeholder="Vendor 는 업체명, Customer 는 고객명, Employee 는 직원 이름을 입력해주세요. (예: STK Motors / Hong, Gil-dong 홍길동)">
         </div>
       </div>
       <div class="form-row full">
@@ -597,7 +600,7 @@ html.deeplink-open.deeplink-busy #deeplink-loader {
         </select>
         <select id="list-filter-type" onchange="renderMyList()">
           <option value="">전체 Type</option>
-          <option>Vendor</option><option>Customer</option>
+          <option>Vendor</option><option>Customer</option><option>Employee</option>
         </select>
         <input type="text" id="list-filter-bpcode" oninput="renderMyList()" placeholder="Title / BP Code / 업체이름 / 요청사항 검색..." style="width:280px">
         <span id="list-count" style="font-size:13px;color:#605e5c;margin-left:auto"></span>
@@ -638,7 +641,7 @@ html.deeplink-open.deeplink-busy #deeplink-loader {
         </select>
         <select id="admin-filter-type" onchange="loadAdminList()">
           <option value="">전체 Type</option>
-          <option>Vendor</option><option>Customer</option>
+          <option>Vendor</option><option>Customer</option><option>Employee</option>
         </select>
         <input type="text" id="admin-filter-search" oninput="loadAdminList()" placeholder="신청자 검색...">
         <input type="text" id="admin-filter-cust" oninput="loadAdminList()" placeholder="업체이름(고객이름) / 요청사항 검색..." style="border:1px solid #d2d0ce;border-radius:4px;padding:6px 10px;font-size:13px;width:230px">
@@ -920,10 +923,40 @@ function safeText(s){ return escHtml(spText(s)); }
 // Description 은 다중 텍스트라 ExternalClass 래퍼가 붙어 오므로 safeText 로
 // 래퍼를 걷어낸 뒤 이스케이프한다. 값이 없으면 흐린 「-」 로 둔다 —
 // 빈칸이면 값이 안 온 건지 원래 없는 건지 구분되지 않는다.
-// Type 배지 색을 정한다. Customer 만 노랑, 그 밖(Vendor 등)은 기존 파랑.
-// 값이 늘어나도 Customer 가 들어간 것만 갈리도록 포함 여부로 판정한다.
+// Type 배지 색을 정한다. Customer 는 노랑 · Employee 는 초록 · 그 밖(Vendor 등)은 기존 파랑.
+// 값이 늘어나도 단어가 들어간 것만 갈리도록 포함 여부로 판정한다.
 function _bpTypeCls(t){
-  return /customer/i.test(String(t || '')) ? 'badge badge-type-customer' : 'badge badge-type';
+  const v = String(t || '');
+  if (/customer/i.test(v)) return 'badge badge-type-customer';
+  if (/employee/i.test(v)) return 'badge badge-type-employee';
+  return 'badge badge-type';
+}
+
+// 유형별 2차 결재자(회계담당자) — 설정 파일 키: BP_VENDOR_APPROVER · BP_CUSTOMER_APPROVER · BP_EMPLOYEE_APPROVER.
+// Employee 는 전용 키가 비어 있으면 Vendor 담당자가 맡는다(직원 BP 는 회계상 Vendor 와 같은 담당).
+function bpApproverFor(type) {
+  const none = {name:'', email:''};
+  if (type === 'Customer') return window._bpCustomerApprover || none;
+  if (type === 'Employee') {
+    const e = window._bpEmployeeApprover;
+    return (e && e.email) ? e : (window._bpVendorApprover || none);
+  }
+  if (type === 'Vendor') return window._bpVendorApprover || none;
+  return none;
+}
+
+// 업체이름 칸의 라벨 · 예시를 유형에 맞춘다. 비우면(초기 상태) 셋을 함께 적는다.
+function syncCustNameLabel(type) {
+  const lbl = document.getElementById('custname-label');
+  const inp = document.getElementById('inp-custname');
+  const map = {
+    Vendor:   ['업체이름', '업체명을 입력해주세요. (예: STK Motors)'],
+    Customer: ['고객이름', '고객명을 입력해주세요. (예: Hong, Gil-dong 홍길동)'],
+    Employee: ['직원 이름', '직원 이름을 입력해주세요. (예: Hong, Gil-dong 홍길동 · 소속 부서)'],
+  };
+  const m = map[type];
+  if (lbl) lbl.textContent = m ? m[0] : '업체이름 (고객이름 · 직원이름)';
+  if (inp) inp.placeholder = m ? m[1] : 'Vendor 는 업체명, Customer 는 고객명, Employee 는 직원 이름을 입력해주세요. (예: STK Motors / Hong, Gil-dong 홍길동)';
 }
 
 // 업체이름(고객이름) 한 칸 — Description 왼쪽. 값은 신청자 입력이라 이스케이프한다.
@@ -1236,6 +1269,8 @@ async function boot(account) {
       // 3차 결재자를 config에서 가져올 수 있도록 전역 변수 세팅
       window._bpVendorApprover   = cfgVal(_cfg,'BP_VENDOR_APPROVER',  {name:'',   email:''});
       window._bpCustomerApprover = cfgVal(_cfg,'BP_CUSTOMER_APPROVER',{name:'', email:''});
+      // Employee(09-29 추가) — 키가 없으면 Vendor 담당자로 대신한다(bpApproverFor)
+      window._bpEmployeeApprover = cfgVal(_cfg,'BP_EMPLOYEE_APPROVER',{name:'', email:''});
     }
     switchTab('form'); // 느린 백그라운드 작업들보다 먼저 초기 탭을 확정 — 이후엔 탭을 강제로 되돌리지 않음
     await loadEmployees();
@@ -1402,21 +1437,15 @@ function onTypeChange() {
   if (_entryNtc) _entryNtc.style.display = 'none';
   const docs = {
     Vendor:   '1. Vendor Registration Form\n2. 통장사본\n3. 사업자등록증\n4. Sanction Check\n5. 개인정보동의서',
-    Customer: '1. Customer Registration Form\n2. 통장사본(환불)\n3. 사업자등록증\n4. Sanction Check(해외업체의 경우)'
+    Customer: '1. Customer Registration Form\n2. 통장사본(환불)\n3. 사업자등록증\n4. Sanction Check(해외업체의 경우)',
+    Employee: '1. Vendor Registration Form\n2. 통장사본',   // 09-29 추가 — 직원 BP(경비 정산 등)
   };
   document.getElementById('docs-box').textContent = docs[type] || 'Type을 먼저 선택해주세요.';
-  if (type === 'Vendor') {
-    const _va = window._bpVendorApprover || {name:'',email:''};
-    document.getElementById('a3-name').value = _va.name;
-    document.getElementById('a3-email').value = _va.email;
-  } else if (type === 'Customer') {
-    const _ca = window._bpCustomerApprover || {name:'',email:''};
-    document.getElementById('a3-name').value = _ca.name;
-    document.getElementById('a3-email').value = _ca.email;
-  } else {
-    document.getElementById('a3-name').value = '';
-    document.getElementById('a3-email').value = '';
-  }
+  // 2차 결재자(회계담당자)는 유형별 설정 키에서 — Employee 는 전용 키가 없으면 Vendor 담당자
+  const _ap = bpApproverFor(type);
+  document.getElementById('a3-name').value = _ap.name || '';
+  document.getElementById('a3-email').value = _ap.email || '';
+  syncCustNameLabel(type);
 }
 
 function onSubCatChange() {
@@ -1480,6 +1509,8 @@ function resetForm() {
   const t1=document.getElementById('a1-team'); if(t1){t1.innerHTML='<option value="">팀</option>';t1.disabled=true;}
   const p1=document.getElementById('a1-person'); if(p1){p1.innerHTML='<option value="">직원 선택</option>';p1.disabled=true;}
   files = []; renderFiles();
+  const _cn = document.getElementById('inp-custname'); if (_cn) _cn.value = '';
+  syncCustNameLabel('');
   document.getElementById('docs-box').textContent = 'Type을 먼저 선택해주세요.';
   document.getElementById('bpcode-notice').style.display = 'none';
   showBpInfo('');   // 제출·초기화 뒤에 이전 업체 정보가 남아 있으면 안 된다
@@ -1548,9 +1579,7 @@ async function submitRequest() {
     let a3name = document.getElementById('a3-name').value;
     let a3email = document.getElementById('a3-email').value;
     if (!a3email) {
-      const _fallback = bpType === 'Vendor'
-        ? (window._bpVendorApprover || {name:'',email:''})
-        : (window._bpCustomerApprover || {name:'',email:''});
+      const _fallback = bpApproverFor(bpType);   // Vendor · Customer · Employee(→ 전용 키 없으면 Vendor)
       a3name = _fallback.name;
       a3email = _fallback.email;
     }
@@ -3025,7 +3054,7 @@ async function loadBpModalData() {
 <div id="bp-search-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:800;align-items:center;justify-content:center;padding:20px;font-family:'Segoe UI',sans-serif" onclick="if(event.target===this)closeBpSearchModal()">
   <div style="background:#fff;border-radius:8px;box-shadow:0 16px 48px rgba(0,0,0,.22);width:100%;max-width:500px;max-height:75vh;overflow-y:auto">
     <div style="padding:14px 18px;background:#0078d4;color:#fff;display:flex;justify-content:space-between;align-items:center;font-weight:700;border-radius:8px 8px 0 0;font-family:'Segoe UI',sans-serif">
-      <span>🔍 BP 검색 (Vendor / Customer)</span>
+      <span>🔍 BP 검색 (Vendor / Customer / Employee)</span>
       <button onclick="closeBpSearchModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer">✕</button>
     </div>
     <div style="padding:16px 18px">
