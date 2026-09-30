@@ -2843,11 +2843,11 @@ function renderBpModalResults(list) {
   }
   const cap = list.length>=50 ? '<div style="font-size:11px;color:#a19f9d;padding:4px 12px;border-bottom:1px solid #edebe9">상위 50개 표시</div>' : '';
   el.innerHTML = cap + list.map(b => `
-    <div onclick="selectBpModalItem('${b.code}','${b.name.replace(/'/g,"\'")}','${b.type}')"
+    <div onclick="selectBpModalItem('${b.code}')"
       style="padding:9px 12px;border:1px solid #edebe9;border-radius:4px;margin-bottom:5px;cursor:pointer;transition:all .15s"
       onmouseover="this.style.background='#f0f6ff';this.style.borderColor='#0078d4'"
       onmouseout="this.style.background='';this.style.borderColor='#edebe9'">
-      <div style="font-size:11px;color:#a19f9d">${b.code} · ${b.type||'-'}</div>
+      <div style="font-size:11px;color:#a19f9d">${b.code} · ${b.type||'-'}${b.inactive?' <span style="background:#fde7e9;color:#a4262c;border-radius:8px;padding:0 6px;font-size:10px;font-weight:700">비활성</span>':''}</div>
       <div style="font-size:13px;font-weight:600;color:#323130">${b.name}</div>
       ${b.nameKo?`<div style="font-size:11px;color:#605e5c">${b.nameKo}</div>`:''}
       <div style="font-size:11px;color:#605e5c">사업자등록번호: ${b.bizNo||'Master data 미기재'}</div>
@@ -2913,6 +2913,7 @@ async function showBpInfo(code) {
     + '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap">'
     +   '<span style="font-size:11px;color:#0078d4;background:#e1f0ff;border-radius:10px;padding:2px 9px;font-weight:600">' + escHtml(b.code) + '</span>'
     +   (b.type ? '<span style="font-size:11px;color:#605e5c">' + escHtml(b.type) + '</span>' : '')
+    +   (b.inactive ? '<span style="font-size:11px;color:#a4262c;background:#fde7e9;border-radius:10px;padding:2px 8px;font-weight:700">비활성</span>' : '')
     +   '<span style="margin-left:auto;font-size:11px;color:#a19f9d">Accounting Master 파일 기준</span>'
     + '</div>'
     + bpInfoRow('업체명', b.name)
@@ -2923,50 +2924,40 @@ async function showBpInfo(code) {
     + '</div>';
 }
 
-/* BP 마스터 파일(09-30) — STK-DB 문서 라이브러리 루트의 「Master data List 2014_Final(STK).xlsx」. ACC Others BP Master 가 관리하는 바로 그 파일이다.
-   09-30 이전엔 STK-NAS 를 「Master data List 2014」 로 검색해 (DTK) 파일을 읽었는데, 파일이 옮겨지면서 「검색 결과 없음」 만 떴다.
-   ① STK-DB 루트를 이름으로 바로 연다 ② 없으면 STK-DB 드라이브 검색((STK) 우선) ③ 그래도 없으면 예전 위치(STK-NAS) 검색. */
-const BP_MASTER_FILE = 'Master data List 2014_Final(STK).xlsx';
+/* BP 마스터 파일(09-30) — STK-DB 문서 라이브러리 루트의 「BP-Master_목록_20260930_1756.xlsx」. ACC Others BP Master 「목록 내보내기」 로 만든 정리본이며
+   ACC Others 가 이 파일에 등록 · 수정하고, 여기(BP 검색)와 ACC Voucher 가 읽는다. 시트 「BP Master」 · 1행 머리글 ·
+   A Code · B 유형 · C Name 1 · D 한글이름 · E 사업자등록번호 · F Bank · G Account no. · H 상태.
+   ① 루트에서 이름으로 바로 열기 ② 없으면 루트의 BP-Master_목록*.xlsx 가운데 가장 최근 것 ③ 둘 다 없으면 안내. */
+const BP_MASTER_FILE = 'BP-Master_목록_20260930_1756.xlsx';
+const BP_MASTER_PATTERN = /^BP-Master_목록.*\.xlsx$/i;
 let _bpModalLoadError = '';
-async function locateBpMasterFile(t) {
-  const pick = list => (list||[]).find(i=>/Master data List 2014/i.test(i.name||'') && /STK/i.test(i.name||''))
-                    || (list||[]).find(i=>/Master data List 2014/i.test(i.name||''));
+async function locateBpMasterFile() {
+  const driveId = await _getLogDriveId();   // STK-DB 문서 라이브러리(설정 파일 · 로그와 같은 곳)
+  if (!driveId) throw new Error('STK-DB 문서 라이브러리를 찾지 못했습니다');
+  const sel = '$select=id,name,lastModifiedDateTime,file';
   try {
-    const driveId = await _getLogDriveId();   // STK-DB 문서 라이브러리(설정 파일 · 로그와 같은 곳)
-    if (driveId) {
-      const meta = await api('/drives/' + driveId + '/root:/' + encodeURIComponent(BP_MASTER_FILE) + ':?$select=id,name');
-      if (meta && meta.id) { console.log('[BP Modal] STK-DB 루트에서 발견:', meta.name); return { driveId, itemId: meta.id, name: meta.name }; }
-    }
-  } catch(e) { console.warn('[BP Modal] STK-DB 루트에 ' + BP_MASTER_FILE + ' 없음 — 검색으로 넘어감:', e.message); }
-  const searchIn = async (label, sid) => {
-    const drives = await api('/sites/' + sid + '/drives');
-    for (const drv of (drives.value || [])) {
-      try {
-        const sr = await fetch(GRAPH + '/drives/' + drv.id + "/root/search(q='Master%20data%20List%202014')", { headers: { Authorization: 'Bearer ' + t } });
-        if (!sr.ok) continue;
-        const txt = await sr.text(); if (!txt) continue;
-        let d; try { d = JSON.parse(txt); } catch(_) { continue; }
-        const f = pick(d.value);
-        if (f) { console.log('[BP Modal] ' + label + ' 검색으로 발견:', drv.name, f.name); return { driveId: drv.id, itemId: f.id, name: f.name }; }
-      } catch(_) {}
-    }
-    return null;
-  };
-  try { const r = await searchIn('STK-DB', siteId); if (r) return r; } catch(_) {}
-  try { const nas = await api('/sites/startruckkorea.sharepoint.com:/sites/STK-NAS:'); const r = await searchIn('STK-NAS(예전 위치)', nas.id); if (r) return r; } catch(_) {}
-  throw new Error('BP 파일을 찾을 수 없음: ' + BP_MASTER_FILE);
+    const meta = await api('/drives/' + driveId + '/root:/' + encodeURIComponent(BP_MASTER_FILE) + ':?' + sel);
+    if (meta && meta.id) { console.log('[BP Modal] STK-DB 루트에서 발견:', meta.name); return { driveId, itemId: meta.id, name: meta.name }; }
+  } catch(e) { console.warn('[BP Modal] 루트에 ' + BP_MASTER_FILE + ' 없음 — 같은 이름 규칙의 최근 파일을 찾는다:', e.message); }
+  const ch = await api('/drives/' + driveId + '/root/children?' + sel + '&$top=500');
+  const cands = (ch.value || []).filter(f => f.file && BP_MASTER_PATTERN.test(String(f.name || '').normalize('NFC')))   // 한글 이름은 NFC 로 맞춰 비교(맥에서 올린 NFD 이름도 잡는다)
+    .sort((a, b) => String(b.name).localeCompare(String(a.name)) || String(b.lastModifiedDateTime || '').localeCompare(String(a.lastModifiedDateTime || '')));
+  if (!cands.length) throw new Error('BP 파일을 찾을 수 없음: ' + BP_MASTER_FILE);
+  console.warn('[BP Modal] 정해진 이름이 없어 가장 최근 BP-Master_목록 파일을 씁니다:', cands[0].name);
+  return { driveId, itemId: cands[0].id, name: cands[0].name };
 }
 async function loadBpModalData() {
   _bpModalLoadError = '';
   try {
     const t = await token();
-    const loc = await locateBpMasterFile(t);
+    const loc = await locateBpMasterFile();
     const fileRes = await fetch(GRAPH + '/drives/' + loc.driveId + '/items/' + loc.itemId + '/content', { headers: { Authorization: 'Bearer ' + t } });
     if (!fileRes.ok) throw new Error('BP 파일 내려받기 실패 (' + fileRes.status + ')');
     const buf = await fileRes.arrayBuffer();
     const wb = XLSX.read(buf, {type:'array'});
-    const sheetName = wb.SheetNames.find(s=>s==='DTK')||wb.SheetNames[0];
-    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1});
+    // 정리본 열 순서: A Code · B 유형 · C Name 1 · D 한글이름 · E 사업자등록번호 · F Bank · G Account no. · H 상태 — 1행 머리글
+    const sheetName = wb.SheetNames.find(s=>s==='BP Master')||wb.SheetNames[0];
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1,raw:true,defval:''});
     _bpModalData = [];
     for(let i=1;i<rows.length;i++){
       const r=rows[i]; if(!r[0]) continue;
@@ -2974,12 +2965,13 @@ async function loadBpModalData() {
       const item=(r[1]||'').toString().trim();
       const name1=(r[2]||'').toString().trim();
       const name2=(r[3]||'').toString().trim();
-      if(!code||!name1||code.includes('.')) continue;
-      if(code.toLowerCase()==='bp code'||code.toLowerCase()==='code') continue;   // 3행 머리글은 건너뛴다(ACC Voucher 와 같은 규칙)
+      if(!code||!(name1||name2)) continue;   // 이름이 하나도 없는 코드(정리본에 665건)는 검색 · 표시할 게 없어 뺀다
+      if(code.toLowerCase()==='bp code'||code.toLowerCase()==='code') continue;   // 머리글
       const bizNo2=(r[4]||'').toString().trim();
-      const bank2=(r[10]||'').toString().trim();
-      const accountNo2=(r[11]||'').toString().trim();
-      _bpModalData.push({code,type:item,name:name1,nameKo:name2,bizNo:bizNo2,bank:bank2,accountNo:accountNo2});
+      const bank2=(r[5]||'').toString().trim();
+      const accountNo2=(r[6]||'').toString().trim();
+      const inactive=/^비활성$/.test((r[7]||'').toString().trim());
+      _bpModalData.push({code,type:item,name:name1||name2,nameKo:name1?name2:'',bizNo:bizNo2,bank:bank2,accountNo:accountNo2,inactive});
     }
     console.log('[BP Modal] Loaded:', _bpModalData.length);
   } catch(e) {
