@@ -449,7 +449,7 @@ html.deeplink-open.deeplink-busy #deeplink-loader {
 /* APS 모바일(10-09 · aps-mobile) — 767px 이하 전용. 웹 화면 무변경 */
 /* BP Master: 본문 끝(body 안)에 공통 style 블록 이 한 번 더 있어 같은 우선순위면 그쪽이 이긴다 → #app · 모달 id 로 한 단계 올려 쓴다.
    BU Admin 연락처 두 줄(긴 메일)이 360px 에서 헤더를 389px 로 밀던 것 · 상세 라벨 180px 고정 · BP Code 변경 줄 · 입력 모달 360px 고정을 잡는다. */
-@media (max-width: 767px) {
+@media screen and (max-width: 767px) {
   /* ── 바탕 · 바깥 여백 ── */
   #app { padding: 12px 12px 24px; }
   #app .card { padding: 16px 14px; margin-bottom: 12px; }
@@ -482,6 +482,18 @@ html.deeplink-open.deeplink-busy #deeplink-loader {
   #app #inp-bpcode { padding: 8px 10px !important; }
   #app #btn-bp-search { min-height: 40px; }
   #app .docs-box { padding: 10px 12px; }
+  /* 입력 · 선택 칸 높이 40px 로 통일 */
+  #app .form-group input:not([type=checkbox]):not([type=radio]):not([type=file]), #app .form-group select,
+  #app .appr-select-row select, #app .appr-info input { min-height: 40px; }
+
+  /* ── iPhone(Safari) · Galaxy 대비 — 글자 자동 확대 · 칸 폭 넘침 막기(BP 는 날짜 칸 없음) ── */
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  input, select, textarea, button { max-width: 100%; box-sizing: border-box; }
+  input[type=date], input[type=time], input[type=month], input[type=datetime-local] { min-width: 0; }
+  @supports (-webkit-touch-callout: none) {
+    input[type=date], input[type=time], input[type=month], input[type=datetime-local] { -webkit-appearance: none; appearance: none; display: block; min-height: 40px; line-height: normal; text-align: left; }
+    input::-webkit-date-and-time-value { text-align: left; min-height: 1.2em; }
+  }
 
   /* 결재선 — 세로 한 줄씩 */
   #app .appr-line-preview { padding: 10px 12px; }
@@ -498,6 +510,10 @@ html.deeplink-open.deeplink-busy #deeplink-loader {
   #app .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   #app .btn-row > button { width: 100%; min-height: 44px; padding: 10px 12px; }
   #app .file-area { padding: 16px 12px; }
+  /* 첨부 목록 — 띄어쓰기 없는 긴 영문 파일 이름도 줄바꿈 · × 단추는 오른쪽 고정(2차 10-10) */
+  #app .file-item { gap: 8px; }
+  #app .file-item > span { min-width: 0; overflow-wrap: anywhere; }
+  #app .file-item > button { flex: 0 0 auto; min-width: 32px; min-height: 32px; }
 
   /* ── 목록 · 결재함 · 관리자 — 카드(표 상자)만 가로 스크롤, 검색칸은 한 줄 꽉 채움 ── */
   #app #tab-list .card, #app #tab-admin .card, #app #tab-approval .card > div { overflow-x: auto; -webkit-overflow-scrolling: touch; }
