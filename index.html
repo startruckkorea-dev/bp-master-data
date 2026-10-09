@@ -445,6 +445,119 @@ html.deeplink-open.deeplink-busy #deeplink-loader {
   } catch (e) { /* 판별이 안 되면 평소대로 연다 */ }
 })();
 </script>
+<style id="aps-mobile">
+/* APS 모바일(10-09 · aps-mobile) — 767px 이하 전용. 웹 화면 무변경 */
+/* BP Master: 본문 끝(body 안)에 공통 style 블록 이 한 번 더 있어 같은 우선순위면 그쪽이 이긴다 → #app · 모달 id 로 한 단계 올려 쓴다.
+   BU Admin 연락처 두 줄(긴 메일)이 360px 에서 헤더를 389px 로 밀던 것 · 상세 라벨 180px 고정 · BP Code 변경 줄 · 입력 모달 360px 고정을 잡는다. */
+@media (max-width: 767px) {
+  /* ── 바탕 · 바깥 여백 ── */
+  #app { padding: 12px 12px 24px; }
+  #app .card { padding: 16px 14px; margin-bottom: 12px; }
+  #app #tab-list .card, #app #tab-admin .card { padding: 14px 12px !important; }
+  #app .card-title { margin-bottom: 14px; }
+  #app .section-title { margin: 16px 0 10px; }
+
+  /* ── 헤더(V3) — 띠 한 줄 · 제목 한 단계 작게 · BU Admin 줄바꿈 허용 ── */
+  #app .aps-hdr { padding: 0 16px 14px; margin-bottom: 12px; }
+  #app .aps-band { flex-basis: calc(100% + 32px); margin-left: -16px; margin-right: -16px; padding: 0 16px; }
+  #app .aps-band-crumb { overflow: hidden; text-overflow: ellipsis; }
+  #app .header .title { font-size: 1rem; line-height: 1.35; }
+  #app .aps-sub { font-size: 11.5px; }
+  #app .aps-hdr .hdr-contact { display: grid; grid-template-columns: max-content minmax(0, 1fr); max-width: 100%; font-size: 11px; }
+  #app .aps-hdr .hdr-contact-tag { margin-right: 8px; }
+  #app .aps-hdr .hdr-contact-mail { min-width: 0; overflow-wrap: anywhere; }
+
+  /* ── 탭 — 한 줄 가로 스크롤 · 터치 높이 42px ── */
+  #app .tabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; margin-bottom: 12px; }
+  #app .tabs::-webkit-scrollbar { display: none; }
+  #app .tabs .tab { flex: 0 0 auto; white-space: nowrap; min-height: 42px; padding: 10px 15px; display: inline-flex; align-items: center; }
+
+  /* ── 폼 — 1열 · 입력 폭 100% · 글자 16px(iOS 확대 방지) ── */
+  #app .form-row, #app .form-row.three, #app .form-row.full { grid-template-columns: minmax(0, 1fr); gap: 12px; margin-bottom: 12px; }
+  #app .form-group { min-width: 0; }
+  #app .form-group select, #app .form-group input, #app .form-group textarea { width: 100%; min-width: 0; max-width: 100%; padding: 8px 10px; }
+  #app input:not([type=checkbox]):not([type=radio]):not([type=file]), #app select, #app textarea,
+  #confirm-comment, #bp-code-input, #bp-modal-search-input,
+  #modal-content .pdf-exclude input, #modal-content .pdf-exclude textarea { font-size: 16px !important; }  /* .pdf-exclude 는 PDF 출력 때 지워지는 입력칸이라 출력물과 무관 */
+  #app #inp-bpcode { padding: 8px 10px !important; }
+  #app #btn-bp-search { min-height: 40px; }
+  #app .docs-box { padding: 10px 12px; }
+
+  /* 결재선 — 세로 한 줄씩 */
+  #app .appr-line-preview { padding: 10px 12px; }
+  #app .appr-block { padding: 12px; }
+  #app .appr-select-row, #app .appr-info, #app .appr-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  #app .appr-select-row select, #app .appr-info input { min-width: 0; padding: 8px 10px; }
+
+  /* 고른 BP 마스터 정보 상자 — 라벨 폭 줄이고 값은 줄바꿈 */
+  #bp-info-box > div { padding: 12px !important; }
+  #bp-info-box > div > div[style*="gap:10px"] > div:first-child { width: 96px !important; }
+  #bp-info-box > div > div[style*="gap:10px"] > div:last-child { min-width: 0; overflow-wrap: anywhere; }
+
+  /* 단추 줄 — 2열 꽉 채움 */
+  #app .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  #app .btn-row > button { width: 100%; min-height: 44px; padding: 10px 12px; }
+  #app .file-area { padding: 16px 12px; }
+
+  /* ── 목록 · 결재함 · 관리자 — 카드(표 상자)만 가로 스크롤, 검색칸은 한 줄 꽉 채움 ── */
+  #app #tab-list .card, #app #tab-admin .card, #app #tab-approval .card > div { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  #app .filter-bar { gap: 8px; position: sticky; left: 0; }
+  #app .filter-bar select { flex: 1 1 40%; min-width: 0; min-height: 40px; }
+  #app .filter-bar input { flex: 1 1 100%; width: 100% !important; min-height: 40px; }
+  #app .filter-bar > span { margin-left: 0 !important; }
+  #app .filter-bar > button { margin-left: auto; min-height: 36px; }
+
+  /* ── 상세 모달 ── 699px 이하에서만: PDF 출력(html2canvas · windowWidth 700)이 같은 화면을 700px 폭으로 다시 그리므로
+     그 폭에서는 이 규칙이 걸리지 않아야 출력물이 웹과 똑같다. 휴대폰은 모두 700px 미만이다. */
+  @media (max-width: 699.98px) {
+    #detail-modal .modal-box { width: calc(100% - 20px); max-width: none; max-height: 90vh; max-height: 90dvh; padding: 18px 16px 20px; -webkit-overflow-scrolling: touch; }
+    #detail-modal .modal-title { padding-right: 34px; gap: 8px; }
+    #detail-modal .modal-close { top: 10px; right: 10px; width: 36px; height: 36px; }
+    #detail-modal .det-row { gap: 10px; }
+    #detail-modal .det-lbl { width: 100px; }
+    #detail-modal .det-val { min-width: 0; overflow-wrap: anywhere; }
+    #detail-modal .appr-item > span:last-child { white-space: nowrap; flex-shrink: 0; }
+    /* BP Code 변경(관리자) — 코드 · 사유 · 저장을 위아래로 */
+    #modal-content .pdf-exclude > div[style*="display:flex"] { flex-wrap: wrap; }
+    #modal-content .pdf-exclude > div[style*="display:flex"] > div { flex: 1 1 100% !important; }
+    #modal-content .pdf-exclude > div[style*="display:flex"] > button { flex: 1 1 100%; height: 42px !important; }
+    #modal-content .pdf-exclude input { height: 42px !important; }
+    /* 업무 처리 의견 입력 — 입력칸 아래 등록 단추 */
+    #modal-content .plog-input { flex-direction: column; align-items: stretch; }
+    #modal-content .plog-input button { min-height: 42px; }
+    #modal-content .plog-text { padding-left: 4px; }
+    #detail-modal .modal-action .btn-approve, #detail-modal .modal-action .btn-reject { min-height: 46px; }
+  }
+
+  /* ── 확인 · 안내 · BP Code 입력 · BP 검색 팝업 ── */
+  #confirm-modal > div { width: calc(100% - 20px) !important; padding: 22px 18px 18px !important; }
+  #confirm-modal > div > div:last-child { display: grid !important; grid-template-columns: 1fr 1fr; }
+  #confirm-modal > div > div:last-child > button { min-height: 44px; }
+  #bp-code-modal > div { width: calc(100% - 20px) !important; max-width: 360px; padding: 22px 18px 18px !important; }
+  #bp-code-modal > div > div:last-child > button { flex: 1; min-height: 44px; }
+  #bp-alert-modal .bp-alert-box { width: calc(100% - 40px); padding: 24px 20px; }
+  #bp-alert-modal .bp-alert-btn { width: 100%; min-height: 44px; }
+  #bp-search-modal { padding: 10px !important; }
+  #bp-search-modal > div { max-height: 88vh !important; max-height: 88dvh !important; }
+  #bp-search-modal > div > div:first-child > button { width: 36px; height: 36px; flex: none; }
+  #bp-search-modal > div > div:last-child { padding: 14px !important; }
+  #bp-search-modal > div > div:last-child > div:first-child > button { min-height: 40px; }
+  #no-auth-modal > div { width: calc(100% - 20px) !important; padding: 28px 20px 22px !important; }
+  #no-auth-modal > div > button { width: 100%; min-height: 44px; }
+
+  /* ── 로딩 ── */
+  #loading .loading-box { max-width: calc(100% - 40px); padding: 24px 28px; text-align: center; }
+  #dyn-loading { padding: 0 20px; text-align: center; }
+
+  /* ── 로그인 ── */
+  #login-screen { padding: 24px 16px 96px; }
+  #login-screen .login-card { padding: 40px 24px 28px; border-radius: 18px; }
+  #login-screen .login-page-footer { flex-direction: column; gap: 2px; padding: 8px 16px; text-align: center; font-size: 10.5px; line-height: 1.4; }
+
+  footer { padding: 16px 14px !important; margin-top: 24px !important; }
+  footer > div > div { text-align: left !important; }
+}
+</style>
 </head>
 <body>
 <div id="deeplink-loader">
