@@ -1079,6 +1079,11 @@ function escHtml(s){
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+// onclick="showConfirm(…,'역할')" 처럼 JS 문자열 인자로 넣는 역할 값(10-10).
+// 작은따옴표 · 역슬래시는 JS 문자열을 끝내거나 깨뜨리므로 빼고(예전 .replace(/'/g,'') 와 같은 규칙),
+// 큰따옴표 · <, > 는 속성을 벗어나지 못하게 escHtml 로 바꾼다(속성 값이 해석될 때 원래 글자로 돌아온다).
+// 정상 역할('1차결재자(Department Head)' · '2차결재자(회계담당자)')은 그대로 넘어간다.
+function _bpRoleArg(role){ return escHtml(String(role == null ? '' : role).replace(/['\\]/g, '')); }
 
 /* ── 대리 처리 표기 (AAC 연동) ────────────────────────────────────────
    AAC(결재 대리 지정)가 대리인이 처리한 결재행의 ApproverRole 뒤에
@@ -1578,7 +1583,7 @@ function populateDepts(idx) {
   const depts = [...new Set(employeeData.map(e => e.dept))].sort();
   const sel = document.getElementById('a' + idx + '-dept');
   if (!sel) return;
-  sel.innerHTML = '<option value="">부서</option>' + depts.map(d => '<option value="' + d + '">' + d + '</option>').join('');
+  sel.innerHTML = '<option value="">부서</option>' + depts.map(d => '<option value="' + escHtml(d) + '">' + escHtml(d) + '</option>').join('');
 }
 function onDeptChange(idx) {
   const dept = document.getElementById('a' + idx + '-dept').value;
@@ -1587,7 +1592,7 @@ function onDeptChange(idx) {
   document.getElementById('a' + idx + '-name').value = '';
   document.getElementById('a' + idx + '-email').value = '';
   const teams = [...new Set(employeeData.filter(e => e.dept === dept).map(e => e.team))].sort();
-  teamSel.innerHTML = '<option value="">팀</option>' + teams.map(t => '<option value="' + t + '">' + t + '</option>').join('');
+  teamSel.innerHTML = '<option value="">팀</option>' + teams.map(t => '<option value="' + escHtml(t) + '">' + escHtml(t) + '</option>').join('');
   teamSel.disabled = !dept;
   personSel.innerHTML = '<option value="">직원 선택</option>';
   personSel.disabled = true;
@@ -1599,7 +1604,7 @@ function onTeamChange(idx) {
   document.getElementById('a' + idx + '-name').value = '';
   document.getElementById('a' + idx + '-email').value = '';
   const persons = employeeData.filter(e => e.dept === dept && e.team === team);
-  personSel.innerHTML = '<option value="">직원 선택</option>' + persons.map(p => '<option value="' + p.email + '">' + p.name + '</option>').join('');
+  personSel.innerHTML = '<option value="">직원 선택</option>' + persons.map(p => '<option value="' + escHtml(p.email) + '">' + escHtml(p.name) + '</option>').join('');
   personSel.disabled = !team;
 }
 function onPersonChange(idx) {
@@ -1784,7 +1789,7 @@ function removeFile(i) { files.splice(i, 1); renderFiles(); }
 function renderFiles() {
   const totalMB = files.reduce((s,f) => s + f.size, 0) / 1024 / 1024;
   document.getElementById('file-list').innerHTML = files.map((f,i) =>
-    '<div class="file-item"><span>' + f.name + ' <span style="color:#605e5c">(' + (f.size/1024).toFixed(1) + ' KB)</span></span><button onclick="removeFile(' + i + ')">×</button></div>'
+    '<div class="file-item"><span>' + escHtml(f.name) + ' <span style="color:#605e5c">(' + (f.size/1024).toFixed(1) + ' KB)</span></span><button onclick="removeFile(' + i + ')">×</button></div>'
   ).join('') + (files.length ? '<div style="font-size:11px;color:#605e5c;text-align:right;margin-top:4px">총 ' + totalMB.toFixed(1) + ' MB / 10 MB</div>' : '');
 }
 
@@ -1879,9 +1884,26 @@ async function submitRequest() {
   if (subcat !== 'BP creation' && !bpcode) return alert('BP Code를 입력해주세요.');
   if (!desc)   return alert('요청사항을 입력해주세요.');
   if (!document.getElementById('a1-email').value) return alert('1차 결재자(Department Head)를 지정해주세요.');
+  // 2차 결재자(회계담당자)는 유형별 설정 키에서 자동 지정된다. 비어 있으면(설정 파일을 못 읽었거나 키가 비었으면)
+  // 예전에는 2차 결재행 없이 상신돼 부서장 승인만으로 승인완료 · BP Code 입력 단계까지 건너뛰었다.
+  // FA(09-30)와 같이 상신 전에 막고 어떤 KEY 인지 안내한다(10-10). 폼 칸이 비면 설정 값으로 한 번 더 채운다(06-10 경합 대비 그대로).
+  let a3name = document.getElementById('a3-name').value;
+  let a3email = document.getElementById('a3-email').value;
+  if (!a3email) {
+    const _fallback = bpApproverFor(type);   // Vendor · Customer · Employee(→ 전용 키 없으면 Vendor)
+    a3name = _fallback.name;
+    a3email = _fallback.email;
+  }
+  if (!String(a3email || '').trim()) {
+    const _k = type === 'Customer' ? 'BP_CUSTOMER_APPROVER' : type === 'Employee' ? 'BP_EMPLOYEE_APPROVER(없으면 BP_VENDOR_APPROVER)' : 'BP_VENDOR_APPROVER';
+    return alert('2차 결재자(회계담당자) 설정을 읽지 못했습니다: ' + _k + '\n\n새로고침 후 다시 시도해 주세요. 계속되면 system_config_final.xlsx 의 해당 KEY 를 확인하거나 IT팀(stk_it@hyosung.com)에 알려 주세요.');
+  }
   if (!files.length) { document.getElementById('file-notice').style.display = 'block'; return; }
 
   loading(true);
+  // 상신 도중 실패하면 이미 만든 행을 지우지 않고 「철회」로 닫아 둔다(10-10) — 결재자가 반쪽짜리 건을 받지 않게.
+  let reqId = null, _bpSubmitted = false;
+  const _apprIds = [];
   try {
     const item = await api('/sites/' + siteId + '/lists/BP_Requests/items', 'POST', {
       fields: {
@@ -1894,14 +1916,18 @@ async function submitRequest() {
         RequestDate: new Date().toISOString()
       }
     });
-    const reqId = item.id;
+    reqId = item.id;
     await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { Title: 'BP-' + new Date(new Date().getTime()+9*3600*1000).toISOString().slice(0,10) + '_ID-' + reqId } });
 
     // Upload files → Graph API 다운로드 경로 저장 (SharePoint 사이트 권한 불필요)
-    const fileLinks = [];
+    // 첨부는 필수다. 예전에는 업로드가 실패해도 경고 로그만 남기고 결재행을 만들어, 결재자가 첨부 없는 신청을 받았다.
+    // 성공한 파일 수가 고른 파일 수와 같을 때만 상신을 이어 가고, 아니면 멈추고 알린다(FA 와 같은 규칙 · 10-10).
+    const fileLinks = [], _upFail = [];
+    let _driveErr = '';
     try {
       const drivesData = await api('/sites/' + siteId + '/drives');
       const drive = drivesData.value.find(d => d.name === 'AttachedFiles') || drivesData.value[0];
+      if (!drive) throw new Error('첨부 저장 위치를 찾을 수 없습니다.');
       const t = await token();
       for (const file of files) {
         try {
@@ -1913,44 +1939,72 @@ async function submitRequest() {
           if (uploadRes.ok) {
             const uploaded = await uploadRes.json();
             // driveId + itemId 저장
-            fileLinks.push(file.name + '||' + drive.id + '||' + uploaded.id);
+            if (uploaded && uploaded.id) fileLinks.push(file.name + '||' + drive.id + '||' + uploaded.id);
+            else _upFail.push(file.name + ' (응답에 파일 ID 없음)');
+          } else {
+            console.error('Upload failed:', file.name, uploadRes.status);
+            _upFail.push(file.name + ' (' + uploadRes.status + ')');
           }
-        } catch(e) { console.warn('Upload error:', e); }
+        } catch(e) { console.error('Upload error:', e); _upFail.push(file.name + ' (' + (e && e.message || e) + ')'); }
       }
-    } catch(e) { console.warn('Drive error:', e); }
+    } catch(e) { console.error('Drive error:', e); _driveErr = (e && e.message) || String(e); }
+    if (_driveErr || fileLinks.length !== files.length) {
+      // 올라간 파일은 지우지 않고 신청 행에 남겨 두고, 신청은 「철회」로 닫는다(결재행은 아직 만들지 않았다)
+      const _closed = await _bpAbortSubmit(reqId, _apprIds, fileLinks);
+      const _t = 'BP-' + new Date(new Date().getTime()+9*3600*1000).toISOString().slice(0,10) + '_ID-' + reqId;
+      const _why = _driveErr ? ('첨부 저장소 오류: ' + _driveErr) : ('올리지 못한 파일 ' + _upFail.length + '건: ' + _upFail.join(', '));
+      showAlert('첨부파일 업로드에 실패해 상신하지 않았습니다.',
+        _why + ' · ' + (_closed ? _t + ' 은(는) 「철회」로 표시해 두었습니다.' : _t + ' 을(를) 「철회」로 표시하지 못했습니다 — IT팀(stk_it@hyosung.com)에 알려 주세요.')
+        + ' 파일을 확인한 뒤 다시 상신해 주세요.', '⚠️');
+      _bpSubmitted = true;   // 정리를 마쳤으므로 아래 catch 에서 다시 정리하지 않는다
+      return;
+    }
     if (fileLinks.length) {
       await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { AttachedFiles: fileLinks.join(';') } });
     }
 
-    // Create approvals
-    const bpType = document.getElementById('sel-type').value;
-    // a3-email이 비어있으면 config에서 fallback 처리
-    let a3name = document.getElementById('a3-name').value;
-    let a3email = document.getElementById('a3-email').value;
-    if (!a3email) {
-      const _fallback = bpApproverFor(bpType);   // Vendor · Customer · Employee(→ 전용 키 없으면 Vendor)
-      a3name = _fallback.name;
-      a3email = _fallback.email;
-    }
+    // Create approvals — 2차(회계담당자)는 위에서 비어 있지 않음을 확인했다(빠진 채 만들지 않는다)
     const approvers = [
       { name: document.getElementById('a1-name').value, email: document.getElementById('a1-email').value, role: '1차결재자(Department Head)', order: 1 },
       { name: a3name, email: a3email, role: '2차결재자(회계담당자)', order: 2 },
-    ].filter(a => a.email);
+    ];
     for (const a of approvers) {
-      await api('/sites/' + siteId + '/lists/BP_Approvals/items', 'POST', { fields: {
+      const _ar = await api('/sites/' + siteId + '/lists/BP_Approvals/items', 'POST', { fields: {
         Title: 'BP-' + new Date(new Date().getTime()+9*3600*1000).toISOString().slice(0,10) + '_ID-' + reqId + '-' + a.order, RequestID: parseInt(reqId),
         ApproverEmail: a.email, ApproverName: a.name,
         ApproverRole: a.role, ApprovalOrder: a.order,
         Status: a.order === 1 ? '대기' : '대기(잠김)'
       }});
+      if (_ar && _ar.id) _apprIds.push(_ar.id);
     }
+    _bpSubmitted = true;
     const _bpTitle = 'BP-' + new Date(new Date().getTime()+9*3600*1000).toISOString().slice(0,10) + '_ID-' + reqId;
     showAlert('상신이 완료되었습니다.', _bpTitle);
     resetForm(); switchTab('list');
     // 결재함 뱃지 갱신
     setTimeout(() => { loadApprovalQueue(); loadUnifiedBadge(); }, 800);
-  } catch(e) { showAlert('오류가 발생했습니다.', e.message, '⚠️'); }
+  } catch(e) {
+    // 신청 행을 만든 뒤 결재행까지 다 만들기 전에 실패했으면 「철회」로 닫아 둔다(만든 결재행은 철회(잠김))
+    let _note = '';
+    if (reqId && !_bpSubmitted) _note = (await _bpAbortSubmit(reqId, _apprIds, null)) ? ' · 만들던 신청은 「철회」로 표시해 두었습니다. 다시 상신해 주세요.' : ' · 만들던 신청을 「철회」로 표시하지 못했습니다 — IT팀(stk_it@hyosung.com)에 알려 주세요.';
+    showAlert('오류가 발생했습니다.', e.message + _note, '⚠️');
+  }
   finally { loading(false); }
+}
+// 상신 중단 정리(10-10): 행을 지우지 않고 철회(Withdraw)와 같은 값으로 닫는다 — 결재행 「철회(잠김)」, 신청 「철회」.
+// 올라간 첨부가 있으면 신청 행에 남겨 무엇이 올라갔는지 추적되게 한다. 성공하면 true.
+async function _bpAbortSubmit(reqId, apprIds, fileLinks) {
+  let ok = true;
+  for (const id of (apprIds || [])) {
+    try { await api('/sites/' + siteId + '/lists/BP_Approvals/items/' + id, 'PATCH', { fields: { Status: '철회(잠김)' } }); }
+    catch (e) { ok = false; console.error('[BP] 상신 중단 정리 — 결재행 철회 실패:', id, e); }
+  }
+  try {
+    const flds = { Status: '철회' };
+    if (fileLinks && fileLinks.length) flds.AttachedFiles = fileLinks.join(';');
+    await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: flds });
+  } catch (e) { ok = false; console.error('[BP] 상신 중단 정리 — 신청 철회 실패:', reqId, e); }
+  return ok;
 }
 function fmtDate(iso) {
   if (!iso) return '';
@@ -1976,7 +2030,10 @@ async function showDetail(reqId, fromTab) {
       .sort((a,b) => a.fields.ApprovalOrder - b.fields.ApprovalOrder);
 
     const sec = t => `<div class="det-sec">${t}</div>`;
-    const row = (l, v) => `<div class="det-row"><span class="det-lbl">${l}</span><span class="det-val">${v || '-'}</span></div>`;
+    // 값은 기본적으로 이스케이프한다(10-10 — Title · 신청자 · Type · Sub Category · BP Code 가 그대로 들어가던 저장형 XSS).
+    // 배지처럼 HTML 로 만든 값이나 이미 escHtml/safeText 를 거친 값만 rowRaw 로 넘긴다(APS 상세의 row/rowRaw 와 같은 방식).
+    const rowRaw = (l, v) => `<div class="det-row"><span class="det-lbl">${l}</span><span class="det-val">${v || '-'}</span></div>`;
+    const row = (l, v) => rowRaw(l, (v === undefined || v === null || v === '') ? '' : escHtml(v));
 
     // 첨부파일
     // 첨부가 없을 때는 「결재 이력이 없습니다.」와 같은 규칙(가운데 정렬 · 패딩)으로 표시한다.
@@ -1996,17 +2053,17 @@ async function showDetail(reqId, fromTab) {
             if (sep >= 0) {
               const driveId = decoded.substring(0, sep);
               const itemId  = decoded.substring(sep + 3);
-              return `<div style="padding:4px 0;font-size:.8rem">📎 <a href="#" class="file-dl-link" data-drive="${encodeURIComponent(driveId)}" data-id="${encodeURIComponent(itemId)}" data-name="${encodeURIComponent(name)}" style="color:#0078d4;cursor:pointer">${name}</a></div>`;
+              return `<div style="padding:4px 0;font-size:.8rem">📎 <a href="#" class="file-dl-link" data-drive="${encodeURIComponent(driveId)}" data-id="${encodeURIComponent(itemId)}" data-name="${encodeURIComponent(name)}" style="color:#0078d4;cursor:pointer">${escHtml(name)}</a></div>`;
             }
           } catch(ex) {}
-          return `<div style="padding:4px 0;font-size:.8rem;color:#605e5c">📎 ${name}</div>`;
+          return `<div style="padding:4px 0;font-size:.8rem;color:#605e5c">📎 ${escHtml(name)}</div>`;
         }
         if (parts.length >= 3) {
           const driveId = parts[1];
           const itemId  = parts.slice(2).join('||');
-          return `<div style="padding:4px 0;font-size:.8rem">📎 <a href="#" class="file-dl-link" data-drive="${encodeURIComponent(driveId)}" data-id="${encodeURIComponent(itemId)}" data-name="${encodeURIComponent(name)}" style="color:#0078d4;cursor:pointer">${name}</a></div>`;
+          return `<div style="padding:4px 0;font-size:.8rem">📎 <a href="#" class="file-dl-link" data-drive="${encodeURIComponent(driveId)}" data-id="${encodeURIComponent(itemId)}" data-name="${encodeURIComponent(name)}" style="color:#0078d4;cursor:pointer">${escHtml(name)}</a></div>`;
         }
-        return `<div style="padding:4px 0;font-size:.8rem;color:#a19f9d">📎 ${name}</div>`;
+        return `<div style="padding:4px 0;font-size:.8rem;color:#a19f9d">📎 ${escHtml(name)}</div>`;
       }).filter(Boolean).join('');
     }
 
@@ -2018,12 +2075,12 @@ async function showDetail(reqId, fromTab) {
       const st = _BP_APPR_CLS[af.Status] || 'status-대기잠김';
       return `<div class="appr-item">
         <div>
-          ${(()=>{const _r=aacRoleBase(af.ApproverRole),_o=String(af.ApprovalOrder||'');const _n=_r.startsWith(_o+'차')?_r.slice(_o.length+1).trim():_r;const _p=_n.replace(/^결재자\s*/,'');const _q=_p.startsWith('(')?_p:(_p?'('+_p+')':'');return '<b>'+_o+'차</b> 결재자'+_q+aacRolePill(af.ApproverRole, af.Status);})()}
-          <br><span style="font-size:.72rem;color:#605e5c">${af.ApproverName||''} · ${af.ApproverEmail||''}</span>
+          ${(()=>{const _r=aacRoleBase(af.ApproverRole),_o=String(af.ApprovalOrder||'');const _n=_r.startsWith(_o+'차')?_r.slice(_o.length+1).trim():_r;const _p=_n.replace(/^결재자\s*/,'');const _q=_p.startsWith('(')?_p:(_p?'('+_p+')':'');return '<b>'+escHtml(_o)+'차</b> 결재자'+escHtml(_q)+aacRolePill(af.ApproverRole, af.Status);})()}
+          <br><span style="font-size:.72rem;color:#605e5c">${escHtml(af.ApproverName||'')} · ${escHtml(af.ApproverEmail||'')}</span>
           ${af.ApprovalDate ? `<br><span style="font-size:.72rem;color:#a19f9d">${fmtDate(af.ApprovalDate)}</span>` : ''}
           ${af.Comment ? `<br><span style="font-size:.72rem;background:#fff;border:1px solid #edebe9;border-radius:4px;padding:2px 6px;display:inline-block;margin-top:2px">💬 ${safeText(af.Comment)}</span>` : ''}
         </div>
-        <span class="${st}">${af.Status}</span>
+        <span class="${st}">${escHtml(af.Status||'')}</span>
       </div>`;
     }).join('');
 
@@ -2040,7 +2097,7 @@ async function showDetail(reqId, fromTab) {
       sec('BP Code 변경 <span style="font-size:.7rem;font-weight:400;color:#a19f9d">(관리자 전용 · 승인완료 건에 한함)</span>') +
       '<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px">' +
         '<div style="flex:0 0 140px"><div style="font-size:.72rem;color:#605e5c;margin-bottom:4px;font-weight:600">BP Code</div>' +
-        '<input type="text" id="modal-bpcode" value="' + (f.BPCode||'').replace(/"/g,'&quot;') + '" placeholder="BP Code 입력..." style="width:100%;height:34px;border:1px solid #d2d0ce;border-radius:4px;padding:0 10px;font-size:.78rem;font-family:inherit;box-sizing:border-box"></div>' +
+        '<input type="text" id="modal-bpcode" value="' + escHtml(f.BPCode||'') + '" placeholder="BP Code 입력..." style="width:100%;height:34px;border:1px solid #d2d0ce;border-radius:4px;padding:0 10px;font-size:.78rem;font-family:inherit;box-sizing:border-box"></div>' +
         '<div style="flex:1"><div style="font-size:.72rem;color:#605e5c;margin-bottom:4px;font-weight:600">변경 사유 <span style="color:#d83b01">*</span></div>' +
         '<input type="text" id="modal-bpcode-reason" placeholder="BP Code를 변경하는 사유를 입력해주세요..." style="width:100%;height:34px;border:1px solid #d2d0ce;border-radius:4px;padding:0 10px;font-size:.78rem;font-family:inherit;box-sizing:border-box"></div>' +
         '<button id="bpcode-save-btn" onclick="saveBpCodeFromModal(' + reqId + ')" style="padding:6px 16px;background:#0078d4;color:#fff;border:none;border-radius:4px;font-size:.78rem;cursor:pointer;height:34px;white-space:nowrap">저장</button>' +
@@ -2073,24 +2130,24 @@ async function showDetail(reqId, fromTab) {
       row('Title', f.Title || '-') +
       row('신청자', f.RequesterEmail) +
       // 결재함에서 열면 내 단계 상태를 먼저 보여 준다(신청 상태는 뜻이 다를 때만 회색으로 덧붙임).
-      row('상태', (fromTab === 'appr' && myPending)
+      rowRaw('상태', (fromTab === 'appr' && myPending)
         ? `<span class="badge ${_bpStCls(myPending.fields.Status||'대기')}">${escHtml(myPending.fields.Status||'대기')}</span>`
-        : `<span class="badge ${_bpStCls(f.Status)}">${f.Status||'대기'}</span>`) +
+        : `<span class="badge ${_bpStCls(f.Status)}">${escHtml(f.Status||'대기')}</span>`) +
       row('신청일', f.RequestDate ? fmtDate(f.RequestDate) : '-') +
       sec('BP 신청 정보') +
       row('Type', f.BPType) +
       row('Sub Category', f.SubCategory) +
       row('BP Code', f.BPCode || '-') +
-      row('업체이름(고객이름)', escHtml(String(f.CustomerName||'').trim()) || '-') +
-      (f.Description ? row('Description', '<span style="white-space:pre-wrap">' + safeText(f.Description) + '</span>') : '') +
+      rowRaw('업체이름(고객이름)', escHtml(String(f.CustomerName||'').trim()) || '-') +
+      (f.Description ? rowRaw('Description', '<span style="white-space:pre-wrap">' + safeText(f.Description) + '</span>') : '') +
       sec('첨부파일') + filesHtml +
       processLogHtml +
       (bpCodeSectionHtml ? '<div class="pdf-exclude">' + bpCodeSectionHtml + '</div>' : '') +
       sec('결재 이력') +
       '<div style="background:#f9f9f9;border-radius:4px;border:1px solid #edebe9">' + (apprHtml || '<div style="padding:12px;font-size:.8rem;color:#605e5c">결재 이력 없음</div>') + '</div>' +
       (myPending ? `<div class="modal-action pdf-exclude">
-        <button class="btn-approve" onclick="closeModal();showConfirm(${myPending.id},'승인',${reqId},'${(myPending.fields.ApproverRole||'').replace(/'/g,'')}')">✅ 승인</button>
-        <button class="btn-reject" onclick="closeModal();showConfirm(${myPending.id},'반려',${reqId},'${(myPending.fields.ApproverRole||'').replace(/'/g,'')}')">❌ 반려</button>
+        <button class="btn-approve" onclick="closeModal();showConfirm(${myPending.id},'승인',${reqId},'${_bpRoleArg(myPending.fields.ApproverRole)}')">✅ 승인</button>
+        <button class="btn-reject" onclick="closeModal();showConfirm(${myPending.id},'반려',${reqId},'${_bpRoleArg(myPending.fields.ApproverRole)}')">❌ 반려</button>
       </div>` : '');
 
     if(showBpCodeEdit) renderBpCodeChangeLog(f.BPCodeChangeLog);
@@ -2137,7 +2194,7 @@ async function showDetail(reqId, fromTab) {
     });
   } catch(e) {
     markDetailReady();  // 실패해도 로더에 갇히지 않도록 해제(오류 문구는 모달에 표시됨)
-    document.getElementById('modal-content').innerHTML = '<p style="color:#a4262c">오류: ' + e.message + '</p>';
+    document.getElementById('modal-content').innerHTML = '<p style="color:#a4262c">오류: ' + escHtml(e.message) + '</p>';
   }
 }
 
@@ -2298,10 +2355,10 @@ function renderBpCodeChangeLog(logJson) {
     '<div id="bp-code-change-log-list" style="background:#f0f6ff;border:1px solid #c7e0f4;border-radius:6px;overflow:hidden;max-height:220px;overflow-y:auto">' +
     logs.map((log,i,arr) =>
       '<div style="padding:8px 12px;' + (i===arr.length-1 ? '' : 'border-bottom:1px solid #c7e0f4') + '">' +
-        '<div style="font-size:.68rem;color:#a19f9d">' + (log.changedAt||'') + '</div>' +
-        '<div style="font-size:.72rem;color:#323130;margin-top:2px">변경자: <b>' + (log.changedBy||'') + '</b></div>' +
-        '<div style="font-size:.72rem;color:#323130;margin-top:2px">BP Code: <span style="color:#605e5c">' + (log.fromCode||'-') + '</span> → <span style="font-weight:700;color:#0078d4">' + (log.toCode||'-') + '</span></div>' +
-        (log.reason ? '<div style="font-size:.72rem;color:#323130;margin-top:2px">사유: <span style="color:#605e5c">' + log.reason.replace(/</g,'&lt;') + '</span></div>' : '') +
+        '<div style="font-size:.68rem;color:#a19f9d">' + escHtml(log.changedAt||'') + '</div>' +
+        '<div style="font-size:.72rem;color:#323130;margin-top:2px">변경자: <b>' + escHtml(log.changedBy||'') + '</b></div>' +
+        '<div style="font-size:.72rem;color:#323130;margin-top:2px">BP Code: <span style="color:#605e5c">' + escHtml(log.fromCode||'-') + '</span> → <span style="font-weight:700;color:#0078d4">' + escHtml(log.toCode||'-') + '</span></div>' +
+        (log.reason ? '<div style="font-size:.72rem;color:#323130;margin-top:2px">사유: <span style="color:#605e5c">' + escHtml(log.reason) + '</span></div>' : '') +
       '</div>'
     ).join('') +
     '</div>';
@@ -2785,7 +2842,7 @@ async function loadAdminList(page) {
       _adminItems = data.value.sort((a,b) => b.id - a.id);
     } catch(e) {
       dynLoadEnd();
-      if(tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#a4262c">' + e.message + '</td></tr>';
+      if(tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#a4262c">' + escHtml(e.message) + '</td></tr>';
       return;
     }
     dynLoadEnd();
@@ -2820,11 +2877,11 @@ async function loadAdminList(page) {
       + '<td class="c-mail" style="font-size:.78rem" title="' + escHtml(f.RequesterEmail||'') + '">' + escHtml(f.RequesterEmail||'') + '</td>'
       + '<td style="font-size:.78rem;color:#0078d4">' + escHtml(f.Title||'-') + '</td>'
       + '<td><span class="' + _bpTypeCls(f.BPType) + '">' + escHtml(f.BPType||'') + '</span></td>'
-      + '<td>' + (f.SubCategory||'') + '</td>'
+      + '<td>' + escHtml(f.SubCategory||'') + '</td>'
       + _bpCustCell(f.CustomerName)
       + _bpDescCell(f)
       + _bpCodeCell(f.BPCode)
-      + '<td><span class="badge '+_bpStCls(f.Status)+'">' + (f.Status||'대기') + '</span></td>'
+      + '<td><span class="badge '+_bpStCls(f.Status)+'">' + escHtml(f.Status||'대기') + '</span></td>'
       + '<td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td>'
       + '</tr>';
   }, '조회 결과가 없습니다.', 9);
@@ -2888,7 +2945,7 @@ async function loadMyList() {
       .sort((a,b) => new Date(b.fields.RequestDate) - new Date(a.fields.RequestDate));
     dynLoadEnd();
     renderMyList();
-  } catch(e) { dynLoadEnd(); tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#a4262c">' + e.message + '</td></tr>'; }
+  } catch(e) { dynLoadEnd(); tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#a4262c">' + escHtml(e.message) + '</td></tr>'; }
 }
 
 function renderMyList() {
@@ -2922,7 +2979,7 @@ function renderMyList() {
     pgSet('list', [], null, (fStatus||fType||fCode) ? '조회 결과가 없습니다.' : '신청 내역이 없습니다.', 10);
     return;
   }
-  pgSet('list', mine, (item,idx)=>{ const f = item.fields; const rowNum = mine.length - idx; return '<tr onclick="showDetail(' + item.id + ',\'list\')" style="cursor:pointer"><td style="color:#a19f9d;font-size:.66rem">' + rowNum + '</td><td style="font-size:.78rem;color:#0078d4">' + (f.Title||'-') + '</td>' + _bpCustCell(f.CustomerName) + _bpDescCell(f) + '<td><span class="' + _bpTypeCls(f.BPType) + '">' + escHtml(f.BPType||'') + '</span></td><td>' + (f.SubCategory||'') + '</td>' + _bpCodeCell(f.BPCode) + '<td><span class="badge badge-' + (f.Status||'대기') + '">' + (f.Status||'') + '</span></td><td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td><td style="text-align:center;vertical-align:middle;padding:6px 8px;">'+_wdBtn(item.id,'BP_Approvals','BP_Requests',f.Status)+'</td></tr>'; }, '신청 내역이 없습니다.', 10);
+  pgSet('list', mine, (item,idx)=>{ const f = item.fields; const rowNum = mine.length - idx; return '<tr onclick="showDetail(' + item.id + ',\'list\')" style="cursor:pointer"><td style="color:#a19f9d;font-size:.66rem">' + rowNum + '</td><td style="font-size:.78rem;color:#0078d4">' + escHtml(f.Title||'-') + '</td>' + _bpCustCell(f.CustomerName) + _bpDescCell(f) + '<td><span class="' + _bpTypeCls(f.BPType) + '">' + escHtml(f.BPType||'') + '</span></td><td>' + escHtml(f.SubCategory||'') + '</td>' + _bpCodeCell(f.BPCode) + '<td><span class="badge badge-' + escHtml(f.Status||'대기') + '">' + escHtml(f.Status||'') + '</span></td><td>' + (f.RequestDate ? fmtDate(f.RequestDate) : '') + '</td><td style="text-align:center;vertical-align:middle;padding:6px 8px;">'+_wdBtn(item.id,'BP_Approvals','BP_Requests',f.Status)+'</td></tr>'; }, '신청 내역이 없습니다.', 10);
 }
 
 async function loadApprovalQueue() {
@@ -2951,7 +3008,7 @@ async function loadApprovalQueue() {
       const rf = reqMap[String(f.RequestID)] || {};
       // 첫 열은 행 번호다. 예전에는 헤더가 「신청번호」인데 RequestID 를 그려
       // 목록의 번호와 값이 서로 달랐다. IT-Ticket 결재함과 같은 규칙으로 맞춘다.
-      return '<tr onclick="showDetail(' + f.RequestID + ',\'appr\')" style="cursor:pointer"><td style="color:#a19f9d;font-size:.66rem">' + (idx + 1) + '</td><td style="font-size:.78rem">' + (rf.RequesterEmail||'') + '</td><td style="font-size:.78rem;color:#0078d4">' + (rf.Title||'-') + '</td><td><span class="' + _bpTypeCls(rf.BPType) + '">' + escHtml(rf.BPType||'') + '</span></td><td>' + (rf.SubCategory||'') + '</td>' + _bpCustCell(rf.CustomerName) + _bpDescCell(rf) + _bpCodeCell(rf.BPCode) + _apprStatusCell(f.Status, rf.Status) + '<td>' + (rf.RequestDate?fmtDate(rf.RequestDate):'') + '</td><td onclick="event.stopPropagation()"><button class="btn-approve" onclick="showConfirm(' + item.id + ',\'승인\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">승인</button> <button class="btn-reject" onclick="showConfirm(' + item.id + ',\'반려\',' + f.RequestID + ',\'' + (f.ApproverRole||'').replace(/\'/g,'') + '\')">반려</button></td></tr>';
+      return '<tr onclick="showDetail(' + (parseInt(f.RequestID, 10) || 0) + ',\'appr\')" style="cursor:pointer"><td style="color:#a19f9d;font-size:.66rem">' + (idx + 1) + '</td><td style="font-size:.78rem">' + escHtml(rf.RequesterEmail||'') + '</td><td style="font-size:.78rem;color:#0078d4">' + escHtml(rf.Title||'-') + '</td><td><span class="' + _bpTypeCls(rf.BPType) + '">' + escHtml(rf.BPType||'') + '</span></td><td>' + escHtml(rf.SubCategory||'') + '</td>' + _bpCustCell(rf.CustomerName) + _bpDescCell(rf) + _bpCodeCell(rf.BPCode) + _apprStatusCell(f.Status, rf.Status) + '<td>' + (rf.RequestDate?fmtDate(rf.RequestDate):'') + '</td><td onclick="event.stopPropagation()"><button class="btn-approve" onclick="showConfirm(' + item.id + ',\'승인\',' + (parseInt(f.RequestID, 10) || 0) + ',\'' + _bpRoleArg(f.ApproverRole) + '\')">승인</button> <button class="btn-reject" onclick="showConfirm(' + item.id + ',\'반려\',' + (parseInt(f.RequestID, 10) || 0) + ',\'' + _bpRoleArg(f.ApproverRole) + '\')">반려</button></td></tr>';
     });
     dynLoadEnd(); pgSet('appr', rows, function(r){ return r; }, '결재 대기 항목이 없습니다.', 11);
     const badge = document.getElementById('appr-badge');
@@ -3043,6 +3100,15 @@ await api('/sites/' + siteId + '/lists/BP_Approvals/items/' + apprId, 'PATCH', {
         .sort((a,b) => a.fields.ApprovalOrder - b.fields.ApprovalOrder);
       if (next.length) {
         await api('/sites/'+siteId+'/lists/BP_Approvals/items/'+next[0].id, 'PATCH', {fields:{Status:'대기'}});
+      } else if (!_rows.some(i => String(i.fields.ApproverRole||'').indexOf('회계담당자') >= 0)) {
+        // 회계담당자 결재행이 없는 건(10-10 이전에 설정을 못 읽은 채 상신된 건)은 부서장 승인만으로 승인완료하지 않는다.
+        // 승인은 기록됐고 신청은 그대로 둔다 — 관리자가 2차 결재행을 넣으면 회계담당자가 이어서 처리한다.
+        console.error('[BP] 회계담당자 결재행 없음 — 승인완료 전환 중단. RequestID:', reqId);
+        closeModal();
+        showAlert('승인은 기록되었으나 승인완료로 넘기지 않았습니다.',
+          '이 신청에는 2차 결재자(회계담당자) 결재 단계가 없습니다. 관리자 또는 IT팀(stk_it@hyosung.com)에 알려 주세요.', '⚠️');
+        await loadApprovalQueue();
+        return;
       } else {
         await api('/sites/'+siteId+'/lists/BP_Requests/items/'+reqId, 'PATCH', {fields:{Status:'승인완료'}});
       }
@@ -3304,15 +3370,15 @@ function renderBpModalResults(list) {
   }
   const cap = list.length>=50 ? '<div style="font-size:11px;color:#a19f9d;padding:4px 12px;border-bottom:1px solid #edebe9">상위 50개 표시</div>' : '';
   el.innerHTML = cap + list.map(b => `
-    <div onclick="selectBpModalItem('${b.code}')"
+    <div data-code="${escHtml(b.code)}" onclick="selectBpModalItem(this.dataset.code)"
       style="padding:9px 12px;border:1px solid #edebe9;border-radius:4px;margin-bottom:5px;cursor:pointer;transition:all .15s"
       onmouseover="this.style.background='#f0f6ff';this.style.borderColor='#0078d4'"
       onmouseout="this.style.background='';this.style.borderColor='#edebe9'">
-      <div style="font-size:11px;color:#a19f9d">${b.code} · ${b.type||'-'}${b.inactive?' <span style="background:#fde7e9;color:#a4262c;border-radius:8px;padding:0 6px;font-size:10px;font-weight:700">비활성</span>':''}</div>
-      <div style="font-size:13px;font-weight:600;color:#323130">${b.name}</div>
-      ${b.nameKo?`<div style="font-size:11px;color:#605e5c">${b.nameKo}</div>`:''}
-      <div style="font-size:11px;color:#605e5c">사업자등록번호: ${b.bizNo||'Master data 미기재'}</div>
-      <div style="font-size:11px;color:#605e5c">Bank Info.: ${b.bank||'Master data 미기재'} &nbsp;|&nbsp; Account No.: ${b.accountNo||'Master data 미기재'}</div>
+      <div style="font-size:11px;color:#a19f9d">${escHtml(b.code)} · ${escHtml(b.type||'-')}${b.inactive?' <span style="background:#fde7e9;color:#a4262c;border-radius:8px;padding:0 6px;font-size:10px;font-weight:700">비활성</span>':''}</div>
+      <div style="font-size:13px;font-weight:600;color:#323130">${escHtml(b.name)}</div>
+      ${b.nameKo?`<div style="font-size:11px;color:#605e5c">${escHtml(b.nameKo)}</div>`:''}
+      <div style="font-size:11px;color:#605e5c">사업자등록번호: ${escHtml(b.bizNo||'Master data 미기재')}</div>
+      <div style="font-size:11px;color:#605e5c">Bank Info.: ${escHtml(b.bank||'Master data 미기재')} &nbsp;|&nbsp; Account No.: ${escHtml(b.accountNo||'Master data 미기재')}</div>
     </div>`).join('');
 }
 function selectBpModalItem(code, name, type) {
