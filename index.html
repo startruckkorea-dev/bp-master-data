@@ -1406,12 +1406,37 @@ function logAction(systemName, action, detail) {
         timestampKST: `${dateStr} ${p(now.getUTCHours())}:${p(now.getUTCMinutes())}:${p(now.getUTCSeconds())}`,
         user: rawUser, system: systemName, action, detail: detail || {}
       });
-      await fetch(GRAPH + '/drives/' + driveId + '/root:' + path + ':/content', {
+      const _lr = await fetch(GRAPH + '/drives/' + driveId + '/root:' + path + ':/content', {
         method: 'PUT', headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' }, body
       });
+      // 저장이 거부돼도(403 · 429 · 5xx) 흔적이 없던 것 — APS(10-10)처럼 콘솔에 경고만 남긴다(10-15). 원 기능엔 영향 없음
+      if (_lr && !_lr.ok) console.warn('[Log] 기록 실패(무시됨, 원 기능엔 영향 없음): HTTP ' + _lr.status + ' —', systemName, action);
     } catch(e) { console.warn('[Log] 기록 실패(무시됨):', e.message); }
   })();
 }
+/* ══ 데이터 변경 기록(10-15) ══
+   상신 · 결재 승인 · 반려 · 철회 · 관리자 데이터 변경을 위 logAction 으로 Logging_data 에 남긴다.
+   action 이름 · detail 모양은 APS 통합 결재함(Logging_data/APS 「결재 승인」 · 「결재 반려」)에 맞춘다 —
+   신청번호 · 제목 · 결과 · 차수 · 결재자 · 처리자 · 대리 · 역할 · 의견 글자 수(의견 원문 · 금액 · 계좌 · 연락처 같은 개인정보는 넣지 않는다).
+   IT 계정 제외 규칙(10-01, IT Manager · IT system service)은 logAction 안에서 그대로 적용된다(감사 예외를 두지 않는다 — 10-15 결정).
+   실제 저장(Graph 쓰기)이 끝난 뒤에만 부르고 기다리지 않는다. detail 을 만들다 오류가 나도 원 기능으로 번지지 않게 감싼다. */
+function logChange(systemName, action, mk) {
+  try { logAction(systemName, action, typeof mk === 'function' ? mk() : (mk || {})); }
+  catch (e) { console.warn('[Log] 기록 생략(원 기능엔 영향 없음):', action, e && e.message); }
+}
+function logAprDetail(f, extra) {   // 결재행 fields(처리 전 값) → APS 와 같은 차수 · 결재자 · 처리자 · 대리 · 역할
+  f = f || {};
+  const orig = String(f.ApproverEmail || '');
+  let dg = null; try { dg = (typeof aacDelegatorOf === 'function') ? aacDelegatorOf(orig) : null; } catch (e) {}
+  return Object.assign({
+    차수: f.ApprovalOrder == null ? '' : f.ApprovalOrder,
+    결재자: orig,
+    처리자: String((typeof user !== 'undefined' && user && (user.email || user.username)) || ''),
+    대리: dg ? '예 — ' + (f.ApproverName || dg.name || orig) + ' 님 대신' : '',
+    역할: String(f.ApproverRole || '')
+  }, extra || {});
+}
+function logErrText(e) { return String((e && e.message) || e || '').slice(0, 200); }
 async function api(path, method='GET', body=null, _retry=0) {
   const t = await token();
   const opts = { method, headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json', Prefer: 'HonorNonIndexedQueriesWarningMayFailRandomly' } };
@@ -2006,6 +2031,7 @@ async function submitRequest() {
     }
     _bpSubmitted = true;
     const _bpTitle = 'BP-' + new Date(new Date().getTime()+9*3600*1000).toISOString().slice(0,10) + '_ID-' + reqId;
+    logChange('BP Master Data', '상신', () => ({ 신청번호: Number(reqId), 제목: _bpTitle, 유형: type, 하위분류: subcat, 결재단계: _apprIds.length, 첨부: files.length }));   // 10-15
     showAlert('상신이 완료되었습니다.', _bpTitle);
     resetForm(); switchTab('list');
     // 결재함 뱃지 갱신
@@ -2014,6 +2040,7 @@ async function submitRequest() {
     // 신청 행을 만든 뒤 결재행까지 다 만들기 전에 실패했으면 「철회」로 닫아 둔다(만든 결재행은 철회(잠김))
     let _note = '';
     if (reqId && !_bpSubmitted) _note = (await _bpAbortSubmit(reqId, _apprIds, null)) ? ' · 만들던 신청은 「철회」로 표시해 두었습니다. 다시 상신해 주세요.' : ' · 만들던 신청을 「철회」로 표시하지 못했습니다 — IT팀(stk_it@hyosung.com)에 알려 주세요.';
+    if (!_bpSubmitted) logChange('BP Master Data', '상신 실패', () => ({ 신청번호: reqId ? Number(reqId) : '', 유형: type, 하위분류: subcat, 정리: reqId ? (_note.indexOf('「철회」로 표시해 두었습니다') >= 0 ? '철회 표시' : '정리 실패') : '없음', 오류: logErrText(e) }));   // 10-15
     showAlert('오류가 발생했습니다.', e.message + _note, '⚠️');
   }
   finally { loading(false); }
@@ -2322,6 +2349,7 @@ async function submitProcessLog(reqId) {
     loadAdminList(_adminPage);
     if (statusNote) showAlert('일부만 저장되었습니다', statusNote, '⚠️');
   } catch (e) {
+    logChange('BP Master Data', '업무 처리 의견 등록 실패', () => ({ 신청: 'ID-' + reqId, 글자수: text.length, 오류: logErrText(e) }));   // 10-15
     alert('의견 저장 실패: ' + e.message);
   } finally {
     const b = document.getElementById('plog-save-btn');
@@ -2353,8 +2381,13 @@ async function saveBpCode(spId, newCode, reason) {
       BPCodeUpdatedAt: updatedAt,
       BPCodeChangeLog: JSON.stringify(logs)
     });
+    logChange('BP Master Data', 'BP Code 변경', () => ({ 신청번호: Number(spId), 제목: cur.Title || '', 변경: changed ? '예' : '아니오(같은 값 저장)', 이전: fromCode || '-', 변경후: newCode || '-', 사유글자수: String(reason || '').length }));   // 관리자 데이터 변경(10-15)
     return logs;
-  } catch(e) { console.error('saveBpCode error:', e.message); alert('저장 실패: ' + e.message); return null; }
+  } catch(e) {
+    console.error('saveBpCode error:', e.message);
+    logChange('BP Master Data', 'BP Code 변경 실패', () => ({ 신청번호: Number(spId), 변경후: newCode || '-', 오류: logErrText(e) }));
+    alert('저장 실패: ' + e.message); return null;
+  }
 }
 async function saveBpCodeFromModal(reqId) {
   const newCode = document.getElementById('modal-bpcode')?.value || '';
@@ -2789,7 +2822,8 @@ async function exportAdminExcel() {
     return hay.includes(filterCust);
   });
   if (!items.length) { alert('내보낼 데이터가 없습니다.'); return; }
-  logAction('BP Master Data', 'Excel 내보내기', { 건수: items.length, 필터: { 상태: filterStatus||'전체', 유형: filterType||'전체', 검색어: filterSearch||'', BP코드: filterBpcode||'' } });
+  // 출력 기록은 파일을 만든 뒤로 옮겼다(10-15) — 예전에는 만들기 전에 「성공」 으로 남아 실패해도 흔적이 없었다
+  const _xlLog = () => ({ 건수: items.length, 필터: { 상태: filterStatus||'전체', 유형: filterType||'전체', 검색어: filterSearch||'', BP코드: filterBpcode||'' } });
 
   loading(true, 'Excel 생성 중...');
   try {
@@ -2880,7 +2914,9 @@ async function exportAdminExcel() {
     const now = new Date(new Date().getTime()+9*3600*1000);
     const ds = now.getUTCFullYear()+String(now.getUTCMonth()+1).padStart(2,'0')+String(now.getUTCDate()).padStart(2,'0')+'_'+String(now.getUTCHours()).padStart(2,'0')+String(now.getUTCMinutes()).padStart(2,'0');
     XLSX.writeFile(wb, 'BP_Export_'+ds+'.xlsx');
+    logChange('BP Master Data', 'Excel 내보내기', _xlLog);
   } catch(e) {
+    logChange('BP Master Data', 'Excel 내보내기 실패', () => Object.assign(_xlLog(), { 오류: logErrText(e) }));
     alert('Excel 생성 실패: ' + e.message);
   } finally {
     loading(false);
@@ -3123,15 +3159,22 @@ async function confirmApproval() {
 }
 
 async function processApproval(apprId, action, reqId, role, comment='') {
+  // 결재 처리 기록(10-15) — APS 통합 결재함과 같은 「결재 승인」 · 「결재 반려」. 결재행을 쓴 뒤에만 남기고, 쓰기 전 오류는 「…실패」
+  const _lgAct = action==='반려' ? '결재 반려' : '결재 승인';
+  let _lgF = null, _lgW = false, _lgDone = false;
+  const _lg = (what, res, ex) => { _lgDone = true; logChange('BP Master Data', what, () => Object.assign({ 신청번호: Number(reqId), 제목: String((_lgF && _lgF.Title) || '').replace(/-\d+$/, ''), 결과: res }, logAprDetail(_lgF, { 의견글자수: String(comment||'').length, 결재행: apprId }), ex || {})); };
   loading(true);
   try {
         const _cur = await api('/sites/'+siteId+'/lists/BP_Approvals/items/'+apprId+'?$expand=fields');
     if(_cur.fields.Status !== '대기'){showAlert('이미 처리된 결재 항목입니다.','다른 창에서 처리되었거나 이미 완료된 항목입니다.','⚠️');await loadApprovalQueue();return;}
+    _lgF = _cur.fields;
 await api('/sites/' + siteId + '/lists/BP_Approvals/items/' + apprId, 'PATCH', {
       fields: aacPatchWith({ Status: action, ApprovalDate: new Date().toISOString(), Comment: comment || '' }, _cur.fields)
     });
+    _lgW = true;
     if (action === '반려') {
       await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { Status: '반려' } });
+      _lg(_lgAct, '반려 — 신청 반려');
     } else if (action === '승인' && role && role.includes('회계담당자')) {
       // BP creation인 경우만 BP Code 입력 요청, 나머지는 그냥 승인완료
       const reqItem = await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId + '?$expand=fields');
@@ -3139,14 +3182,19 @@ await api('/sites/' + siteId + '/lists/BP_Approvals/items/' + apprId, 'PATCH', {
       if (subCat === 'BP creation') {
         // 최종 승인완료 먼저 처리 후 BP Code 모달 표시
         await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { Status: '승인완료' } });
+        _lg(_lgAct, '승인 — 최종 승인(신청 승인완료)', { 하위분류: subCat });
         showBpCodeModal(reqId, async (bpCode) => {
-          if (bpCode) await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { BPCode: bpCode } });
+          if (bpCode) {
+            await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { BPCode: bpCode } });
+            logChange('BP Master Data', 'BP Code 입력', () => ({ 신청번호: Number(reqId), 제목: String((_lgF && _lgF.Title) || '').replace(/-\d+$/, ''), BP코드: bpCode, 경로: '최종 승인 직후' }));   // 10-15
+          }
           await loadApprovalQueue();
           await loadUnifiedBadge();
         });
         return; // callback에서 처리
       } else {
         await api('/sites/' + siteId + '/lists/BP_Requests/items/' + reqId, 'PATCH', { fields: { Status: '승인완료' } });
+        _lg(_lgAct, '승인 — 최종 승인(신청 승인완료)', { 하위분류: subCat });
       }
     } else if (action === '승인') {
       // 다음 결재자 활성화.
@@ -3158,6 +3206,7 @@ await api('/sites/' + siteId + '/lists/BP_Approvals/items/' + apprId, 'PATCH', {
       const _rows = await aprRowsRetry('/sites/'+siteId+"/lists/BP_Approvals/items?$expand=fields&$top=50&$filter=fields/RequestID eq "+parseInt(reqId));
       if (!_rows.length) {
         console.error('[BP] 결재 행 조회 결과가 비어 있음 — 승인완료 전환 중단. RequestID:', reqId);
+        _lg(_lgAct, '승인 기록 · 다음 단계로 넘기지 못함(결재 행 조회 0건)');
         showAlert('승인은 기록되었으나 다음 단계로 넘기지 못했습니다.',
           '잠시 후 결재함에서 상태를 다시 확인해 주세요. 계속 같은 증상이면 IT팀(stk_it@hyosung.com)에 알려주세요.' + (aprRowsRetry.lastError ? '\n(원인: ' + aprRowsRetry.lastError + ')' : ''), '⚠️');
         closeModal(); await loadApprovalQueue();
@@ -3167,10 +3216,12 @@ await api('/sites/' + siteId + '/lists/BP_Approvals/items/' + apprId, 'PATCH', {
         .sort((a,b) => a.fields.ApprovalOrder - b.fields.ApprovalOrder);
       if (next.length) {
         await api('/sites/'+siteId+'/lists/BP_Approvals/items/'+next[0].id, 'PATCH', {fields:{Status:'대기'}});
+        _lg(_lgAct, '승인 — ' + (next[0].fields.ApprovalOrder ?? '') + '차 결재자에게 넘김');
       } else if (!_rows.some(i => String(i.fields.ApproverRole||'').indexOf('회계담당자') >= 0)) {
         // 회계담당자 결재행이 없는 건(10-10 이전에 설정을 못 읽은 채 상신된 건)은 부서장 승인만으로 승인완료하지 않는다.
         // 승인은 기록됐고 신청은 그대로 둔다 — 관리자가 2차 결재행을 넣으면 회계담당자가 이어서 처리한다.
         console.error('[BP] 회계담당자 결재행 없음 — 승인완료 전환 중단. RequestID:', reqId);
+        _lg(_lgAct, '승인 기록 · 승인완료로 넘기지 않음(회계담당자 결재행 없음)');
         closeModal();
         showAlert('승인은 기록되었으나 승인완료로 넘기지 않았습니다.',
           '이 신청에는 2차 결재자(회계담당자) 결재 단계가 없습니다. 관리자 또는 IT팀(stk_it@hyosung.com)에 알려 주세요.', '⚠️');
@@ -3178,15 +3229,23 @@ await api('/sites/' + siteId + '/lists/BP_Approvals/items/' + apprId, 'PATCH', {
         return;
       } else {
         await api('/sites/'+siteId+'/lists/BP_Requests/items/'+reqId, 'PATCH', {fields:{Status:'승인완료'}});
+        _lg(_lgAct, '승인 — 최종 승인(신청 승인완료)');
       }
     }
+    if (_lgW && !_lgDone) _lg(_lgAct, action);   // 위 갈래에 해당하지 않는 처리(예: 보류 등)도 1건
     closeModal();
     showAlert(action + ' 처리되었습니다.', '', action === '반려' ? '❌' : '✅');
     // SharePoint 반영 대기 후 재조회
     await new Promise(r => setTimeout(r, 800));
     await loadApprovalQueue();
     await loadUnifiedBadge();
-  } catch(e) { showAlert('오류가 발생했습니다.', e.message, '⚠️'); }
+  } catch(e) {
+    if (!_lgDone) {
+      if (_lgW) _lg(_lgAct, '결재행은 기록됨 · 이후 단계 오류 — ' + logErrText(e));   // APS 와 같은 문구
+      else _lg(_lgAct + ' 실패', '처리 안 함', { 오류: logErrText(e) });
+    }
+    showAlert('오류가 발생했습니다.', e.message, '⚠️');
+  }
   finally { loading(false); }
 }
 
@@ -3375,10 +3434,12 @@ async function withdrawRequest(e, reqId, aprList, reqList) {
       api('/sites/'+siteId+'/lists/'+aprList+'/items/'+i.id, 'PATCH', {fields:{Status:'철회(잠김)'}})
     ));
     await api('/sites/'+siteId+'/lists/'+reqList+'/items/'+reqId, 'PATCH', {fields:{Status:'철회'}});
+    logChange('BP Master Data', '철회', () => ({ 신청번호: Number(reqId), 처리: '본인', 결재행: myAprs.length }));   // 10-15
     if(typeof showAlert === 'function') showAlert('철회 완료','신청이 철회되었습니다.','✅');
     else alert('신청이 철회되었습니다.');
     loadMyList();
   } catch(err) {
+    logChange('BP Master Data', '철회 실패', () => ({ 신청번호: Number(reqId), 오류: logErrText(err) }));
     alert('오류: ' + err.message);
   }
 }
