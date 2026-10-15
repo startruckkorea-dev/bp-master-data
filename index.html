@@ -1581,7 +1581,9 @@ async function boot(account) {
     // 단독 상세보기 모드: 작성 폼·헤더·탭은 필요 없으므로 배경색만 남기고 전부 숨김
     _standaloneDetail = true;
     armStandaloneLoaderTimeout();
-    showDetail(_openId);
+    // 10-15: 권한 확인(openIdGate)이 끝날 때까지 로더만 보인다. 통과한 건만 상세를 부르고, 차단이면 로더 자리에 안내만 남긴다.
+    const _oidOk = await openIdGate(_openId);
+    if (_oidOk) showDetail(String(_oidOk));
     history.replaceState(null, '', location.pathname);
   } else {
     // APS 에서 결재하러 들어온 경우 — 결재함 · 그 건의 상세를 연다.
@@ -2454,6 +2456,7 @@ function markDetailReady() {
 function armStandaloneLoaderTimeout() {
   setTimeout(() => {
     if (document.documentElement.classList.contains('detail-ready')) return;
+    if (_oidBlocked) return;   // 10-15: 권한 차단 안내가 떠 있으면 그대로 둔다
     const el = document.getElementById('standalone-loader');
     if (!el) return;
     el.innerHTML = '<div style="font-size:1.6rem">⚠️</div>'
@@ -2463,6 +2466,42 @@ function armStandaloneLoaderTimeout() {
 }
 // ?openId= 딥링크로 진입한 단독 상세보기 모드 여부 (다른 시스템에서 연동 링크로 들어온 경우)
 let _standaloneDetail = false;
+/* ── ?openId= 단독 상세 보기 권한 확인(10-15) ──
+   SSC · IT Ticket 의 「관련 티켓」 링크(?openId=)는 예전엔 권한 확인 없이 누구에게나 상세(내용 · 첨부 · 결재 이력 · 상세 PDF)를 열었다.
+   ?id= 딥링크(deepLinkAllowed)와 같은 기준으로 연다 — 신청자 · 그 건의 결재자(대리 위임 포함, isMyAppr) · 관리자(ADMIN_EMAILS =
+   설정 파일의 BP_ADMIN_N(1부터 연속) · ADMIN_SP). BP 에는 IT · PKF 명단이 따로 없어 넣지 않는다.
+   설정을 못 읽으면(_configLoaded 가 false) 관리자 명단이 기본 빈 값뿐이라 신청자 · 결재자만 통과한다(fail-closed) — 안내에 「다시 시도」 를 덧붙인다.
+   판정이 끝날 때까지 상세는 부르지 않는다(로더만 보임) — 차단이면 상세 DOM · PDF · 첨부 링크가 한 번도 만들어지지 않는다.
+   차단은 Logging_data 에 「단독 상세 접근 차단」(id · 사유) 으로 남긴다. 돌려주는 값: 열 신청 ID(숫자) · 차단이면 0. */
+let _oidBlocked = false;
+async function openIdGate(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  const id = /^\d{1,9}$/.test(s) ? parseInt(s, 10) : 0;   // 숫자가 아니면 조회하지 않고 「없는 건」 으로 본다
+  let allow = false;
+  try { allow = id > 0 ? await deepLinkAllowed(id) : 'notfound'; } catch (e) { allow = false; }
+  if (allow === true) return id;
+  _oidBlocked = true;
+  const nf = allow === 'notfound';
+  const cfgFail = typeof _configLoaded !== 'undefined' && !_configLoaded;   // BP 는 설정을 읽었을 때만 _configLoaded 가 true
+  const reason = nf ? '없는 건' : (cfgFail ? '설정 읽기 실패 — 신청자 · 결재자 아님' : '신청자 · 결재자 · 관리자 아님(또는 확인 실패)');
+  try { logAction('BP Master Data', '단독 상세 접근 차단', { id: s.slice(0, 40), 사유: reason }); } catch (e) { console.warn('[Log] 차단 기록 생략:', e && e.message); }
+  const el = document.getElementById('standalone-loader');
+  if (el) {   // 로더 자리를 안내로 바꾼다(모양은 closeStandaloneDetail 의 「확인이 끝났습니다」 화면과 같다 — DOM 으로 만든다)
+    el.textContent = '';
+    const add = (tag, cls, css, txt) => { const d = document.createElement(tag); if (cls) d.className = cls; if (css) d.style.cssText = css; d.textContent = txt; el.appendChild(d); return d; };
+    add('div', '', 'font-size:1.6rem', '🔒');
+    add('div', 'sl-text', '', nf ? '해당 신청 건을 찾을 수 없습니다' : '이 신청 건을 볼 수 있는 권한이 없습니다');
+    add('div', 'sl-sub', '', cfgFail && !nf ? '설정 파일을 읽지 못했습니다 — 새로고침 후 다시 시도해 주세요' : '이 탭은 닫으셔도 됩니다');
+    add('button', '', 'margin-top:6px;background:#0078d4;color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit', '전체 시스템 열기')
+      .onclick = () => { location.href = location.pathname; };
+  }
+  // ?id= 딥링크와 같은 문구 · 방식(alert). 설정을 못 읽었으면 다시 시도 안내를 덧붙인다.
+  alert(nf
+    ? '해당 신청 건을 찾을 수 없습니다. 삭제되었거나 번호가 잘못되었습니다.\n결재함에서 내 결재 건을 확인해 주세요.'
+    : '이 신청 건을 볼 수 있는 권한이 없습니다.\n결재함에서 내 결재 건을 확인해 주세요.'
+      + (cfgFail ? '\n\n설정 파일(system_config_final.xlsx)을 읽지 못해 관리자 권한을 확인할 수 없습니다. 새로고침 후 다시 시도해 주세요.' : ''));
+  return 0;
+}
 function closeModal() {
   const pdfBtn = document.getElementById('btn-export-pdf');
   if (pdfBtn) pdfBtn.style.display = 'none';
