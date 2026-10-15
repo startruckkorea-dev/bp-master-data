@@ -2473,12 +2473,85 @@ let _standaloneDetail = false;
    설정을 못 읽으면(_configLoaded 가 false) 관리자 명단이 기본 빈 값뿐이라 신청자 · 결재자만 통과한다(fail-closed) — 안내에 「다시 시도」 를 덧붙인다.
    판정이 끝날 때까지 상세는 부르지 않는다(로더만 보임) — 차단이면 상세 DOM · PDF · 첨부 링크가 한 번도 만들어지지 않는다.
    차단은 Logging_data 에 「단독 상세 접근 차단」(id · 사유) 으로 남긴다. 돌려주는 값: 열 신청 ID(숫자) · 차단이면 0. */
+/* ── ?openId= PKF 열람 허용(10-15) ──
+   SSC(shared-sc · SSC-UAT)의 「관련 티켓」 은 [제목:BP:id] 토큰을 SSC_Requests.RelatedTickets(한 줄에 하나, 예전 건은 Detail 뒤)에 저장하고
+   https://…?openId=<id>&_v=… 링크로 이 화면을 연다. 그 티켓을 처리하는 PKF(외부 회계법인) 담당자는 신청자 · 결재자 · 관리자가 아니라 막혔다.
+   허용 ① PKF 명단 — system_config 의 SHARED-SC_2nd_N(1부터 연속). ACC Voucher 의 isPkfUser 와 같은 기준:
+          이메일 소문자 정확히 일치, 또는 명단에 등록된 도메인 안에서 같은 아이디(같은 사람이 도메인 두 개를 쓰는 경우).
+   허용 ② 설정을 못 읽는 외부 게스트 — 이 건(BP · id)을 관련 티켓으로 연결한 SSC 티켓의 PKFAssignees(「a@x; b@y」, 예전 「이름||메일」)에
+          내가 있으면 허용. 그 계정이 읽을 수 있는 SSC 티켓 안에서만 찾고, 조회가 실패하면 이 경로는 불허(다른 조건은 그대로).
+   내 신원 후보: user.email · user.username(UPN) · Graph /me 의 mail · userPrincipalName, 그리고 게스트 UPN(이름_도메인#EXT#@테넌트)을 되돌린 메일. */
+const OID_SSC_REQ_LIST = 'bb912dff-ba54-4abd-871a-b3d4c3c8620d';   // SSC_Requests(shared-sc · SSC-UAT 공용 리스트 GUID)
+let _oidMeIds = null;
+async function oidMyIdentities() {
+  if (_oidMeIds) return _oidMeIds;
+  const raw = [user && user.email, user && user.username];
+  try { const me = await api('/me?$select=mail,userPrincipalName'); raw.push(me && me.mail, me && me.userPrincipalName); } catch (e) { console.warn('[PKF] /me 조회 실패:', e && e.message); }
+  const ids = new Set();
+  raw.forEach(v => {
+    const s = String(v || '').trim().toLowerCase();
+    if (!s) return;
+    ids.add(s);
+    const m = s.match(/^(.+)#ext#@/);   // 외부 게스트 UPN: kim_pkf.co.kr#EXT#@tenant.onmicrosoft.com → kim@pkf.co.kr
+    if (m) { const k = m[1].lastIndexOf('_'); if (k > 0) ids.add(m[1].slice(0, k) + '@' + m[1].slice(k + 1)); }
+  });
+  _oidMeIds = [...ids];
+  return _oidMeIds;
+}
+function oidPkfEmails() {   // 설정을 못 읽었으면 빈 명단
+  const cfg = typeof _sysConfig !== 'undefined' ? _sysConfig : null;
+  const out = [];
+  for (let n = 1; cfg && cfg['SHARED-SC_2nd_' + n]; n++) {
+    const em = String(cfg['SHARED-SC_2nd_' + n].email || '').trim().toLowerCase();
+    if (em) out.push(em);
+  }
+  return out;
+}
+function oidPkfDomains(list) { return new Set((list || []).map(e => e.split('@')[1] || '').filter(Boolean)); }
+function oidPkfMatch(ids, targets, doms) {   // ACC isPkfUser · meInPkfText 와 같은 기준
+  if (targets.some(e => ids.includes(e))) return true;   // 정확히 일치
+  // 같은 사람이 도메인 두 개를 쓰는 경우 — 둘 다 PKF 명단에 등록된 도메인일 때만 같은 아이디를 인정(아무 도메인이나 허용하면 동명이인이 통과)
+  return ids.some(id => {
+    const [lp, dom] = id.split('@');
+    return !!(lp && dom && doms.has(dom) && targets.some(t => { const [tl, td] = t.split('@'); return tl === lp && doms.has(td || ''); }));
+  });
+}
+function oidPlain(s) {   // RelatedTickets(plain) · Detail(리치 텍스트) → 글자만. textarea 로 엔티티만 풀어 스크립트가 돌 여지가 없다
+  const t = String(s || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(div|p)>/gi, '\n').replace(/<[^>]+>/g, '');
+  const ta = document.createElement('textarea'); ta.innerHTML = t; return ta.value;
+}
+async function openIdPkfAllowed(id) {
+  const ids = await oidMyIdentities();
+  if (!ids.length) return false;
+  // ① PKF 명단(설정 파일) — 명단 전체가 대상 · 같은 도메인 안의 같은 아이디도 인정
+  const pkf = oidPkfEmails();
+  if (pkf.length && oidPkfMatch(ids, pkf, oidPkfDomains(pkf))) return true;
+  // ② 이 건을 연결한 SSC 티켓의 PKF 담당자
+  let rows;
+  try {
+    rows = (await apiAll('/sites/' + siteId + '/lists/' + OID_SSC_REQ_LIST + '/items?$expand=fields($select=RelatedTickets,Detail,PKFAssignees)')).value || [];
+  } catch (e) { console.warn('[PKF] SSC 티켓 조회 실패 — 티켓 담당자 경로 불허:', e && e.message); return false; }
+  const re = /\[[^\]\n]*?:(FA|BP|ACC):(\d+)\]/g;
+  return rows.some(r => {
+    const f = r.fields || {};
+    const refs = oidPlain(f.RelatedTickets) + '\n' + oidPlain(f.Detail);
+    let m, hit = false;
+    re.lastIndex = 0;
+    while ((m = re.exec(refs))) { if (m[1] === 'BP' && m[2] === String(id)) { hit = true; break; } }
+    if (!hit) return false;
+    const assignees = oidPlain(f.PKFAssignees).split(';')
+      .flatMap(p => p.split('||')).map(x => x.trim().toLowerCase()).filter(x => x.includes('@'));
+    return oidPkfMatch(ids, assignees, oidPkfDomains(pkf));   // 설정을 못 읽었으면 정확히 일치만
+  });
+}
 let _oidBlocked = false;
 async function openIdGate(raw) {
   const s = String(raw == null ? '' : raw).trim();
   const id = /^\d{1,9}$/.test(s) ? parseInt(s, 10) : 0;   // 숫자가 아니면 조회하지 않고 「없는 건」 으로 본다
   let allow = false;
   try { allow = id > 0 ? await deepLinkAllowed(id) : 'notfound'; } catch (e) { allow = false; }
+  // 10-15: PKF(외부 회계법인) 담당자는 SSC 「관련 티켓」 링크로 이 건을 읽을 수 있다(열람만 — 상세 화면의 단추 규칙은 그대로).
+  if (allow === false && id > 0) { try { if (await openIdPkfAllowed(id)) allow = true; } catch (e) { console.warn('[PKF] 판정 실패:', e && e.message); } }
   if (allow === true) return id;
   _oidBlocked = true;
   const nf = allow === 'notfound';
