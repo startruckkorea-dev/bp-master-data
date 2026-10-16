@@ -3564,52 +3564,117 @@ function _wdBtn(itemId, aprList, reqList, status) {
 }
 
 // ── BP Code 검색 모달 ──
+/* 열자마자 업체 · 계좌 목록이 보이던 것을 없앴다(10-16). 검색어를 넣고 Enter 또는 「검색」 을 눌렀을 때만 찾고,
+   그때마다 Logging_data 에 「BP 검색」(검색어 · 결과건수 · 화면), 고르면 「BP 검색 선택」(BP코드 · 이름 · 화면) 을 남긴다.
+   타자만으로는 찾지도, 남기지도 않는다. 결과의 계좌 · 은행은 기록에 넣지 않는다. IT 운영 계정 제외 규칙은 logAction 이 그대로 지킨다. */
 let _bpModalData = [], _bpModalTimer = null;
+const BP_MODAL_CAP = 50;
+let _bpModalCtx = '', _bpModalLastQ = '';
 
-async function openBpSearchModal() {
+function _bpModalEmptyHtml() {
+  return '<div class="bpm-empty" style="text-align:center;padding:26px 12px 22px;color:#605e5c;word-break:keep-all">'
+    + '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#a19f9d" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" style="display:block;margin:0 auto 10px"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>'
+    + '<div style="font-size:13px;font-weight:600;color:#323130;line-height:1.6">BP 코드 · 이름 · 사업자등록번호 · 계좌번호로 검색해 주세요</div>'
+    + '<div style="font-size:11.5px;color:#8a8886;line-height:1.7;margin-top:4px">2자 이상 입력 후 Enter 또는 「검색」. 검색 기록은 보안 감사를 위해 시스템에 저장됩니다.</div>'
+    + '</div>';
+}
+function _bpModalHint(msg) {
+  const h = document.getElementById('bp-modal-hint');
+  if (!h) return;
+  h.textContent = msg || '';
+  h.style.display = msg ? 'block' : 'none';
+}
+function _bpModalShowEmpty() {
+  const el = document.getElementById('bp-modal-results');
+  if (!el) return;
+  if (!_bpModalData.length && _bpModalLoadError) { renderBpModalResults([]); return; }   // 못 읽었으면 그 이유를 먼저
+  el.innerHTML = _bpModalEmptyHtml();
+}
+// 어느 화면 · 칸에서 열었는지(기록용). 지금은 신청서 작성의 BP Code 칸 하나뿐이다.
+function _bpModalContext() {
+  const lbl = document.getElementById('bpcode-label');
+  const sub = (document.getElementById('sel-subcat') || {}).value || '';
+  return '신청서 작성 · ' + ((lbl && lbl.textContent.replace(/\*/g, '').trim()) || 'BP Code') + (sub ? ' (' + sub + ')' : '');
+}
+
+async function openBpSearchModal(ctx) {
   const modal = document.getElementById('bp-search-modal');
+  const inp = document.getElementById('bp-modal-search-input');
+  _bpModalCtx = (typeof ctx === 'string' && ctx) ? ctx : _bpModalContext();
+  _bpModalLastQ = '';
   modal.style.display = 'flex';
-  document.getElementById('bp-modal-search-input').value = '';
+  inp.value = '';
+  _bpModalHint('');
   if(_bpModalData.length === 0) {
     document.getElementById('bp-modal-results').innerHTML = '<div style="text-align:center;padding:24px;color:#a19f9d">데이터 로딩 중...</div>';
-    document.getElementById('bp-modal-search-input').disabled = true;
+    inp.disabled = true;
     await loadBpModalData();
-    document.getElementById('bp-modal-search-input').disabled = false;
-    renderBpModalResults(_bpModalData.slice(0,10));
-    setTimeout(() => document.getElementById('bp-modal-search-input').focus(), 100);
-  } else {
-    renderBpModalResults(_bpModalData.slice(0,10));
-    setTimeout(() => document.getElementById('bp-modal-search-input').focus(), 100);
+    inp.disabled = false;
   }
+  _bpModalShowEmpty();
+  setTimeout(() => inp.focus(), 100);
 }
 function closeBpSearchModal() {
   document.getElementById('bp-search-modal').style.display = 'none';
 }
-let _bpModalTimer2 = null;
-function onBpModalSearch(q) {
-  clearTimeout(_bpModalTimer2);
-  _bpModalTimer2 = setTimeout(() => {
-    const kw = q.toLowerCase().trim();
-    if(!kw) { renderBpModalResults(_bpModalData.slice(0,10)); return; }
-    const res = [];
-    for(const b of _bpModalData) {
-      if(b.code.toLowerCase().includes(kw) || b.name.toLowerCase().includes(kw) || (b.nameKo&&b.nameKo.includes(q)) || (b.bizNo&&b.bizNo.includes(kw)) || (b.bank&&b.bank.toLowerCase().includes(kw)) || (b.accountNo&&b.accountNo.includes(kw))) {
-        res.push(b); if(res.length >= 50) break;
-      }
-    }
-    renderBpModalResults(res);
-  }, 200);
+// 타자 중에는 목록을 새로 보여 주지 않는다. 글자를 다 지우면 처음 안내로 돌아가고, 남아 있던 짧은 검색어 안내는 걷는다.
+function onBpModalInput(q) {
+  _bpModalHint('');
+  if (!String(q || '').trim()) { _bpModalLastQ = ''; _bpModalShowEmpty(); }
 }
-function renderBpModalResults(list) {
+function onBpModalKey(e) {
+  if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229) return;   // 한글 조합 중 Enter 는 글자 확정용
+  e.preventDefault();
+  onBpModalSearch(e.target.value);
+}
+// 숫자 · 하이픈 · 공백만 → 계좌 · 사업자번호 검색으로 보고 숫자 4자리 이상을 요구한다(짧은 숫자로 훑어보기 방지).
+function _bpModalQueryProblem(q) {
+  if (q.length < 2) return '검색어를 2자 이상 입력해 주세요.';
+  if (/^[\d\s-]+$/.test(q) && q.replace(/\D/g, '').length < 4) return '번호(사업자등록번호 · 계좌번호)로 찾을 때는 숫자 4자리 이상 입력해 주세요.';
+  return '';
+}
+function onBpModalSearch(raw) {
+  clearTimeout(_bpModalTimer2);
+  const typed = String(raw == null ? '' : raw);
+  const q = typed.trim();
+  const bad = _bpModalQueryProblem(q);
+  if (bad) {
+    _bpModalHint(bad);
+    _bpModalLastQ = '';
+    _bpModalShowEmpty();
+    const inp = document.getElementById('bp-modal-search-input'); if (inp) inp.focus();
+    return;
+  }
+  _bpModalHint('');
+  if (!_bpModalData.length) { renderBpModalResults([]); return; }   // 마스터를 못 읽었다 — 찾은 게 아니므로 남기지 않는다
+  const kw = q.toLowerCase();
+  const digits = q.replace(/\D/g, '');
+  const numOnly = /^[\d\s-]+$/.test(q);
+  const dg = v => String(v || '').replace(/\D/g, '');
+  const res = [];
+  for(const b of _bpModalData) {
+    if (String(b.code||'').toLowerCase().includes(kw) || String(b.name||'').toLowerCase().includes(kw) || (b.nameKo && String(b.nameKo).toLowerCase().includes(kw))
+      || (b.bizNo && String(b.bizNo).includes(q)) || (b.accountNo && String(b.accountNo).includes(q))
+      || (numOnly && digits.length >= 4 && (dg(b.bizNo).includes(digits) || dg(b.accountNo).includes(digits)))) res.push(b);
+  }
+  _bpModalLastQ = typed;
+  renderBpModalResults(res.slice(0, BP_MODAL_CAP), res.length, q);
+  logAction('BP Master Data', 'BP 검색', { 검색어: typed, 결과건수: res.length, 화면: _bpModalCtx || _bpModalContext() });
+}
+let _bpModalTimer2 = null;
+function renderBpModalResults(list, total, q) {
   const el = document.getElementById('bp-modal-results');
   if(!list.length) {
     el.innerHTML = (!_bpModalData.length && _bpModalLoadError)
-      ? '<div style="text-align:center;padding:20px;color:#a4262c;font-size:12px;line-height:1.7">마스터 파일을 불러오지 못했습니다.<br><span style="color:#605e5c">' + escHtml(_bpModalLoadError) + '</span><br><span style="color:#a19f9d">STK-DB 문서 라이브러리의 「' + escHtml(BP_MASTER_FILE) + '」 을 확인해 주세요.</span></div>'
-      : '<div style="text-align:center;padding:20px;color:#a19f9d">검색 결과 없음</div>';
+      ? '<div style="text-align:center;padding:20px;color:#a4262c;font-size:12px;line-height:1.7">마스터 파일을 불러오지 못했습니다.<br><span style="color:#605e5c">' + escHtml(_bpModalLoadError) + '</span><br><span style="color:#a19f9d">SharePoint 문서 라이브러리의 「' + escHtml(BP_MASTER_FILE) + '」 을 확인해 주세요.</span></div>'
+      : '<div style="text-align:center;padding:22px 12px;color:#605e5c;font-size:12.5px;line-height:1.7">' + (q ? '「' + escHtml(q) + '」 ' : '') + '검색 결과가 없습니다.<br><span style="font-size:11.5px;color:#8a8886">철자 · 번호를 확인하시거나 다른 검색어로 찾아 주세요.</span></div>';
     return;
   }
-  const cap = list.length>=50 ? '<div style="font-size:11px;color:#a19f9d;padding:4px 12px;border-bottom:1px solid #edebe9">상위 50개 표시</div>' : '';
-  el.innerHTML = cap + list.map(b => `
+  const n = total == null ? list.length : total;
+  const head = n > list.length
+    ? '<div style="font-size:11.5px;color:#8a5a00;background:#fff8e6;border:1px solid #f3dfa8;border-radius:4px;padding:6px 10px;margin-bottom:8px">' + n + '건 중 ' + list.length + '건 표시 — 검색어를 더 구체적으로 입력해 주세요</div>'
+    : '<div style="font-size:11.5px;color:#8a8886;padding:0 2px 6px">' + (q ? '「' + escHtml(q) + '」 ' : '') + '검색 결과 ' + n + '건</div>';
+  el.innerHTML = head + list.map(b => `
     <div data-code="${escHtml(b.code)}" onclick="selectBpModalItem(this.dataset.code)"
       style="padding:9px 12px;border:1px solid #edebe9;border-radius:4px;margin-bottom:5px;cursor:pointer;transition:all .15s"
       onmouseover="this.style.background='#f0f6ff';this.style.borderColor='#0078d4'"
@@ -3618,10 +3683,12 @@ function renderBpModalResults(list) {
       <div style="font-size:13px;font-weight:600;color:#323130">${escHtml(b.name)}</div>
       ${b.nameKo?`<div style="font-size:11px;color:#605e5c">${escHtml(b.nameKo)}</div>`:''}
       <div style="font-size:11px;color:#605e5c">사업자등록번호: ${escHtml(b.bizNo||'Master data 미기재')}</div>
-      <div style="font-size:11px;color:#605e5c">Bank Info.: ${escHtml(b.bank||'Master data 미기재')} &nbsp;|&nbsp; Account No.: ${escHtml(b.accountNo||'Master data 미기재')}</div>
+      <div style="font-size:11px;color:#605e5c;overflow-wrap:anywhere">Bank Info.: ${escHtml(b.bank||'Master data 미기재')} &nbsp;|&nbsp; Account No.: ${escHtml(b.accountNo||'Master data 미기재')}</div>
     </div>`).join('');
 }
 function selectBpModalItem(code, name, type) {
+  const b = _bpModalData.find(x => String(x.code) === String(code));
+  logAction('BP Master Data', 'BP 검색 선택', { BP코드: code, 이름: (b && b.name) || '', 검색어: _bpModalLastQ, 화면: _bpModalCtx || _bpModalContext() });   // 은행 · 계좌는 넣지 않는다
   document.getElementById('inp-bpcode').value = code;
   document.getElementById('bpcode-notice').style.display = 'none';
   closeBpSearchModal();
@@ -3700,7 +3767,7 @@ const BP_MASTER_PATTERN = /^BP-Master_목록.*\.xlsx$/i;
 let _bpModalLoadError = '';
 async function locateBpMasterFile() {
   const driveId = await _getLogDriveId();   // STK-DB 문서 라이브러리(설정 파일 · 로그와 같은 곳)
-  if (!driveId) throw new Error('STK-DB 문서 라이브러리를 찾지 못했습니다');
+  if (!driveId) throw new Error('문서 라이브러리를 찾지 못했습니다');
   const sel = '$select=id,name,lastModifiedDateTime,file';
   try {
     const meta = await api('/drives/' + driveId + '/root:/' + encodeURIComponent(BP_MASTER_FILE) + ':?' + sel);
@@ -4012,13 +4079,19 @@ body.aps-year-off #aps-year-empty{display:block!important}
       <button onclick="closeBpSearchModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer">✕</button>
     </div>
     <div style="padding:16px 18px">
-      <div style="display:flex;gap:6px;margin-bottom:12px">
-        <input type="text" id="bp-modal-search-input" placeholder="BP코드, 이름, 사업자등록번호, Bank Info., Account No. 검색..." oninput="onBpModalSearch(this.value)"
-          style="flex:1;border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:.78rem">
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <input type="text" id="bp-modal-search-input" placeholder="BP 코드 · 이름 · 사업자등록번호 · 계좌번호" autocomplete="off" enterkeyhint="search"
+          oninput="onBpModalInput(this.value)" onkeydown="onBpModalKey(event)" aria-describedby="bp-modal-hint bp-modal-audit"
+          style="flex:1;min-width:0;border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:.78rem">
         <button onclick="onBpModalSearch(document.getElementById('bp-modal-search-input').value)"
-          style="padding:7px 14px;border:none;border-radius:4px;background:#0078d4;color:#fff;font-size:12px;cursor:pointer">검색</button>
+          style="padding:7px 14px;border:none;border-radius:4px;background:#0078d4;color:#fff;font-size:12px;cursor:pointer;flex:none">검색</button>
       </div>
-      <div id="bp-modal-results"><div style="text-align:center;padding:24px;color:#a19f9d">검색어를 입력하세요</div></div>
+      <div id="bp-modal-hint" role="status" aria-live="polite" style="display:none;font-size:11.5px;color:#8a5a00;margin:0 0 6px 2px"></div>
+      <div id="bp-modal-audit" style="display:flex;align-items:flex-start;gap:6px;font-size:11px;color:#8a8886;line-height:1.5;margin:0 0 12px 2px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:2px"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"/></svg>
+        <span>검색 내용과 선택한 BP는 감사 목적으로 기록됩니다 · Searches are logged for audit.</span>
+      </div>
+      <div id="bp-modal-results"></div>
     </div>
   </div>
 </div>
