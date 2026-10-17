@@ -3615,7 +3615,7 @@ let _bpModalCtx = '', _bpModalLastQ = '';
 function _bpModalEmptyHtml() {
   return '<div class="bpm-empty" style="text-align:center;padding:26px 12px 22px;color:#605e5c;word-break:keep-all">'
     + '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#a19f9d" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" style="display:block;margin:0 auto 10px"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>'
-    + '<div style="font-size:13px;font-weight:600;color:#323130;line-height:1.6">BP 코드 · 이름 · 사업자등록번호 · 계좌번호로 검색해 주세요</div>'
+    + '<div style="font-size:13px;font-weight:600;color:#323130;line-height:1.6">BP 코드 · 이름 · 사업자등록번호 · 계좌 끝 4자리로 검색해 주세요</div>'
     + '<div style="font-size:11.5px;color:#8a8886;line-height:1.7;margin-top:4px">2자 이상 입력 후 Enter 또는 「검색」을 눌러 주세요.</div>'
     + '</div>';
 }
@@ -3695,8 +3695,9 @@ function onBpModalSearch(raw) {
   const res = [];
   for(const b of _bpModalData) {
     if (String(b.code||'').toLowerCase().includes(kw) || String(b.name||'').toLowerCase().includes(kw) || (b.nameKo && String(b.nameKo).toLowerCase().includes(kw))
-      || (b.bizNo && String(b.bizNo).includes(q)) || (b.accountNo && String(b.accountNo).includes(q))
-      || (numOnly && digits.length >= 4 && (dg(b.bizNo).includes(digits) || dg(b.accountNo).includes(digits)))) res.push(b);
+      || (b.bizNo && String(b.bizNo).includes(q))
+      || (numOnly && digits.length >= 4 && dg(b.bizNo).includes(digits))
+      || (numOnly && digits.length === 4 && b.acctLast4 === digits)) res.push(b);   // 10-17 계좌는 끝 4자리 일치만(ACC Voucher 와 같음)
   }
   _bpModalLastQ = typed;
   renderBpModalResults(res.slice(0, BP_MODAL_CAP), res.length, q);
@@ -3724,7 +3725,7 @@ function renderBpModalResults(list, total, q) {
       <div style="font-size:13px;font-weight:600;color:#323130">${escHtml(b.name)}</div>
       ${b.nameKo?`<div style="font-size:11px;color:#605e5c">${escHtml(b.nameKo)}</div>`:''}
       <div style="font-size:11px;color:#605e5c">사업자등록번호: ${escHtml(b.bizNo||'Master data 미기재')}</div>
-      <div style="font-size:11px;color:#605e5c;overflow-wrap:anywhere">Bank Info.: ${escHtml(b.bank||'Master data 미기재')} &nbsp;|&nbsp; Account No.: ${escHtml(b.accountNo||'Master data 미기재')}</div>
+      <div style="font-size:11px;color:#605e5c;overflow-wrap:anywhere">Bank Info.: ${escHtml(b.bank||'Master data 미기재')} &nbsp;|&nbsp; Account No.: ${escHtml(bpAcctMask(b)||'Master data 미기재')}</div>
     </div>`).join('');
 }
 function selectBpModalItem(code, name, type) {
@@ -3748,6 +3749,8 @@ function onBpCodeInput(v) {
 // ── 고른 BP 의 마스터 정보 상자 ───────────────────────────────────────
 // 마스터 파일(_bpModalData)에 이미 있는 값을 그대로 보여 준다. 저장하지 않는다.
 // 값은 외부 파일에서 오므로 반드시 이스케이프한다.
+// 계좌번호는 끝 4자리만(10-17 · ACC Voucher BP 검색과 같음) — 전체 번호는 ACC Others 「BP 코드 조회」 에서 본다. 목록에도 전체 번호를 두지 않는다
+function bpAcctMask(b) { return b && b.acctLast4 ? '****' + b.acctLast4 : ''; }
 function bpInfoRow(label, value, mono) {
   const v = String(value == null ? '' : value).trim();
   return '<div style="display:flex;gap:10px;padding:3px 0">'
@@ -3795,7 +3798,7 @@ async function showBpInfo(code) {
     + (b.nameKo ? bpInfoRow('업체명(국문)', b.nameKo) : '')
     + bpInfoRow('사업자등록번호', b.bizNo, true)
     + bpInfoRow('Bank Info.', b.bank)
-    + bpInfoRow('Account No.', b.accountNo, true)
+    + bpInfoRow('Account No.', bpAcctMask(b), true)
     + '</div>';
 }
 
@@ -3846,7 +3849,8 @@ async function loadBpModalData() {
       const bank2=(r[5]||'').toString().trim();
       const accountNo2=(r[6]||'').toString().trim();
       const inactive=/^비활성$/.test((r[7]||'').toString().trim());
-      _bpModalData.push({code,type:item,name:name1||name2,nameKo:name1?name2:'',bizNo:bizNo2,bank:bank2,accountNo:accountNo2,inactive});
+      const acctD2=accountNo2.replace(/\D/g,'');
+      _bpModalData.push({code,type:item,name:name1||name2,nameKo:name1?name2:'',bizNo:bizNo2,bank:bank2,acctLast4:acctD2.length>=4?acctD2.slice(-4):'',inactive});
     }
     console.log('[BP Modal] Loaded:', _bpModalData.length);
   } catch(e) {
@@ -4121,7 +4125,7 @@ body.aps-year-off #aps-year-empty{display:block!important}
     </div>
     <div style="padding:16px 18px">
       <div style="display:flex;gap:6px;margin-bottom:6px">
-        <input type="text" id="bp-modal-search-input" placeholder="BP 코드 · 이름 · 사업자등록번호 · 계좌번호" autocomplete="off" enterkeyhint="search"
+        <input type="text" id="bp-modal-search-input" placeholder="BP 코드 · 이름 · 사업자등록번호 · 계좌 끝 4자리" autocomplete="off" enterkeyhint="search"
           oninput="onBpModalInput(this.value)" onkeydown="onBpModalKey(event)" aria-describedby="bp-modal-hint bp-modal-audit"
           style="flex:1;min-width:0;border:1px solid #d2d0ce;border-radius:4px;padding:7px 10px;font-size:.78rem">
         <button onclick="onBpModalSearch(document.getElementById('bp-modal-search-input').value)"
