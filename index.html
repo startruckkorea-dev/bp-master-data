@@ -1113,7 +1113,7 @@ function _bpRoleArg(role){ return escHtml(String(role == null ? '' : role).repla
 /* ── 대리 처리 표기 (AAC 연동) ────────────────────────────────────────
    AAC(결재 대리 지정)가 대리인이 처리한 결재행의 ApproverRole 뒤에
    '· 대리(이름 <메일>)' 를 덧붙인다. 그 꼬리를 그대로 화면에 뿌리면
-   '1차결재자 · 대리(Gildong Hong <hong.gildong@hyosung.com>)' 처럼 날값이 노출된다.
+   '1차결재자 · 대리(Gildong Hong <user@example.com>)' 처럼 날값이 노출된다.
    본래 역할만 남기고, 대리였다는 사실은 알약으로 따로 보여준다.
    IT-Ticket(1877행 부근)·Goodwill-Approval·aps 와 같은 표기·같은 색이다.
    대리가 아니면 aacRolePill 이 빈 문자열을 돌려주므로 호출부에 조건이 필요 없다. */
@@ -1125,7 +1125,7 @@ function _aacRoleParse(role){
   if(!m) return null;
   const im = m[2].match(/^([\s\S]*?)\s*<([^>]+)>\s*$/);
   const nm = (im ? im[1] : m[2]).trim(), em = im ? im[2].trim() : '';
-  // 이름이 없으면 메일을 이름 자리에 쓴다 — 'on behalf of  · a@x.com' 처럼 비지 않게
+  // 이름이 없으면 메일을 이름 자리에 쓴다 — 'on behalf of  · a@example.com' 처럼 비지 않게
   return { base: m[1].trim(), name: nm || em, email: nm ? em : '' };
 }
 function aacRoleBase(role){
@@ -1505,6 +1505,33 @@ async function loadSystemConfig() {
     return null;
   }
 }
+/* IT 문의 메일(10-17) — 코드에 메일 주소를 두지 않는다. system_config_final.xlsx 의 BP_IT_CONTACT(C열) → 없으면 CONTACT_EMAIL 순으로 채우고,
+   설정을 못 읽었으면(로그인 전 · 읽기 실패) 메일 없이 「IT팀」 만 보인다. 형식이 맞는 메일만 받으므로 HTML 에 그대로 넣어도 안전하다.
+   data-it-contact 가 붙은 화면 칸은 설정을 읽은 뒤 메일 링크로 바뀐다. */
+var IT_CONTACT_KEY = 'BP_IT_CONTACT', __itMail = '';
+function itTeam(label) { label = label || 'IT팀'; return __itMail ? label + '(' + __itMail + ')' : label; }
+function itApplyDom() {
+  try {
+    document.querySelectorAll('[data-it-contact]').forEach(function (el) {
+      el.textContent = '';
+      if (!__itMail) { el.textContent = el.getAttribute('data-it-contact') || 'IT팀'; return; }
+      var a = document.createElement('a'); a.href = 'mailto:' + __itMail; a.textContent = __itMail;
+      a.style.color = '#0078d4'; a.style.textDecoration = 'none'; el.appendChild(a);
+    });
+  } catch (e) {}
+}
+function itSetFromCfg(cfg) {
+  try {
+    if (!cfg || typeof cfg !== 'object') return;
+    var keys = Object.keys(cfg);
+    var pick = function (k) { var kk = keys.find(function (x) { return String(x).trim().toUpperCase() === k.toUpperCase(); }); return kk && cfg[kk] ? String(cfg[kk].email || '').trim().toLowerCase() : ''; };
+    var ok = function (v) { return /^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(v); };
+    var mail = [pick(IT_CONTACT_KEY), pick('CONTACT_EMAIL')].find(ok);
+    if (mail) __itMail = mail;
+    itApplyDom();
+  } catch (e) {}
+}
+loadSystemConfig = (function (orig) { return async function () { var c = await orig.apply(this, arguments); itSetFromCfg(c || (typeof _sysConfig !== 'undefined' ? _sysConfig : null)); return c; }; })(loadSystemConfig);
 function cfgVal(cfg, key, defaultObj) {
   if (!cfg || !cfg[key]) return defaultObj;
   const v = cfg[key];
@@ -1928,10 +1955,10 @@ function applyFlexApprovers(){
       if(!note){ note=document.createElement('div'); note.className='flex-note'; title ? title.insertAdjacentElement('afterend', note) : block.insertBefore(note, block.firstChild); }
       const what = r.org ? (s.role==='tl' ? '팀장(Team Manager)' : '부서장(Department Head)') : (s.role==='tl' ? '팀장(Boss)' : '부서장(Boss of Boss)');   // 10-14: 3열을 썼으면 그 열 이름
       note.textContent = nodata
-        ? '⚠ 직원 명부(employee_search)를 읽지 못해 결재자를 직접 선택합니다 — 새로고침 후에도 같으면 IT팀(stk_it@hyosung.com)에 알려주세요.'
+        ? '⚠ 직원 명부(employee_search)를 읽지 못해 결재자를 직접 선택합니다 — 새로고침 후에도 같으면 '+itTeam('IT팀')+'에 알려주세요.'
         : r.rec
-        ? '⚠ Flex 명부(employee_search)에서 '+what+' 「'+((r.org ? (s.role==='tl'?r.tlName:r.dhName) : (s.role==='tl'?r.rec.boss:(r.rec.boss2||r.rec.boss)))||'(빈칸)')+'」 을(를) 찾지 못해 직접 선택합니다 — IT팀(stk_it@hyosung.com)에 알려주세요.'
-        : '⚠ 신청자 계정이 Flex 명부(employee_search)에 없어 결재자를 직접 선택합니다 — IT팀(stk_it@hyosung.com)에 알려주세요.';
+        ? '⚠ Flex 명부(employee_search)에서 '+what+' 「'+((r.org ? (s.role==='tl'?r.tlName:r.dhName) : (s.role==='tl'?r.rec.boss:(r.rec.boss2||r.rec.boss)))||'(빈칸)')+'」 을(를) 찾지 못해 직접 선택합니다 — '+itTeam('IT팀')+'에 알려주세요.'
+        : '⚠ 신청자 계정이 Flex 명부(employee_search)에 없어 결재자를 직접 선택합니다 — '+itTeam('IT팀')+'에 알려주세요.';
       why.push(s.id+': '+(r.rec && r.org ? (s.role==='tl' ? 'Team Manager 못 찾음('+(r.tlName||'')+')' : 'Department Head 못 찾음('+(r.dhName||'')+')') : r.rec ? (s.role==='tl' ? 'Boss 못 찾음('+(r.rec.boss||'')+')' : 'Boss of Boss 못 찾음('+(r.rec.boss2||'')+'/'+(r.rec.boss||'')+')') : '명부에 없음'));
     }
   });
@@ -1964,7 +1991,7 @@ async function submitRequest() {
   }
   if (!String(a3email || '').trim()) {
     const _k = type === 'Customer' ? 'BP_CUSTOMER_APPROVER' : type === 'Employee' ? 'BP_EMPLOYEE_APPROVER(없으면 BP_VENDOR_APPROVER)' : 'BP_VENDOR_APPROVER';
-    return alert('2차 결재자(회계담당자) 설정을 읽지 못했습니다: ' + _k + '\n\n새로고침 후 다시 시도해 주세요. 계속되면 system_config_final.xlsx 의 해당 KEY 를 확인하거나 IT팀(stk_it@hyosung.com)에 알려 주세요.');
+    return alert('2차 결재자(회계담당자) 설정을 읽지 못했습니다: ' + _k + '\n\n새로고침 후 다시 시도해 주세요. 계속되면 system_config_final.xlsx 의 해당 KEY 를 확인하거나 '+itTeam('IT팀')+'에 알려 주세요.');
   }
   if (!files.length) { document.getElementById('file-notice').style.display = 'block'; return; }
 
@@ -2022,7 +2049,7 @@ async function submitRequest() {
       const _t = 'BP-' + new Date(new Date().getTime()+9*3600*1000).toISOString().slice(0,10) + '_ID-' + reqId;
       const _why = _driveErr ? ('첨부 저장소 오류: ' + _driveErr) : ('올리지 못한 파일 ' + _upFail.length + '건: ' + _upFail.join(', '));
       showAlert('첨부파일 업로드에 실패해 상신하지 않았습니다.',
-        _why + ' · ' + (_closed ? _t + ' 은(는) 「철회」로 표시해 두었습니다.' : _t + ' 을(를) 「철회」로 표시하지 못했습니다 — IT팀(stk_it@hyosung.com)에 알려 주세요.')
+        _why + ' · ' + (_closed ? _t + ' 은(는) 「철회」로 표시해 두었습니다.' : _t + ' 을(를) 「철회」로 표시하지 못했습니다 — '+itTeam('IT팀')+'에 알려 주세요.')
         + ' 파일을 확인한 뒤 다시 상신해 주세요.', '⚠️');
       _bpSubmitted = true;   // 정리를 마쳤으므로 아래 catch 에서 다시 정리하지 않는다
       return;
@@ -2055,7 +2082,7 @@ async function submitRequest() {
   } catch(e) {
     // 신청 행을 만든 뒤 결재행까지 다 만들기 전에 실패했으면 「철회」로 닫아 둔다(만든 결재행은 철회(잠김))
     let _note = '';
-    if (reqId && !_bpSubmitted) _note = (await _bpAbortSubmit(reqId, _apprIds, null)) ? ' · 만들던 신청은 「철회」로 표시해 두었습니다. 다시 상신해 주세요.' : ' · 만들던 신청을 「철회」로 표시하지 못했습니다 — IT팀(stk_it@hyosung.com)에 알려 주세요.';
+    if (reqId && !_bpSubmitted) _note = (await _bpAbortSubmit(reqId, _apprIds, null)) ? ' · 만들던 신청은 「철회」로 표시해 두었습니다. 다시 상신해 주세요.' : ' · 만들던 신청을 「철회」로 표시하지 못했습니다 — '+itTeam('IT팀')+'에 알려 주세요.';
     if (!_bpSubmitted) logChange('BP Master Data', '상신 실패', () => ({ 신청번호: reqId ? Number(reqId) : '', 유형: type, 하위분류: subcat, 정리: reqId ? (_note.indexOf('「철회」로 표시해 두었습니다') >= 0 ? '철회 표시' : '정리 실패') : '없음', 오류: logErrText(e) }));   // 10-15
     showAlert('오류가 발생했습니다.', e.message + _note, '⚠️');
   }
@@ -3334,7 +3361,7 @@ await api('/sites/' + siteId + '/lists/BP_Approvals/items/' + apprId, 'PATCH', {
         console.error('[BP] 결재 행 조회 결과가 비어 있음 — 승인완료 전환 중단. RequestID:', reqId);
         _lg(_lgAct, '승인 기록 · 다음 단계로 넘기지 못함(결재 행 조회 0건)');
         showAlert('승인은 기록되었으나 다음 단계로 넘기지 못했습니다.',
-          '잠시 후 결재함에서 상태를 다시 확인해 주세요. 계속 같은 증상이면 IT팀(stk_it@hyosung.com)에 알려주세요.' + (aprRowsRetry.lastError ? '\n(원인: ' + aprRowsRetry.lastError + ')' : ''), '⚠️');
+          '잠시 후 결재함에서 상태를 다시 확인해 주세요. 계속 같은 증상이면 '+itTeam('IT팀')+'에 알려주세요.' + (aprRowsRetry.lastError ? '\n(원인: ' + aprRowsRetry.lastError + ')' : ''), '⚠️');
         closeModal(); await loadApprovalQueue();
         return;
       }
@@ -3350,7 +3377,7 @@ await api('/sites/' + siteId + '/lists/BP_Approvals/items/' + apprId, 'PATCH', {
         _lg(_lgAct, '승인 기록 · 승인완료로 넘기지 않음(회계담당자 결재행 없음)');
         closeModal();
         showAlert('승인은 기록되었으나 승인완료로 넘기지 않았습니다.',
-          '이 신청에는 2차 결재자(회계담당자) 결재 단계가 없습니다. 관리자 또는 IT팀(stk_it@hyosung.com)에 알려 주세요.', '⚠️');
+          '이 신청에는 2차 결재자(회계담당자) 결재 단계가 없습니다. 관리자 또는 '+itTeam('IT팀')+'에 알려 주세요.', '⚠️');
         await loadApprovalQueue();
         return;
       } else {
