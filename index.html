@@ -337,6 +337,9 @@ input.aps-lf-t { width: 180px; }
     .status-반려{color:#a4262c;font-weight:600}
     .appr-item{display:flex;justify-content:space-between;align-items:flex-start;padding:9px 10px;border-bottom:1px solid #edebe9;font-size:.8rem;gap:10px}
 .appr-item:last-child{border-bottom:none}
+/* 11-05 결재 이력 — 의견에 띄어쓰기 없는 긴 글(공유 폴더 주소 등)이 있어도 칸 안에서 줄을 바꾸고, 오른쪽 상태(승인 · 대기 …)가 밀려나지 않게(모든 화면 폭 · PDF 포함) */
+.appr-item>div:first-child{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.appr-item>:last-child:not(:first-child){flex:none;white-space:nowrap}
 
 /* ── GW 시각 스타일 통일 (너비/레이아웃 변경 없음) ── */
 .tabs::-webkit-scrollbar{display:none}
